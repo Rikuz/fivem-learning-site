@@ -164,6 +164,7 @@ npx serve .
   <script src="../../assets/js/progress.js"></script>
   <script src="../../assets/js/nav.js"></script>
   <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
 </body>
 </html>
 ```

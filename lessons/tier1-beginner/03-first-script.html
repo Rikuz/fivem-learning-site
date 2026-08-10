@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>最初のスクリプトを作る | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t1-03-first-script">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="1">🟢 入門</span>
+      <span class="badge category-badge">📘 Lua基礎</span>
+      <span class="badge category-badge">⚙️ 環境構築</span>
+    </div>
+
+    <h1>最初のスクリプトを作る</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>自分のresource(スクリプト単位のフォルダ)を1から作成し、サーバーに読み込ませて、F8コンソールに文字を表示させる</strong>ところまでできるようになります。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>FiveMのスクリプトは<code>resources</code>フォルダの中に1つのフォルダとして配置します。このフォルダには最低限、<strong>fxmanifest.lua</strong>(そのresourceの設定ファイル。どのLuaファイルをclient/serverどちらで実行するかなどを書く)と、実際の処理を書くLuaファイルが必要です。</p>
+      <p>作成したresourceは<code>server.cfg</code>に<code>ensure リソース名</code>という1行を追加することで、サーバー起動時に自動的に読み込まれます。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>1. resourceフォルダを作成する</h3>
+      <div class="code-block">
+        <pre><code class="language-bash">cd C:\fxserver\resources\[local]
+mkdir my-first-script
+cd my-first-script</code></pre>
+      </div>
+
+      <h3>2. fxmanifest.luaを作成する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">fx_version 'cerulean'
+game 'gta5'
+
+author 'あなたの名前'
+description 'はじめてのFiveMスクリプト'
+version '1.0.0'
+
+client_script 'client.lua'
+server_script 'server.lua'</code></pre>
+      </div>
+
+      <h3>3. client.luaを作成する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">-- client.lua: プレイヤーの画面(クライアント側)で動く処理
+RegisterCommand('hello', function()
+    print('こんにちは!クライアント側のスクリプトが動いています。')
+end, false)</code></pre>
+      </div>
+
+      <h3>4. server.luaを作成する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">-- server.lua: サーバー側で動く処理。resource起動時に一度だけ実行される
+print('my-first-script がサーバー側で起動しました')</code></pre>
+      </div>
+
+      <h3>5. server.cfgに追加する</h3>
+      <div class="code-block">
+        <pre><code class="language-bash">ensure my-first-script</code></pre>
+      </div>
+
+      <h3>6. サーバーを起動して確認する</h3>
+      <p>サーバーを起動すると、サーバーコンソールに <code>my-first-script がサーバー側で起動しました</code> と表示されます。</p>
+      <p>ゲーム内でF8キーを押してクライアントコンソールを開き、<code>hello</code>と入力してEnterを押すと、<code>こんにちは!クライアント側のスクリプトが動いています。</code>と表示されます。</p>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li><code>ensure</code>の後のリソース名は<strong>フォルダ名と完全に一致</strong>している必要があります。1文字でも違うと「見つかりません」というエラーになります。</li>
+        <li><code>client_script</code>と<code>server_script</code>を逆に書いてしまうと、コマンドがF8コンソールに反応しなかったり、意図しない側で処理が実行されたりします。「画面やプレイヤー操作に関わるものはclient」「データ管理やサーバー全体に関わるものはserver」と覚えておくと迷いにくいです。</li>
+        <li>ファイルを保存しただけではサーバーに反映されません。サーバーコンソールで<code>restart my-first-script</code>と入力するか、サーバーを再起動してください。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p><code>fx_version 'cerulean'</code>はfxmanifestのフォーマットバージョンを指定するもので、現在のFiveMではほぼ固定でこの値を使います。次のレッスンで<code>fxmanifest.lua</code>の各項目を詳しく見ていきます。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

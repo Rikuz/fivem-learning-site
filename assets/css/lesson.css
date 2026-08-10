@@ -1,0 +1,75 @@
+/* lesson.css — レッスンページ専用スタイル */
+
+.lesson-meta {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: var(--space-2);
+}
+
+main > h1 {
+  margin-top: var(--space-1);
+}
+
+main section {
+  margin-bottom: var(--space-4);
+}
+
+main section h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 2px solid var(--color-border);
+  padding-bottom: 6px;
+}
+
+.conclusion {
+  background: var(--color-badge-bg);
+  border-radius: 8px;
+  padding: var(--space-2);
+}
+
+.conclusion h2 {
+  border-bottom: none;
+  margin-top: 0;
+  padding-bottom: 0;
+}
+
+.pitfalls {
+  border-left: 4px solid var(--tier4-main);
+  padding-left: var(--space-2);
+}
+
+.pitfalls h2 {
+  border-bottom: none;
+}
+
+.supplement {
+  border-left: 4px solid var(--color-border);
+  padding-left: var(--space-2);
+}
+
+.supplement h2 {
+  border-bottom: none;
+}
+
+.version-note {
+  font-size: var(--font-size-small);
+  color: var(--color-muted);
+  background: var(--color-badge-bg);
+  border-radius: 6px;
+  padding: var(--space-1) var(--space-2);
+}
+
+main ul,
+main ol {
+  padding-left: 1.4em;
+}
+
+main li {
+  margin-bottom: 6px;
+}
+
+.term {
+  font-weight: bold;
+}

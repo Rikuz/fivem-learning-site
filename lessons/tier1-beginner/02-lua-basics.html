@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lua基礎文法 | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t1-02-lua-basics">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="1">🟢 入門</span>
+      <span class="badge category-badge">📘 Lua基礎</span>
+    </div>
+
+    <h1>Lua基礎文法</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>変数・テーブル・関数・条件分岐・ループというLuaの基本要素を読み書きできる</strong>ようになります。FiveMのスクリプトはすべてこの基礎の組み合わせでできています。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p><strong>Lua</strong>はFiveMのスクリプトを書くための言語(スクリプト言語。他に軽量で組み込みやすいという特徴がある)です。変数の型を事前に宣言する必要がなく、比較的シンプルな文法なので、プログラミング初心者でも学びやすい言語です。</p>
+      <p>FiveMではデータをまとめて扱うときに<strong>テーブル</strong>(Luaにおける配列・連想配列を兼ねるデータ構造)を多用します。プレイヤー情報やアイテム情報など、ほぼ全てがテーブルで表現されます。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>変数とデータ型</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local playerName = "Alice"   -- 文字列
+local playerLevel = 12        -- 数値
+local isOnline = true         -- 真偽値(true/false)
+
+print(playerName, playerLevel, isOnline)
+-- 出力: Alice   12   true</code></pre>
+      </div>
+
+      <h3>テーブル(配列として)</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local fruits = { "apple", "banana", "orange" }
+
+print(fruits[1])  -- Luaの配列は1から始まる(0からではない)
+-- 出力: apple
+
+for i = 1, #fruits do
+    print(i, fruits[i])
+end</code></pre>
+      </div>
+
+      <h3>テーブル(連想配列として)</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local player = {
+    name = "Alice",
+    level = 12,
+    money = 500
+}
+
+print(player.name)   -- ドット記法
+print(player["money"]) -- ブラケット記法(どちらでも同じ意味)</code></pre>
+      </div>
+
+      <h3>関数</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local function addMoney(current, amount)
+    return current + amount
+end
+
+local newMoney = addMoney(player.money, 100)
+print(newMoney) -- 600</code></pre>
+      </div>
+
+      <h3>if文</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">if player.level >= 10 then
+    print("ベテランプレイヤーです")
+elseif player.level >= 5 then
+    print("中級者です")
+else
+    print("初心者です")
+end</code></pre>
+      </div>
+
+      <h3>for / whileループ</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">-- forループ(1から5まで1ずつ増やす)
+for i = 1, 5 do
+    print("カウント: " .. i)  -- ".."は文字列連結演算子
+end
+
+-- whileループ
+local hp = 100
+while hp > 0 do
+    hp = hp - 25
+    print("残りHP: " .. hp)
+end</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li>Luaの配列(テーブル)は<strong>添字が1から始まります</strong>。他言語(JavaScriptなど)の0始まりに慣れていると`fruits[0]`にアクセスしてバグになりがちです。</li>
+        <li>文字列の連結は<code>+</code>ではなく<code>..</code>を使います。<code>"a" + "b"</code>はエラーになります。</li>
+        <li><code>local</code>を付け忘れるとグローバル変数になり、他のスクリプトファイルの同名変数と衝突する危険があります。基本的に変数は必ず<code>local</code>で宣言してください。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>FiveMのLuaにはネイティブ関数(FiveMがゲームエンジンを直接操作するために提供する組み込み関数。例: <code>CreatePed</code>や<code>GetEntityCoords</code>)が多数用意されています。これらは通常のLua標準関数と同じように呼び出せますが、FiveM側で定義された特別な関数です。次のレッスン以降で実際に使っていきます。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

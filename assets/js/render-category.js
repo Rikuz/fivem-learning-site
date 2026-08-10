@@ -1,0 +1,155 @@
+// assets/js/render-category.js — カテゴリ別一覧ページ(category.html)の描画・フィルタ処理
+
+function parseFilterFromURL() {
+  const params = new URLSearchParams(window.location.search);
+  const cat = params.get("cat");
+  const tier = params.get("tier");
+  return {
+    categories: cat ? cat.split(",").filter(Boolean) : [],
+    tiers: tier ? tier.split(",").filter(Boolean).map(Number) : [],
+  };
+}
+
+function updateURL(state) {
+  const params = new URLSearchParams();
+  if (state.categories.length) params.set("cat", state.categories.join(","));
+  if (state.tiers.length) params.set("tier", state.tiers.join(","));
+  const query = params.toString();
+  const newURL = window.location.pathname + (query ? "?" + query : "");
+  window.history.replaceState(null, "", newURL);
+}
+
+function renderFilterUI(state, onChange) {
+  const el = document.getElementById("category-filter");
+  if (!el) return;
+  el.className = "category-filter";
+
+  const categoryOptions = Object.entries(window.CATEGORY_INFO)
+    .map(([key, info]) => {
+      const checked = state.categories.includes(key) ? "checked" : "";
+      return `
+        <label class="category-filter__option">
+          <input type="checkbox" data-filter="category" value="${key}" ${checked}>
+          ${info.emoji} ${info.label}
+        </label>
+      `;
+    })
+    .join("");
+
+  const tierOptions = [1, 2, 3, 4, 5]
+    .map((tier) => {
+      const info = window.TIER_INFO[tier];
+      const checked = state.tiers.includes(tier) ? "checked" : "";
+      return `
+        <label class="category-filter__option">
+          <input type="checkbox" data-filter="tier" value="${tier}" ${checked}>
+          ${info.emoji} ${info.label}
+        </label>
+      `;
+    })
+    .join("");
+
+  el.innerHTML = `
+    <div class="category-filter__group">
+      <span class="category-filter__group-title">カテゴリで絞り込み</span>
+      ${categoryOptions}
+    </div>
+    <div class="category-filter__group">
+      <span class="category-filter__group-title">難易度で絞り込み</span>
+      ${tierOptions}
+    </div>
+  `;
+
+  el.querySelectorAll("input[data-filter]").forEach((input) => {
+    input.addEventListener("change", () => {
+      const type = input.getAttribute("data-filter");
+      const value = type === "tier" ? Number(input.value) : input.value;
+      const list = type === "tier" ? state.tiers : state.categories;
+      const idx = list.indexOf(value);
+      if (input.checked && idx === -1) list.push(value);
+      if (!input.checked && idx !== -1) list.splice(idx, 1);
+      onChange(state);
+    });
+  });
+}
+
+function lessonCardHTML(lesson) {
+  const tierInfo = window.TIER_INFO[lesson.tier];
+  const categoryBadges = lesson.categories
+    .map((key) => {
+      const info = window.CATEGORY_INFO[key];
+      return `<span class="badge category-badge">${info.emoji} ${info.label}</span>`;
+    })
+    .join("");
+
+  return `
+    <a class="lesson-card" data-lesson-card="${lesson.id}" href="${lesson.path}">
+      <div class="lesson-card__badges">
+        <span class="badge tier-badge" data-tier="${lesson.tier}">${tierInfo.emoji} ${tierInfo.label}</span>
+        ${categoryBadges}
+      </div>
+      <p class="lesson-card__title">${lesson.title} <span data-complete-check></span></p>
+      <p class="lesson-card__summary">${lesson.summary}</p>
+      <div class="lesson-card__meta">
+        <span>所要時間目安: ${lesson.estimatedMinutes}分</span>
+      </div>
+    </a>
+  `;
+}
+
+function filterLessons(lessons, state) {
+  return lessons.filter((lesson) => {
+    const tierOK = state.tiers.length === 0 || state.tiers.includes(lesson.tier);
+    const catOK =
+      state.categories.length === 0 ||
+      lesson.categories.some((c) => state.categories.includes(c));
+    return tierOK && catOK;
+  });
+}
+
+function renderResults(state) {
+  const el = document.getElementById("category-results");
+  if (!el) return;
+  const lessons = window.LESSONS || [];
+  const filtered = filterLessons(lessons, state);
+
+  if (state.categories.length === 0) {
+    // カテゴリ未選択時はフラットな一覧を表示
+    el.innerHTML = `<div class="tier-section__cards">${filtered.map(lessonCardHTML).join("")}</div>`;
+  } else {
+    // カテゴリ選択時は選択カテゴリごとにグループ化し、サマリー見出しを表示
+    el.innerHTML = state.categories
+      .map((catKey) => {
+        const info = window.CATEGORY_INFO[catKey];
+        const summary = window.CATEGORY_SUMMARY[catKey];
+        const catLessons = filtered.filter((l) => l.categories.includes(catKey));
+        if (catLessons.length === 0) return "";
+        return `
+          <section class="tier-section" style="--tier-main: var(--color-border)">
+            <div class="tier-section__header">
+              <h2 class="tier-section__title">${info.emoji} ${info.label}</h2>
+            </div>
+            <p class="category-summary">${summary}</p>
+            <div class="tier-section__cards">${catLessons.map(lessonCardHTML).join("")}</div>
+          </section>
+        `;
+      })
+      .join("");
+  }
+
+  renderProgressUI();
+}
+
+function initCategoryPage() {
+  const state = parseFilterFromURL();
+
+  const rerender = (newState) => {
+    updateURL(newState);
+    renderResults(newState);
+  };
+
+  renderFilterUI(state, rerender);
+  renderResults(state);
+}
+
+window.addEventListener("DOMContentLoaded", initCategoryPage);

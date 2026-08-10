@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>デバッグの基本 | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t1-05-debug-basics">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="1">🟢 入門</span>
+      <span class="badge category-badge">📘 Lua基礎</span>
+    </div>
+
+    <h1>デバッグの基本</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>F8コンソールでエラーメッセージを読み、どのファイルの何行目が原因かを特定し、print()で原因を絞り込む</strong>という、開発の基本サイクルができるようになります。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>FiveMではclient側のエラーは<strong>F8コンソール</strong>(ゲーム内でF8キーを押すと開発者コンソールが開く)に、server側のエラーはFXServerを起動しているターミナル(コンソールウィンドウ)に表示されます。</p>
+      <p>エラーメッセージには通常、<strong>ファイル名と行番号</strong>が含まれています。まずここを確認するのがデバッグの第一歩です。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>典型的なエラーメッセージの例</h3>
+      <div class="code-block">
+        <pre><code class="language-bash">SCRIPT ERROR: @my-first-script/client.lua:5: attempt to index a nil value (global 'playre')</code></pre>
+      </div>
+      <p>これは「<code>my-first-script</code>リソースの<code>client.lua</code>の5行目で、<code>playre</code>という(定義されていない)変数を使おうとした」というエラーです。多くの場合、変数名のタイプミス(この例では<code>player</code>のつづり間違い)が原因です。</p>
+
+      <h3>print()で状態を確認する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local function calculateReward(level)
+    print('calculateReward called with level =', level) -- 引数が正しく渡っているか確認
+
+    local reward = level * 100
+    print('reward =', reward) -- 計算結果を確認
+
+    return reward
+end
+
+calculateReward(5)</code></pre>
+      </div>
+      <p>処理の要所要所に<code>print()</code>を挟むことで、「どこまでは正しく動いていて、どこから想定と違う値になっているか」を絞り込めます。原因箇所が特定できたら、デバッグ用の<code>print()</code>は削除するか、コメントアウトしておきましょう。</p>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li>client側のエラーはF8コンソール、server側のエラーはターミナル(サーバーを起動している画面)と、<strong>表示される場所が違います</strong>。片方だけ見て「エラーが出ていない」と勘違いしないよう注意してください。</li>
+        <li>エラーメッセージの1行目だけでなく、その下に続く「スタックトレース」(処理がどの関数からどの関数へ呼ばれて到達したかの履歴)も、原因特定の手がかりになります。</li>
+        <li>print()を大量に残したままにすると、後で本当に必要なログが埋もれてしまいます。確認が終わったら整理する習慣をつけましょう。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>F8コンソールでは<code>resmon 1</code>と入力するとリソースごとの負荷(CPU使用率)を表示できます。これはTier5「パフォーマンス計測と最適化」で詳しく扱います。エラーが出た際は、まず落ち着いてファイル名・行番号を確認する癖をつけることが、上達への一番の近道です。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

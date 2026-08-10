@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>開発環境を整える | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t1-01-setup-environment">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="1">🟢 入門</span>
+      <span class="badge category-badge">⚙️ 環境構築</span>
+    </div>
+
+    <h1>開発環境を整える</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>自分のPC上でFiveMサーバーを起動し、スクリプトを置く場所(resourcesフォルダ)を理解し、VS Codeでコードを編集できる状態</strong>になります。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>FiveM(GTA Vのマルチプレイヤー拡張フレームワーク)のスクリプトは、実際のプレイヤーがいる本番サーバーで直接試すものではありません。まず自分のPC上に<strong>ローカルサーバー</strong>(自分だけがアクセスできる練習用サーバー)を立てて、そこで動作確認しながら開発します。</p>
+      <p>ローカルサーバーの起動には<strong>txAdmin</strong>(FiveMサーバーに標準で付属する管理ツール。サーバーの起動・設定・再起動をブラウザ画面から操作できる)を使うのが最も簡単です。</p>
+      <p>スクリプトは<strong>resource(リソース)</strong>という単位で管理されます。1つの機能(例: NPC配置スクリプト、UI表示スクリプトなど)が1つのresourceフォルダに対応し、サーバーの`resources`フォルダの中に置きます。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+      <p>まだLuaコードは書きませんが、この時点で用意する手順をコマンド・設定として示します。</p>
+
+      <h3>1. FiveMサーバーアーティファクトの入手・配置</h3>
+      <div class="code-block">
+        <pre><code class="language-bash">mkdir C:\fxserver
+cd C:\fxserver
+# https://runtime.fivem.net/artifacts/fivem/build_server_windows/master/ から
+# 最新のfx.tar.gz(または.zip)をダウンロードして展開する</code></pre>
+      </div>
+
+      <h3>2. resourcesフォルダの構成を確認する</h3>
+      <div class="code-block">
+        <pre><code class="language-bash">C:\fxserver\
+├── FXServer.exe
+├── server.cfg           # サーバー設定ファイル
+└── resources\
+    ├── [local]\          # 自作スクリプトはこの中に置く運用が一般的
+    │   └── my-first-script\
+    └── [system]\         # txAdminなどシステムリソース</code></pre>
+      </div>
+
+      <h3>3. server.cfgの最低限の設定</h3>
+      <div class="code-block">
+        <pre><code class="language-bash">endpoint_add_tcp "0.0.0.0:30120"
+endpoint_add_udp "0.0.0.0:30120"
+
+set sv_hostname "My Local Dev Server"
+set sv_maxclients 4
+
+# ライセンスキーは https://keymaster.fivem.net/ で無料発行できる
+sv_licenseKey "ここに自分のキーを入れる"</code></pre>
+      </div>
+
+      <h3>4. サーバーを起動する</h3>
+      <div class="code-block">
+        <pre><code class="language-bash">cd C:\fxserver
+FXServer.exe +exec server.cfg</code></pre>
+      </div>
+      <p>起動後にコンソールへ表示されるURL(通常 <code>http://localhost:30120/</code>)からtxAdminの初回セットアップ画面を開けます。</p>
+
+      <h3>5. VS Codeの拡張機能</h3>
+      <p>VS Codeで <strong>「Lua」</strong>(sumneko.lua など)拡張機能を入れておくと、補完やシンタックスチェックが効いて開発しやすくなります。</p>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li>サーバーのポート(既定30120)がファイアウォールでブロックされていると、自分のPCからも接続できないことがあります。ローカルで動作確認するだけなら外部公開の設定(ポート開放)は不要です。</li>
+        <li><code>sv_licenseKey</code>は個人ごとに発行される無料のキーです。他人のキーを流用しない・公開リポジトリにコミットしないよう注意してください。</li>
+        <li>resourcesフォルダの命名にスペースや日本語を含めると、パス関連のエラーが起きることがあります。英数字とハイフン・アンダースコアのみを使いましょう。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>txAdminのWeb UIからは、リソースの有効化・無効化、再起動、コンソールログの確認などをブラウザから行えます。次のレッスンからはLuaの基礎文法を学び、その後実際にresourceを1つ作成します。</p>
+      <p class="version-note">※FiveMサーバーアーティファクトは頻繁に更新されます。ダウンロードページの表記やUIは公式ドキュメント(docs.fivem.net)で最新情報を確認してください。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>
