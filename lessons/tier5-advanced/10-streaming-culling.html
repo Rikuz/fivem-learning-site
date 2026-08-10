@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>エンティティのストリーミング距離・カリング調整 | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t5-10-streaming-culling">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="5">⚫ 上級</span>
+      <span class="badge category-badge">⚡ パフォーマンス</span>
+    </div>
+
+    <h1>エンティティのストリーミング距離・カリング調整</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>大量のNPC・オブジェクトを配置した際に、描画・処理の負荷を抑えるための距離設定(カリング)</strong>を調整できるようになります。</p>
+      <p><strong>こんな時に使う:</strong> イベント会場に大量の装飾プロップを置いたら重くなった、多数のNPCを配置するショップ街を作ったら負荷が高いとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p><strong>カリング</strong>(視界に入らない、または一定距離より遠いオブジェクトの描画・処理を省略する最適化手法)は、ゲームエンジンが標準で行っていますが、その基準距離をスクリプトから調整できます。全てのエンティティが常に最大範囲で処理され続けると、Tier5-01で学んだ負荷の原因になります。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>個別のエンティティのカリング距離を設定する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local prop = CreateObject(`prop_sign_advert_01a`, 100.0, 200.0, 30.0, true, true, false)
+
+-- SetEntityDistanceCullingRadius(entity, radius)
+-- 通常より近い距離(例: 30メートル)でカリングさせることで、遠くからの負荷を減らす
+SetEntityDistanceCullingRadius(prop, 30.0)</code></pre>
+      </div>
+
+      <h3>大量のプロップを配置する際の工夫</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local decorations = {
+    { model = `prop_bunting_01`, coords = vector3(100.0, 200.0, 31.0) },
+    { model = `prop_bunting_01`, coords = vector3(102.0, 200.0, 31.0) },
+    -- ... 大量の装飾データ
+}
+
+local spawnedProps = {}
+
+local function spawnNearbyDecorations()
+    local playerCoords = GetEntityCoords(PlayerPedId())
+
+    for _, decoration in ipairs(decorations) do
+        local distance = #(playerCoords - decoration.coords)
+        local key = decoration.coords.x .. '_' .. decoration.coords.y
+
+        if distance < 50.0 and not spawnedProps[key] then
+            -- 近づいたときだけ生成する(全部を最初から出しっぱなしにしない)
+            local prop = CreateObject(decoration.model, decoration.coords.x, decoration.coords.y, decoration.coords.z, false, false, false)
+            SetEntityDistanceCullingRadius(prop, 60.0)
+            spawnedProps[key] = prop
+        elseif distance >= 50.0 and spawnedProps[key] then
+            -- 離れたら削除する
+            DeleteObject(spawnedProps[key])
+            spawnedProps[key] = nil
+        end
+    end
+end
+
+CreateThread(function()
+    while true do
+        spawnNearbyDecorations()
+        Wait(2000)
+    end
+end)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li><code>SetEntityDistanceCullingRadius</code>を極端に小さくしすぎると、プレイヤーが近づいているのに描画が間に合わず、オブジェクトが突然出現するように見えることがあります。用途に応じたバランスを取ってください。</li>
+        <li>大量のエンティティを常時生成したままにするのではなく、上記コード例のように「近づいたら生成、離れたら削除」という動的な管理をすることで、根本的な負荷を大きく減らせます。カリング距離の調整と組み合わせるとさらに効果的です。</li>
+        <li>この最適化はclient側の処理です。server側で大量のエンティティのネットワーク同期(<code>isNetwork = true</code>)を行っている場合は、サーバー全体の負荷にも影響します。装飾のように他プレイヤーと共有する必要のないものは、<code>isNetwork = false</code>のローカルエンティティにすることも検討してください。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>このレッスンで扱った「近づいたら生成、離れたら削除」というパターンは、Tier2-03のBlip/Marker表示制御や、Tier2-11のパーティクルエフェクトの管理でも繰り返し登場した考え方です。FiveMスクリプト開発全体を通じて、この「距離に応じた動的な管理」は非常に重要な最適化テクニックです。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

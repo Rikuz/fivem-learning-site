@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>メタテーブルで疑似クラスを作る | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t5-06-metatables-oop">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="5">⚫ 上級</span>
+      <span class="badge category-badge">📘 Lua基礎</span>
+    </div>
+
+    <h1>メタテーブルで疑似クラスを作る</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>Luaにはない「クラス」の概念を、メタテーブルを使って再現し、複数のインスタンス(実体)を持つオブジェクト指向的な設計</strong>ができるようになります。</p>
+      <p><strong>こんな時に使う:</strong> 「プレイヤーオブジェクト」「ペットオブジェクト」のように、同じ構造・振る舞いを持つデータを何個も扱いたいとき。QBCoreの<code>Player.Functions.〜</code>のような書き方の裏側を理解したいとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>Luaにはクラスという言語機能自体はありませんが、<strong>メタテーブル</strong>(あるテーブルに対して「見つからないキーにアクセスされたときの挙動」等を定義する特別なテーブル)を使うことで、クラスのような仕組みを表現できます。特に<code>__index</code>(存在しないキーへのアクセス時に代わりに参照するテーブルを指定する)がよく使われます。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>クラスの定義</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">Pet = {}
+Pet.__index = Pet -- Petテーブル自身をメタテーブルとして使う
+
+function Pet.new(name, hunger)
+    local self = setmetatable({}, Pet) -- 新しいテーブルにPetのメタテーブルを設定する
+    self.name = name
+    self.hunger = hunger or 100
+    return self
+end
+
+function Pet:feed(amount)
+    self.hunger = math.min(100, self.hunger + amount)
+    print((self.name .. 'の満腹度: %d'):format(self.hunger))
+end
+
+function Pet:isHungry()
+    return self.hunger < 30
+end</code></pre>
+      </div>
+
+      <h3>インスタンス(実体)を作って使う</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local dog = Pet.new('ポチ', 50)
+local cat = Pet.new('タマ', 80)
+
+dog:feed(20) -- ポチの満腹度: 70
+print(dog:isHungry()) -- false
+
+print(dog.name, cat.name) -- ポチ タマ(それぞれ独立したデータを持つ)</code></pre>
+      </div>
+
+      <h3>__indexの仕組み(なぜこれで動くか)</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">-- dog:feed(20) は、実は dog.feed(dog, 20) の糖衣構文(コロン記法)
+-- dogテーブル自体には feed 関数が存在しないため、
+-- メタテーブルの __index (= Pet) を探しに行き、Pet.feed が見つかって実行される</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li><code>Pet.__index = Pet</code>を書き忘れると、<code>setmetatable</code>で作ったインスタンスから<code>Pet</code>で定義した関数が見つからず、<code>nil</code>エラーになります。この1行は疑似クラスパターンの定型句として覚えておきましょう。</li>
+        <li><code>function Pet:feed(amount)</code>のようなコロン記法は、暗黙的に第1引数<code>self</code>を受け取ります。ドット記法(<code>function Pet.feed(self, amount)</code>)と完全に同じ意味ですが、コロン記法の方が「このインスタンス自身のメソッド」であることが分かりやすくなります。</li>
+        <li>複雑な継承(クラスを継承したクラス)を実現するには、さらに複数のメタテーブルを連結する必要があり、コードが読みにくくなりがちです。本当に必要な場合を除き、シンプルなテーブル+関数の組み合わせで十分なことも多いです。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>QBCoreの<code>Player.Functions.AddMoney(...)</code>のような書き方や、ESXの<code>xPlayer.getMoney()</code>は、まさにこのメタテーブルによる疑似クラスパターンで実装されています。フレームワークのソースコードを読むときの理解の助けになります。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

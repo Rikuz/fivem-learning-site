@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>StateBagsの応用パターン | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t5-09-statebags-advanced">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="5">⚫ 上級</span>
+      <span class="badge category-badge">⚡ パフォーマンス</span>
+      <span class="badge category-badge">📡 イベント/通信</span>
+    </div>
+
+    <h1>StateBagsの応用パターン</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>StateBags(Tier5-03)に複雑なデータを持たせる際の設計、変更検知の絞り込み、ルーティングバケットとの併用</strong>といった、実運用でよく使われる応用パターンを実装できるようになります。</p>
+      <p><strong>こんな時に使う:</strong> 複数の値をまとめて1つのStateBagキーで管理したい、特定の値の変化だけを効率よく検知したいとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>Tier5-03では単一の値(<code>job</code>等)をStateBagに設定する例を扱いました。実運用では、複数の関連する値をまとめてテーブルとして持たせたり、特定のキーの変化だけをclient側で監視したりする場面が多くあります。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>複数の値をまとめたテーブルを持たせる</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">-- server.lua
+Player(playerId).state:set('status', {
+    hunger = 80,
+    thirst = 60,
+    stamina = 100,
+}, true)</code></pre>
+      </div>
+
+      <h3>特定のキーの変化だけを監視する(第2引数でキーを絞り込む)</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">-- client.lua
+-- 第2引数を空文字列 '' にすると全エンティティのstatusの変化を監視する
+AddStateBagChangeHandler('status', '', function(bagName, key, value, reserved, replicated)
+    if value.hunger < 20 then
+        print(bagName .. 'の空腹度が低下しています')
+    end
+end)
+
+-- 特定のプレイヤーのbagNameだけを対象にしたい場合は、bagNameを直接指定する
+-- 例: AddStateBagChangeHandler('status', ('player:%s'):format(playerId), handler)</code></pre>
+      </div>
+
+      <h3>ルーティングバケット(Tier5-08)と組み合わせる</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">-- 強盗インスタンス内だけで共有したい進行状況をStateBagsで管理する
+Entity(heistDoor).state:set('isBreached', false, true)
+
+AddStateBagChangeHandler('isBreached', '', function(bagName, key, value)
+    if value == true then
+        print('ドアが突破されました')
+    end
+end)</code></pre>
+      </div>
+      <p>ルーティングバケットが分かれていても、StateBagの変更通知はバケットの境界を越えて届く場合があるため、本当にそのインスタンス内だけで完結させたい情報は、バケットIDを含めたキー設計(例: <code>heist_100_doorState</code>)にするなどの工夫が必要になることがあります。</p>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li>StateBagに大きなテーブルを頻繁に<code>set</code>すると、その都度シリアライズ(データを送信用の形式に変換する処理)とネットワーク送信が発生し、負荷が高くなります。変化の少ない値をまとめる、更新頻度を抑えるといった工夫をしましょう(Tier5-01のパフォーマンス計測と組み合わせて確認するのがおすすめです)。</li>
+        <li><code>AddStateBagChangeHandler</code>のハンドラは、そのキーが変化するたびに呼ばれます。ハンドラの中で重い処理をすると、変化のたびに負荷がかかるため、最小限の処理にとどめてください。</li>
+        <li>複数のresourceが同じStateBagキーに書き込むと、お互いの値を上書きし合ってしまいます。キー名の命名規則(resource名を含める等)を決めておくと衝突を防げます。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>StateBagsは便利ですが万能ではありません。「多くのclientが継続的に参照する、比較的静的なデータ」に向いており、高頻度で細かく変わる座標などのデータには、既存のネイティブな同期機構を使う方が適しています(Tier5-03の補足も参照してください)。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

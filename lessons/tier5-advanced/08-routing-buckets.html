@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ルーティングバケットでインスタンスを分ける | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t5-08-routing-buckets">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="5">⚫ 上級</span>
+      <span class="badge category-badge">⚡ パフォーマンス</span>
+      <span class="badge category-badge">🌍 ワールド操作</span>
+    </div>
+
+    <h1>ルーティングバケットでインスタンスを分ける</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>プレイヤーやエンティティを別々の「見え方のグループ(バケット)」に分け、同じ座標にいても互いに見えない・干渉しない状態を作る</strong>ことができるようになります。</p>
+      <p><strong>こんな時に使う:</strong> 強盗ミッションを複数グループが同時に進められるようにしたい(お互いのグループが見えないようにする)、キャラクター選択画面中は他プレイヤーと干渉させたくないとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p><strong>ルーティングバケット</strong>は、サーバー上の全プレイヤー・エンティティに割り当てられる「グループ番号」のようなものです。デフォルトでは全員がバケット0に属しており、同じワールドを共有しています。異なるバケット番号を設定すると、そのプレイヤー(やエンティティ)は<strong>別のバケットに属するものを一切認識できなくなります</strong>(座標が同じでも、まるで別のインスタンスにいるかのように振る舞います)。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>server.lua: プレイヤーを別のバケットに移動する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local function movePlayerToInstance(playerId, bucketId)
+    SetPlayerRoutingBucket(playerId, bucketId)
+end
+
+-- 強盗グループを個別のインスタンスに入れる例
+RegisterCommand('startheist', function(source)
+    local heistGroupId = 100 + math.random(1, 999) -- グループごとに一意な番号を割り当てる
+
+    movePlayerToInstance(source, heistGroupId)
+    TriggerClientEvent('myscript:notify', source, '強盗インスタンスに移動しました')
+end, false)</code></pre>
+      </div>
+
+      <h3>エンティティ(NPC・車両)を特定のバケットに紐付ける</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local heistGuard = CreatePed(4, `s_m_y_swat_01`, 100.0, 200.0, 30.0, 0.0, true, false)
+SetEntityRoutingBucket(heistGuard, heistGroupId) -- このNPCはheistGroupId のバケットにいるプレイヤーにしか見えない</code></pre>
+      </div>
+
+      <h3>元のワールド(バケット0)に戻す</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">RegisterCommand('endheist', function(source)
+    SetPlayerRoutingBucket(source, 0)
+end, false)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li>プレイヤーをバケット移動した後、<strong>そのプレイヤーが生成したNPC・車両等も同じバケットに紐付ける必要があります</strong>。忘れると、プレイヤー本人は別インスタンスにいるのに、生成物だけが元のワールド(バケット0)に残ってしまいます。</li>
+        <li>バケット番号は「グローバルに全サーバーで共有される数値」です。複数の強盗グループを同時に走らせる場合、番号が重複しないよう管理する仕組み(上記コード例のようなランダム割り当てや、使用中バケットのリスト管理)が必要です。</li>
+        <li>チャット・イベント通知などの一部の仕組みは、デフォルトではバケットを考慮せず全員に送られます。バケットごとに独立させたい通知は、対象プレイヤーのバケットを確認してから送るなどの工夫が必要です。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>Tier5-03で学んだStateBagsと組み合わせることで、「同じバケット内のプレイヤーにだけ状態を同期する」といった、より高度な設計もできます(Tier5-09「StateBagsの応用パターン」で扱います)。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

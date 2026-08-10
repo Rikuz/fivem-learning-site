@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>コルーチンの基礎 | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t5-07-coroutines-basics">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="5">⚫ 上級</span>
+      <span class="badge category-badge">📘 Lua基礎</span>
+    </div>
+
+    <h1>コルーチンの基礎</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>コルーチン(処理を好きなタイミングで一時停止・再開できる仕組み)の基本を理解し、<code>CreateThread</code>との違いを説明できる</strong>ようになります。</p>
+      <p><strong>こんな時に使う:</strong> 複数のステップからなる処理を、途中で一時停止しながら順番に進めたいとき。FiveMのフレームワーク内部の非同期処理の仕組みを理解したいとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>Tier2-05で学んだ<code>CreateThread</code>はFiveM独自の仕組みですが、<strong>コルーチン(coroutine)</strong>はLua言語自体が持つ標準機能です。<code>coroutine.yield</code>で処理を一時停止し、<code>coroutine.resume</code>で再開できます。FiveMの内部でも、非同期処理をシンプルに書くための土台としてコルーチンが使われることがあります。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>コルーチンの基本</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local co = coroutine.create(function()
+    print('ステップ1')
+    coroutine.yield() -- ここで一時停止する
+
+    print('ステップ2')
+    coroutine.yield()
+
+    print('ステップ3')
+end)
+
+coroutine.resume(co) -- ステップ1 が出力される
+coroutine.resume(co) -- ステップ2 が出力される
+coroutine.resume(co) -- ステップ3 が出力される</code></pre>
+      </div>
+
+      <h3>値を渡しながら一時停止・再開する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local co = coroutine.create(function(startValue)
+    print('開始値: ' .. startValue)
+
+    local receivedValue = coroutine.yield('ステップ1完了')
+    print('受け取った値: ' .. receivedValue)
+end)
+
+local ok, message = coroutine.resume(co, 100)
+print(message) -- ステップ1完了
+
+coroutine.resume(co, 'こんにちは')</code></pre>
+      </div>
+
+      <h3>非同期処理をコルーチンで直列に見せる(概念)</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local function fetchDataSync(query)
+    local co = coroutine.running()
+    local result = nil
+
+    MySQL.Async.fetchAll(query, {}, function(data)
+        result = data
+        coroutine.resume(co) -- DB結果が返ってきたタイミングで再開する
+    end)
+
+    coroutine.yield() -- 結果が来るまで一時停止しておく
+    return result
+end
+
+CreateThread(function()
+    -- コルーチンの仕組みのおかげで、コールバックを書かずに「同期処理っぽく」書ける
+    local users = fetchDataSync('SELECT * FROM users')
+    print(#users)
+end)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li><code>coroutine.yield()</code>は、<strong>コルーチンの中からしか呼べません</strong>。通常の関数の中で直接呼ぶとエラーになります。</li>
+        <li>停止したままのコルーチンを二度と<code>resume</code>しないと、その中の処理は永遠に完了しません。多用しすぎると「どこで止まっているか」が把握しづらくなるため、複雑な非同期フローには慎重に使いましょう。</li>
+        <li><code>CreateThread</code>(FiveM独自、<code>Wait()</code>で制御される)と<code>coroutine</code>(Lua標準、<code>yield</code>/<code>resume</code>で制御される)は別の仕組みです。<code>CreateThread</code>の中身自体が実はコルーチンの応用として実装されている、という関係性ですが、通常のスクリプトを書く上では区別して使えれば十分です。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>コルーチンを直接扱う場面は多くありませんが、フレームワークやライブラリのソースコードを読んでいると「非同期処理を同期処理のように書くためのテクニック」として登場することがあります。仕組みを知っておくと、そうしたコードを読み解きやすくなります。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>
