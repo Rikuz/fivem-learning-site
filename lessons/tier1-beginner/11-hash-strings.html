@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GetHashKeyとハッシュ文字列 | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t1-11-hash-strings">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="1">🟢 入門</span>
+      <span class="badge category-badge">📘 Lua基礎</span>
+    </div>
+
+    <h1>GetHashKeyとハッシュ文字列</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong><code>GetHashKey</code>とバッククォート記法(<code>` `</code>)の意味を理解し、モデル名などの文字列をnative関数が要求するハッシュ値に正しく変換できる</strong>ようになります。</p>
+      <p><strong>こんな時に使う:</strong> Tier2-02で書いた<code>` a_m_m_business_01 `</code>のような記法の意味を知りたいとき、モデル名をハッシュに変換する処理を自分で書きたいとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>GTA Vのゲームエンジン内部では、ペドモデル名や武器名などの多くの文字列が、実際には<strong>ハッシュ値</strong>(文字列を一定の計算で変換した固定長の数値。同じ文字列からは必ず同じ数値が得られる)として扱われています。<code>GetHashKey('文字列')</code>という関数で、任意の文字列をこのハッシュ値に変換できます。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>GetHashKeyで明示的に変換する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local modelHash = GetHashKey('a_m_m_business_01')
+print(modelHash) -- 数値(例: -1656750862)が出力される
+
+local ped = CreatePed(4, modelHash, 100.0, 200.0, 30.0, 90.0, false, false)</code></pre>
+      </div>
+
+      <h3>バッククォート記法(糖衣構文)</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">-- 以下2行は完全に同じ意味
+local modelHash1 = GetHashKey('a_m_m_business_01')
+local modelHash2 = `a_m_m_business_01`
+
+print(modelHash1 == modelHash2) -- true</code></pre>
+      </div>
+      <p>FiveMのLua処理系には、バッククォートで囲んだ文字列を<strong>コンパイル時に自動でハッシュ値へ変換する</strong>という拡張機能があります。これまでのレッスンで使ってきた<code>` a_m_m_business_01 `</code>のような記法は、この糖衣構文(syntax sugar。書きやすくするための簡略記法)です。</p>
+
+      <h3>weapon名などでも同様に使える</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local weaponHash = `WEAPON_PISTOL`
+GiveWeaponToPed(PlayerPedId(), weaponHash, 100, false, true)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li>ハッシュ変換は<strong>不可逆</strong>です。ハッシュ値から元の文字列を復元することはできません(数値だけを見ても、何のモデルだったか分かりません)。デバッグ時は元の文字列をコメントで残しておくと分かりやすくなります。</li>
+        <li>大文字・小文字が異なると、別のハッシュ値になります。<code>` WEAPON_PISTOL `</code>と<code>` weapon_pistol `</code>は別の値として扱われるため、公式のモデル名・アイテム名の表記に正確に合わせる必要があります。</li>
+        <li><code>GetHashKey</code>は実行時に計算されるのに対し、バッククォート記法はコンパイル時に変換されるため、わずかに実行が速い場合があります。基本的にはどちらを使っても構いません(このサイトでは主にバッククォート記法を使っています)。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>変数に入った文字列をハッシュ化したい場合(コンパイル時に値が確定しない場合)は、バッククォート記法が使えないため<code>GetHashKey(変数)</code>を使う必要があります。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

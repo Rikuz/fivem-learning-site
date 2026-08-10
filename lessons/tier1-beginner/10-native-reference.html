@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ネイティブ関数リファレンスの読み方 | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t1-10-native-reference">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="1">🟢 入門</span>
+      <span class="badge category-badge">📘 Lua基礎</span>
+    </div>
+
+    <h1>ネイティブ関数リファレンスの読み方</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>docs.fivem.netのネイティブ関数リファレンスを自分で読み、知らない関数の使い方を調べられる</strong>ようになります。このサイトのレッスンに載っていない関数を使いたくなったときに役立つ、一生使えるスキルです。</p>
+      <p><strong>こんな時に使う:</strong> このサイトで扱っていないnative関数を使いたいとき、「この引数は何を意味しているんだろう」と迷ったとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p><strong>ネイティブ関数(native関数)</strong>は、これまでのレッスンで何度も登場した<code>CreatePed</code>や<code>GetEntityCoords</code>のような、FiveMがゲームエンジンを直接操作するために提供している組み込み関数です。全てのnative関数は<a href="https://docs.fivem.net/natives/" target="_blank" rel="noopener">docs.fivem.net/natives/</a>で検索・閲覧できます。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <p>コードそのものではなく、ドキュメントページの読み方を説明します。例として<code>CREATE_VEHICLE</code>(Luaでは<code>CreateVehicle</code>)のページを見てみましょう。</p>
+
+      <h3>1. 関数名の対応関係</h3>
+      <p>ドキュメント上は<code>CREATE_VEHICLE</code>のようにC言語風の大文字スネークケースで書かれていますが、Luaから呼ぶときは<code>CreateVehicle</code>のようにキャメルケースに変換されます。この変換ルールはどのnative関数でも共通です。</p>
+
+      <h3>2. 引数(Parameters)の読み方</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">-- ドキュメントの表記例(実際はページ内に表形式で記載されている):
+-- Hash modelHash, float x, float y, float z, float heading, BOOL isNetwork, BOOL netMissionEntity
+
+CreateVehicle(model, x, y, z, heading, isNetwork, netMissionEntity)</code></pre>
+      </div>
+      <p>型(<code>Hash</code>, <code>float</code>, <code>BOOL</code>等)と引数名が並んでいます。<code>Hash</code>は<code>GetHashKey</code>やバッククォート記法(次のレッスンで扱います)でハッシュ化した値を渡すという意味です。<code>BOOL</code>は<code>true</code>/<code>false</code>を渡します。</p>
+
+      <h3>3. client/server対応の見分け方</h3>
+      <p>ページ上部に「<strong>Client</strong>」「<strong>Server</strong>」といったタグや実行環境の表記があります。両方に対応している関数もあれば、client専用(画面表示・入力系)、server専用(プレイヤー管理系)の関数もあります。</p>
+
+      <h3>4. 戻り値(Return value)の確認</h3>
+      <p>ページ下部に戻り値の型が書かれています。<code>CreateVehicle</code>であれば<code>Vehicle</code>型(生成した車両のハンドル、つまり操作用のID)が返ってきます。</p>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li>ドキュメントの説明文だけでは動作イメージが掴みにくいnative関数もあります。関数名で検索し、コミュニティのフォーラム(forum.cfx.re)やGitHub上の実例コードを参考にするのも有効です。</li>
+        <li>一部のnative関数は非推奨(deprecated)になっていたり、GTA Online専用で意図通りに動かないものもあります。ページ上部の注記を確認してください。</li>
+        <li>ハッシュ値を渡す引数に文字列をそのまま渡すとエラーになります。<code>GetHashKey('文字列')</code>または<code>` 文字列 `</code>(バッククォート記法)で変換してから渡してください(次のレッスンで詳しく扱います)。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>VS Codeに「FiveM Natives」のような補完拡張機能を入れておくと、コードを書きながら引数のヒントが表示され、ドキュメントを開く回数を減らせます。ネイティブ関数は数百種類以上あるため、全てを覚える必要はなく、「調べれば使える」状態を目指しましょう。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Config.luaの設計パターン | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t1-09-config-pattern">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="1">🟢 入門</span>
+      <span class="badge category-badge">⚙️ 環境構築</span>
+    </div>
+
+    <h1>Config.luaの設計パターン</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>変更されやすい値(価格・座標・時間など)を1つの設定ファイルにまとめ、コードの他の部分から安全に参照する</strong>設計ができるようになります。</p>
+      <p><strong>こんな時に使う:</strong> ショップの価格を後から調整したい、座標を複数の場所で使い回したい、サーバーごとに設定を変えられるようにしたいとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>座標や価格などの値をコードのあちこちに直接書いてしまう(ハードコーディングする)と、後で変更するときに全箇所を探して直す必要が出てきます。<strong>Config.lua</strong>という1つのファイルに設定値をまとめ、<code>shared_script</code>(Tier1-04参照)として読み込むことで、修正箇所を1つに集約できます。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>Config.lua</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">Config = {}
+
+Config.ShopLocation = vector3(100.0, 200.0, 30.0)
+Config.ShopItems = {
+    { name = 'water', label = '水', price = 20 },
+    { name = 'bread', label = 'パン', price = 30 },
+}
+Config.RestockIntervalMinutes = 30</code></pre>
+      </div>
+
+      <h3>fxmanifest.lua</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">shared_script 'config.lua' -- client/serverどちらからも参照できるようにする
+
+client_script 'client.lua'
+server_script 'server.lua'</code></pre>
+      </div>
+
+      <h3>他のファイルからConfigを参照する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">-- server.lua
+RegisterNetEvent('myscript:buyItem')
+AddEventHandler('myscript:buyItem', function(itemName)
+    for _, item in ipairs(Config.ShopItems) do
+        if item.name == itemName then
+            print(('%sの価格は%s円です'):format(item.label, item.price))
+            return
+        end
+    end
+end)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li><code>Config.lua</code>を<code>shared_script</code>にし忘れて<code>client_script</code>だけに指定すると、server側から<code>Config</code>を参照した際に<code>nil</code>エラーになります。</li>
+        <li><code>Config = {}</code>のようにグローバル変数として定義するのが一般的ですが、他のresourceの<code>Config</code>と名前が衝突しないよう注意してください(1つのresource内で完結していれば問題ありません)。</li>
+        <li>設定値を変更しただけでは反映されません。Tier1-03で学んだように<code>restart リソース名</code>でresourceを再起動する必要があります。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>大規模なリソースでは<code>config/items.lua</code>、<code>config/locations.lua</code>のように用途ごとにConfigファイルを分割することもあります(Tier2-19「shared_scriptを使ったモジュール分割」で発展的に扱います)。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

@@ -113,6 +113,13 @@ window.LESSONS = LESSONS;
 | `targeting` | ターゲティング(ox_target等) |
 | `ui-library` | UIライブラリ(ox_lib等) |
 | `world` | ワールド操作(天候・時間) |
+| `effects` | エフェクト(パーティクル・サウンド) |
+| `appearance` | 外見・キャラクリエイト |
+| `camera` | カメラ演出 |
+| `gameplay` | 経済・ゲームプレイシステム |
+| `admin-tools` | 管理者・運用ツール |
+| `voice` | ボイス・無線 |
+| `dispatch` | ディスパッチ通知 |
 
 ---
 

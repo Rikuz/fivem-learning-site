@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>エラーハンドリング(pcall/xpcall) | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t1-07-error-handling">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="1">🟢 入門</span>
+      <span class="badge category-badge">📘 Lua基礎</span>
+    </div>
+
+    <h1>エラーハンドリング(pcall/xpcall)</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>一部の処理でエラーが起きても、スクリプト全体・resource全体を止めずに安全に処理を継続する</strong>ことができるようになります。</p>
+      <p><strong>こんな時に使う:</strong> 外部APIへの通信、DBの結果が想定と違う形で返ってきた場合、JSON文字列のパースなど「失敗する可能性がある処理」を実行するとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>通常、Luaの関数内でエラーが発生すると、そのエラーは呼び出し元に伝播し、対処しなければresource全体が止まってしまいます。<strong>pcall</strong>(protected call。関数を「保護された状態」で呼び出し、エラーが起きても落ちずに結果を返してくれる仕組み)を使うと、エラーを検知して自分で対処できます。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>pcallの基本</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local function riskyFunction()
+    error('何か問題が発生しました') -- 意図的にエラーを発生させる
+end
+
+local success, errorMessage = pcall(riskyFunction)
+
+if success then
+    print('正常に完了しました')
+else
+    print('エラーが発生しました: ' .. errorMessage)
+end</code></pre>
+      </div>
+
+      <h3>JSONパースなど、失敗しうる処理での活用</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local function safeJsonDecode(jsonString)
+    local success, result = pcall(json.decode, jsonString)
+
+    if success then
+        return result
+    else
+        print('JSONの解析に失敗しました: ' .. tostring(jsonString))
+        return nil
+    end
+end
+
+local data = safeJsonDecode('{invalid json')
+print(data) -- nil(エラーにならず安全に処理が続く)</code></pre>
+      </div>
+
+      <h3>xpcall: エラー内容をより詳しく扱いたい場合</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local function errorHandler(err)
+    return debug.traceback(err, 2) -- スタックトレース(呼び出し履歴)付きのエラー情報を作る
+end
+
+local success, result = xpcall(riskyFunction, errorHandler)
+
+if not success then
+    print('詳細なエラー情報:')
+    print(result)
+end</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li><code>pcall</code>は「起きる可能性のある異常」を扱うためのものです。プログラムの<strong>ロジックの間違い</strong>(変数名のタイプミス等)まで<code>pcall</code>で握りつぶしてしまうと、バグに気づきにくくなります。デバッグ中は積極的にエラーメッセージを<code>print</code>で表示しましょう。</li>
+        <li><code>pcall</code>で囲んだからといって、処理自体が「成功した」わけではありません。<code>success</code>の値を必ず確認し、失敗時の代替処理(デフォルト値を使う、通知を出す等)を書いてください。</li>
+        <li>全ての処理を<code>pcall</code>で囲む必要はありません。むしろ普段は自然にエラーを出して気づける状態にしておき、「外部要因で失敗しうる処理」だけを<code>pcall</code>で保護するのが良い設計です。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p><code>pcall</code>の第2引数以降には、保護したい関数に渡す引数をそのまま続けて書けます(上記の<code>pcall(json.decode, jsonString)</code>の<code>jsonString</code>部分)。DB連携(Tier3)や外部API連携(Tier3-22)など、失敗しうる処理を扱うレッスンで今後も活用します。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Gitでのバージョン管理 | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t1-08-git-basics">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="1">🟢 入門</span>
+      <span class="badge category-badge">⚙️ 環境構築</span>
+    </div>
+
+    <h1>Gitでのバージョン管理</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>自分のresourceフォルダの変更履歴をGitで管理し、いつでも過去の状態に戻せる</strong>ようになります。</p>
+      <p><strong>こんな時に使う:</strong> 「昨日まで動いていたのに、今日変更したら壊れた」というときに、変更前の状態に戻したいとき。複数人で同じスクリプトを編集するとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p><strong>Git</strong>(ファイルの変更履歴を記録・管理するバージョン管理システム)を使うと、「いつ・どのファイルの・どこを変更したか」が全て記録され、必要になれば過去の状態に戻せます。resourceフォルダ単位でGit管理するのが一般的です。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>Gitリポジトリを初期化する</h3>
+      <div class="code-block">
+        <pre><code class="language-bash">cd C:\fxserver\resources\[local]\my-first-script
+git init</code></pre>
+      </div>
+
+      <h3>.gitignoreを作成する(記録しないファイルを指定)</h3>
+      <div class="code-block">
+        <pre><code class="language-bash"># .gitignore
+node_modules/
+*.log
+.env</code></pre>
+      </div>
+      <p><code>.gitignore</code>(Gitの記録対象から除外するファイル・フォルダを指定する設定ファイル)を用意しておくと、ビルド成果物や個人の設定ファイルなど、共有すべきでないファイルを誤ってコミットせずに済みます。</p>
+
+      <h3>変更を記録する(コミット)</h3>
+      <div class="code-block">
+        <pre><code class="language-bash">git add fxmanifest.lua client.lua server.lua
+git commit -m "最初のスクリプトを作成"</code></pre>
+      </div>
+
+      <h3>変更履歴を確認する</h3>
+      <div class="code-block">
+        <pre><code class="language-bash">git log --oneline</code></pre>
+      </div>
+
+      <h3>特定のコミット時点まで戻す</h3>
+      <div class="code-block">
+        <pre><code class="language-bash"># 直前のコミットに戻す(作業中の変更は破棄される点に注意)
+git checkout -- .
+
+# 特定のコミットの内容を確認する
+git show &lt;コミットハッシュ&gt;</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li><code>git add</code>し忘れたファイルはコミットに含まれません。<code>git status</code>で「変更されたが記録されていないファイル」を確認する癖をつけましょう。</li>
+        <li>ライセンスキーやDBパスワードなど、秘密情報を含むファイルを誤ってコミットしないよう注意してください(<code>.gitignore</code>で除外するか、環境変数化する)。一度公開リポジトリにpushしてしまうと、削除しても履歴に残り続けます。</li>
+        <li><code>git checkout -- .</code>のような変更破棄コマンドは<strong>取り消せません</strong>。実行前に本当に破棄してよい変更か確認してください。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>GitHubのようなリモートリポジトリサービスと組み合わせれば、複数人での共同開発やバックアップにも使えます(このサイト自体もGitHub Pagesで公開されており、同じ仕組みを使っています)。まずは自分のPC内だけでコミットする習慣から始めるのがおすすめです。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

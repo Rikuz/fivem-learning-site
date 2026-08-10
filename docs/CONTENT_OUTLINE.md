@@ -2,7 +2,7 @@
 
 このドキュメントが**コンテンツ制作の唯一の正とする仕様書**です。Claude Codeはレッスン本文を書く際、必ずこの一覧の説明・使用構文に従ってください。ここに書かれていない仕様を憶測で追加しないこと。
 
-5つのtier × 各5レッスン = 計25レッスンをMVP(Phase 1実装範囲)とした。以降、要望に応じてレッスンを追加しており(2026-08-10時点で34レッスン)、tierごとの件数は5件に固定されない。追加する場合も、同じtier構造・カテゴリキーの枠組みを使うこと。
+5つのtier × 各5レッスン = 計25レッスンをMVP(Phase 1実装範囲)とした。以降、要望に応じてレッスンを追加しており(2026-08-10時点で88レッスン)、tierごとの件数は5件に固定されない。追加する場合も、同じtier構造・カテゴリキーの枠組みを使うこと。
 
 ---
 
@@ -16,6 +16,11 @@
 | `t1-04-fxmanifest` | fxmanifest.luaを理解する | `environment` | t1-03 | `fx_version`, `game`, `client_script`, `server_script`, `shared_script`, `dependency`の意味と使い分け |
 | `t1-05-debug-basics` | デバッグの基本 | `lua-basics` | t1-03 | F8コンソールの開き方、エラーメッセージの読み方(ファイル名・行番号の見方)、`print()`を使った原因の切り分け方 |
 | `t1-06-string-table-utils` | 文字列・テーブル操作の応用 | `lua-basics` | t1-02 | `string.format`, `string.upper`/`lower`, `string.find`、`table.insert`/`remove`、`pairs`と`ipairs`の違い |
+| `t1-07-error-handling` | エラーハンドリング(pcall/xpcall) | `lua-basics` | t1-02 | `pcall`/`xpcall`でエラーを捕捉し、スクリプト全体を止めずに処理を継続する方法 |
+| `t1-08-git-basics` | Gitでのバージョン管理 | `environment` | t1-01 | resourceフォルダのGit管理、コミット・巻き戻し、`.gitignore`の設定 |
+| `t1-09-config-pattern` | Config.luaの設計パターン | `environment` | t1-04 | 設定値を`Config.lua`にまとめ`shared_script`として参照する設計パターン |
+| `t1-10-native-reference` | ネイティブ関数リファレンスの読み方 | `lua-basics` | t1-01 | docs.fivem.netの読み方、引数・戻り値の見方、client/server対応の見分け方 |
+| `t1-11-hash-strings` | GetHashKeyとハッシュ文字列 | `lua-basics` | t1-02 | `GetHashKey`の役割、`` `モデル名` ``バッククォート記法がハッシュ変換の糖衣構文であること |
 
 ---
 
@@ -31,6 +36,17 @@
 | `t2-06-spawn-vehicle` | 車両を生成・操作する | `vehicle` | t2-02 | `CreateVehicle`で車両を生成、`SetPedIntoVehicle`でプレイヤーを乗せる、`SetVehicleNumberPlateText`、`DeleteVehicle`での削除 |
 | `t2-07-play-animation` | アニメーションを再生する | `animation` | t2-02 | `RequestAnimDict`でアニメ辞書を読み込み、`TaskPlayAnim`で再生、`RemoveAnimDict`で解放 |
 | `t2-08-weather-time-sync` | 天候・時間を同期する | `world`, `events` | t2-01 | `NetworkOverrideClockTime`での時間設定、`SetWeatherTypeOvertimePersist`等の天候native、イベントで全clientに同期させる設計 |
+| `t2-09-create-object` | オブジェクト(プロップ)を生成・設置する | `npc-entity` | t2-02 | `CreateObject`でプロップを生成、`DeleteObject`で削除 |
+| `t2-10-camera-control` | カメラを演出する | `camera` | t2-01 | `CreateCamWithParams`、`RenderScriptCams`でカメラを切り替える簡易カットシーン |
+| `t2-11-particle-effects` | パーティクルエフェクトを再生する | `effects` | t2-02 | `RequestNamedPtfxAsset`、`StartParticleFxNonLoopedAtCoord`で炎・煙・火花を再生 |
+| `t2-12-play-sound` | サウンドを再生する | `effects` | t2-01 | `PlaySoundFrontend`、`PlaySoundFromCoord`で効果音・座標付きサウンドを再生 |
+| `t2-13-ped-appearance` | ペドの服装・見た目を変更する | `appearance` | t2-02 | `SetPedComponentVariation`、`SetPedPropIndex`で服装・装飾品を変更 |
+| `t2-14-vehicle-repair` | 車両の修理・ダメージ管理 | `vehicle` | t2-06 | `SetVehicleFixed`、`GetVehicleEngineHealth`で車両を修理・状態確認 |
+| `t2-15-player-dropped` | 切断理由の取得と後処理 | `events` | t2-01 | `playerDropped`イベントで切断理由取得、切断時のクリーンアップ処理 |
+| `t2-16-keybind-mapping` | キーバインド設定 | `events` | t2-04 | `RegisterKeyMapping`でプレイヤーが変更可能なキー割り当てを登録 |
+| `t2-17-raycast-target` | 照準先のエンティティを取得する | `targeting` | t2-02 | `GetEntityPlayerIsFreeAimingAt`、`StartShapeTestRay`で照準先を取得 |
+| `t2-18-custom-zones` | エリア判定を自作する | `world` | t2-01 | 座標・半径・多角形での範囲判定を自作するゾーンシステム |
+| `t2-19-shared-modules` | shared_scriptを使ったモジュール分割 | `environment` | t1-04 | `shared_script`でclient/server共通コードを整理するファイル分割設計 |
 
 ---
 
@@ -46,6 +62,27 @@
 | `t3-06-exports-between-resources` | exportsで関数を公開する | `events` | t2-01 | `exports('関数名', function)`でresource間から呼べる関数を公開する、`exports['resource名']:関数名(...)`で呼び出す |
 | `t3-07-ox-target` | ox_targetでインタラクションを作る | `targeting` | t2-02 | 下記「ox_target 正確な構文」を使用。`addBoxZone`/`addModel`でターゲット可能なゾーン・モデルを登録する |
 | `t3-08-ox-lib-notify-progress` | ox_libで通知・プログレスバーを出す | `ui-library` | t3-01 | 下記「ox_lib 正確な構文」を使用。`lib.notify`で通知、`lib.progressBar`で進捗バー付きアクションを実装する |
+| `t3-09-multi-resource-structure` | 複数resourceにまたがるプロジェクト構成のコツ | `environment` | t3-06 | 機能ごとのresource分割基準、命名規則、`dependency`での依存関係管理 |
+| `t3-10-death-revive-system` | 死亡・蘇生(リバイブ)システムの基礎 | `gameplay` | t2-01 | `wasted`イベントの検知、ダウン状態への遷移、蘇生コマンドでの復帰処理 |
+| `t3-11-scaleform` | Scaleform(GTA組み込みUI部品)を使う | `nui` | t3-01 | `RequestScaleformMovie`、`BeginScaleformMovieMethod`でGTA標準UIを再現 |
+| `t3-12-drawtext3d` | 頭上にフローティングテキストを表示する | `nui` | t2-01 | `SetDrawOrigin`等でワールド座標にテキストを描画する自作DrawText3D |
+| `t3-13-custom-context-menu` | 独自のコンテキストメニューを自作する | `nui` | t3-02 | NUI+`RegisterNUICallback`でox_libなしのコンテキストメニューを自作 |
+| `t3-14-notification-queue` | 通知のキュー管理 | `nui` | t3-01 | JS側で通知を順番に表示するキュー(待ち行列)の実装 |
+| `t3-15-autosave-pattern` | プレイヤーデータの自動保存設計 | `database` | t3-03 | 切断時保存+定期オートセーブループでデータ損失を減らす設計 |
+| `t3-16-cache-strategy` | キャッシュ戦略 | `database`, `performance` | t3-03 | 頻繁に参照するデータをメモリキャッシュしDB問い合わせを減らす |
+| `t3-17-json-vs-relational` | JSON保存 vs リレーショナル設計の使い分け | `database` | t3-03 | JSON列にまとめる設計とテーブル正規化のメリット・デメリット比較 |
+| `t3-18-garage-basics` | ガレージシステムの基礎設計 | `vehicle`, `framework` | t2-06, t3-03 | 所有車両のDB保存、格納/出庫の基本フロー |
+| `t3-19-whitelist-application` | ホワイトリスト・応募フォームシステム | `security` | t3-05 | `playerConnecting`でのホワイトリスト外接続拒否、応募承認プロセスの設計 |
+| `t3-20-admin-menu-basics` | 管理者メニューの基礎設計 | `admin-tools` | t3-02, t2-04 | 権限チェック付きコマンドでNUIメニューを開き、プレイヤー一覧・操作ボタンを実装 |
+| `t3-21-report-ticket-system` | 通報・チケットシステムの基礎 | `admin-tools` | t3-03 | 通報のDB記録、管理者による一覧・対応済み管理の簡易チケットシステム |
+| `t3-22-discord-webhook-log` | 重要操作をDiscord Webhookでログ収集する | `admin-tools`, `events` | t3-03 | `PerformHttpRequest`でDiscord Webhookに送信し重要操作を外部記録 |
+| `t3-23-crafting-system` | クラフト(製作)システムの基礎 | `gameplay` | t3-04 | 素材チェック→消費→完成品付与のクラフト処理フロー |
+| `t3-24-fishing-mining-minigame` | 釣り・採掘などのミニゲームループ | `gameplay` | t3-08 | プログレスバー+確率抽選での繰り返しアクションのゲームループ |
+| `t3-25-skill-xp-system` | スキル・経験値(XP)システム | `gameplay` | t3-03 | 行動に応じたXP加算、レベルアップ判定、DB保存の基本設計 |
+| `t3-26-vending-shop-system` | 自動販売機・ショップシステム | `gameplay`, `database` | t3-04 | 商品リスト定義、所持金チェック、購入処理の基本フロー |
+| `t3-27-voice-proximity-concept` | 音声近接チャットの考え方 | `voice` | t2-01 | pma-voice等の近接ボイスがルーティングバケット等と組み合わさる仕組みの考え方 |
+| `t3-28-radio-channel-system` | 無線チャンネルシステムの基礎 | `voice` | t3-27 | チャンネルIDでのプレイヤーグループ管理、同一チャンネル内通信の設計 |
+| `t3-29-qb-target` | qb-targetでインタラクションを作る | `targeting` | t3-07 | 下記「qb-target 正確な構文」を使用。`AddBoxZone`等でox_targetの代替として使う |
 
 ### exports 正確な構文(FiveM公式ドキュメント準拠)
 
@@ -93,6 +130,30 @@ exports.ox_target:addModel('a_m_m_business_01', {
 })
 ```
 > ※`addBoxZone`の`options`は`event`(TriggerEventで発火するイベント名)または`onSelect`(直接呼ばれる関数)のどちらかを指定できる。`addEntity`(ネットワークID指定)・`addLocalEntity`(エンティティハンドル指定)・`removeZone`等の関数もある。ox_targetはOverextended(CommunityOx)がメンテナンスしており、バージョンによってオプションが追加される場合があるため、導入しているバージョンの公式ドキュメント(overextended.dev/docs/ox_target)も確認すること。
+
+### qb-target 正確な構文(要順守・憶測禁止。docs.qbcore.org 及び github.com/qbcore-framework/qb-target/EXAMPLES.md で確認済み)
+
+```lua
+exports['qb-target']:AddBoxZone("MissionRowDutyClipboard", vector3(441.7989, -982.0529, 30.67834), 0.45, 0.35, {
+    name = "MissionRowDutyClipboard",
+    heading = 11.0,
+    debugPoly = false,
+    minZ = 30.77834,
+    maxZ = 30.87834,
+}, {
+    options = {
+        {
+            type = "client", -- 'client'ならclient側イベント、'server'ならserver側イベントが発火する
+            event = "qb-policejob:ToggleDuty",
+            icon = "fas fa-sign-in-alt",
+            label = "Sign In",
+            job = "police", -- この職業のプレイヤーにしか選択肢を表示しない(省略可)
+        },
+    },
+    distance = 2.5
+})
+```
+> ※第1引数はゾーンの一意な名前、第2引数は中心座標、第3・4引数は長さ・幅(float)。`AddTargetModel`(モデル指定)・`AddTargetEntity`(エンティティ指定)・`RemoveZone`等の関数もある。qb-targetはox_targetと並んでよく使われる代替ライブラリで、どちらか一方を導入して使う(併用は非推奨)。バージョンによってオプションが変わる場合があるため、導入しているバージョンのドキュメント(docs.qbcore.org)も確認すること。
 
 ### ox_lib 正確な構文(要順守・憶測禁止。overextended.dev/ox_lib/Modules/Interface/Client 各ページで確認済み)
 
@@ -147,6 +208,18 @@ local count = exports.ox_inventory:GetItemCount(source, 'water')
 | `t4-05-lb-phone-nui-bridge` | lb-phoneアプリのUIとLua間通信 | `lb-phone`, `nui` | t4-04 | 通常のNUIとの違い(`SendNUIMessage`ではなく`SendCustomAppMessage`を使う点)、`onOpen`のタイミングとデータ送信の注意点 |
 | `t4-06-okok-banking-integration` | okokBankingV2と連携する | `okok`, `framework` | t4-03 | 下記「okokBankingV2 正確な構文」を使用。口座残高の取得・入出金・取引履歴取得を自作スクリプトから呼び出す |
 | `t4-07-ban-kick-system` | BAN・キック機能を実装する | `security` | t2-04, t3-05 | `DropPlayer`でキックする、`playerConnecting`イベントとdeferralsを使った接続時のBANチェック |
+| `t4-08-db-schema-migration` | DBスキーマのバージョン管理・マイグレーション | `database` | t3-03 | テーブル構造変更を安全に反映するマイグレーションSQLファイルの管理方法 |
+| `t4-09-player-loaded-event` | ログイン完了イベントを使う | `framework` | t4-01 | `esx:playerLoaded`、`QBCore:Client:OnPlayerLoaded`でのログイン後初期化処理 |
+| `t4-10-business-account-management` | ビジネス/組織口座の管理 | `framework`, `okok` | t4-06 | job名を口座識別子に使ったsociety口座の管理・入出金設計 |
+| `t4-11-screenshot-basic` | screenshot-basicでスクリーンショットを取得する | `admin-tools` | t3-20 | 下記「screenshot-basic 正確な構文」を使用。証拠保全用のスクリーンショット取得 |
+| `t4-12-used-car-dealership` | 中古車販売店(ディーラー)システム | `gameplay`, `vehicle` | t3-18 | 車両カタログ提示、試乗、購入処理、所有車両登録の基本フロー |
+| `t4-13-discord-oauth-integration` | Discord連携(OAuth・ロール確認) | `events` | t3-22 | Discord identifierとBot連携でのロール確認の概念 |
+| `t4-14-ox-doorlock` | ox_doorlockでドアを施錠する | `targeting`, `world` | t3-07 | 下記「ox_doorlock 正確な構文」を使用。`setDoorState`等でドアを施錠・解錠 |
+| `t4-15-ox-fuel` | ox_fuelで燃料システムを連携する | `vehicle` | t2-14 | 下記「ox_fuel 正確な構文」を使用。`setPaymentMethod`等で給油の支払い方法をカスタマイズ |
+| `t4-16-cd-dispatch` | cd_dispatchで警察無線通知を送る | `dispatch` | t3-28 | 下記「cd_dispatch 正確な構文」を使用。事件情報を送りディスパッチ通知を表示 |
+| `t4-17-illenium-appearance` | illenium-appearanceでキャラクリエイトする | `appearance` | t2-13 | 下記「illenium-appearance 正確な構文」を使用。`startPlayerCustomization`でキャラクリエイト画面を開く |
+| `t4-18-qb-clothing` | qb-clothingで服屋システムを使う | `appearance`, `framework` | t4-17 | 下記「qb-clothing 正確な構文」を使用。服屋メニュー・ワードローブを開く |
+| `t4-19-renewed-banking` | Renewed-Bankingと連携する | `framework`, `database` | t4-06 | 下記「Renewed-Banking 正確な構文」を使用。okokBanking以外の銀行スクリプト連携 |
 
 ### okokBankingV2 正確な構文(要順守・憶測禁止。docs.okokscripts.io/scripts/okokbankingv2/exports で確認済み)
 
@@ -268,6 +341,125 @@ window.addEventListener('message', (event) => {
 ```
 > ※`onOpen`コールバックのタイミングではUI(iframe)がまだ読み込み中の場合があるため、`onOpen`から直接初期データを送らないこと。UI側から「準備完了」を伝えるコールバックを送ってもらい、それを受けてからLua側がデータを送る設計にする。
 
+### screenshot-basic 正確な構文(要順守・憶測禁止。github.com/citizenfx/screenshot-basic README で確認済み)
+
+```lua
+exports['screenshot-basic']:requestClientScreenshot(GetPlayers()[1], {
+    fileName = 'cache/screenshot.jpg'
+    -- encoding = 'png' | 'jpg' | 'webp' (省略時は'jpg')
+    -- quality = 0.0〜1.0 (省略時は0.92)
+}, function(err, data)
+    print('err', err)
+    print('data', data) -- fileName省略時はここに画像のdata URIが入る
+end)
+```
+> ※`requestClientScreenshot`はサーバー側からエクスポートを呼ぶ形。第1引数はプレイヤーID。`fileName`を指定するとサーバーの`cache/`以下にファイル保存され、省略するとコールバックにdata URI文字列が渡る。
+
+### ox_doorlock 正確な構文(要順守・憶測禁止。overextended.dev/docs/ox_doorlock/Server/functions で確認済み)
+
+```lua
+-- ドアを施錠する(state: true/1で施錠、false/0で解錠)
+exports.ox_doorlock:setDoorState(doorId, true)
+
+-- ドアのデータを取得する(id・name・座標・現在の施錠状態などを含むテーブル)
+local door = exports.ox_doorlock:getDoor(doorId)
+local doorByName = exports.ox_doorlock:getDoorFromName('my_door_name')
+
+-- ドアの設定を編集する
+exports.ox_doorlock:editDoor(doorId, { distance = 3.0 })
+```
+> ※ox_doorlockのドア自体の登録は、Lua設定ファイルではなく**ゲーム内の`/doorlock`コマンド**でその場に立って作成し、DBに保存する方式(READMEに「Doors are stored in a database for ease-of-use」と明記)。`doorId`はDB上のドアのID、`name`は任意で付けられる識別名。バージョンによって仕様が変わる場合があるため公式ドキュメントも確認すること。
+
+### ox_fuel 正確な構文(要順守・憶測禁止。overextended.dev/ox_fuel 各ページで確認済み)
+
+```lua
+-- 支払い方法をカスタマイズする(ESXの例)
+exports.ox_fuel:setPaymentMethod(function(playerId, amount)
+    local xPlayer = ESX.GetPlayerFromId(playerId)
+    local bankAmount = xPlayer.getAccount('bank').money
+
+    if bankAmount >= amount then
+        xPlayer.removeAccountMoney('bank', amount)
+        return true
+    end
+
+    return false
+end)
+
+-- 現在の燃料残量を取得する(StateBag経由)
+local fuel = Entity(vehicleNetId).state.fuel
+```
+> ※ox_fuelはox_inventoryと組み合わせて使う設計。`setMoneyCheck`で所持金チェック方法もカスタマイズできる。詳細は導入しているバージョンの公式ドキュメントを確認すること。
+
+### cd_dispatch 正確な構文(要順守・憶測禁止。docs.codesign.pro/paid-scripts/dispatch/resource-integration で確認済み)
+
+```lua
+local data = exports['cd_dispatch']:GetPlayerInfo()
+
+TriggerServerEvent('cd_dispatch:AddNotification', {
+    job_table = { 'police' },
+    coords = data.coords,
+    title = '10-15 - Store Robbery',
+    message = ('%sが%sで強盗をしています'):format(data.sex, data.street),
+    flash = 0,
+    unique_id = data.unique_id,
+    sound = 1,
+    blip = {
+        sprite = 431,
+        scale = 1.2,
+        colour = 3,
+        flashes = false,
+        text = '911 - Store Robbery',
+        time = 5,
+        radius = 0,
+    }
+})
+```
+> ※`job_table`に通知先のjob名を配列で指定する。`GetPlayerInfo`エクスポートで現在地・性別・通り名などを取得できる。cd_dispatchは有償スクリプトであり、バージョンによってフィールドが増減する場合があるため公式ドキュメントを確認すること。
+
+### illenium-appearance 正確な構文(要順守・憶測禁止。github.com/iLLeniumStudios/illenium-appearance ソースコードで確認済み)
+
+```lua
+-- キャラクリエイト画面を開く(client側)
+exports['illenium-appearance']:startPlayerCustomization(function(appearance)
+    if appearance then
+        -- 確定された場合、appearanceに見た目データが入る
+        TriggerServerEvent('myscript:saveAppearance', appearance)
+    else
+        -- キャンセルされた場合はnilが渡る
+    end
+end)
+```
+> ※第2引数に設定用のconfigテーブルを渡すこともできる。QBCore/ESX両対応をうたうリソースで、バージョンによってconfigの項目が変わる場合があるため公式ドキュメント(docs.illenium.dev)も確認すること。
+
+### qb-clothing 正確な構文(要順守・憶測禁止。github.com/qbcore-framework/qb-clothing の client.lua で確認済み)
+
+```lua
+-- 服屋(見た目編集含む)メニューを開く
+TriggerEvent('qb-clothing:client:openMenu')
+
+-- 保存済みのワードローブ(アウトフィット)一覧を開く
+TriggerEvent('qb-clothing:client:openOutfitMenu')
+```
+> ※どちらも引数なしで呼び出すclientイベント。実際にどの店舗でどちらを開くかは、Tier3の`ox_target`/`qb-target`のインタラクションと組み合わせて実装することが多い。バージョンによってイベント名が変わる場合があるため、導入しているqb-clothingのソースコード・ドキュメントも確認すること。
+
+### Renewed-Banking 正確な構文(要順守・憶測禁止。renewed.dev/banking/exports で確認済み)
+
+```lua
+-- 口座残高を取得する(存在しない場合はfalse)
+local amount = exports['Renewed-Banking']:getAccountMoney(account)
+
+-- 入金する(成功時true)
+local success = exports['Renewed-Banking']:addAccountMoney(account, 500)
+
+-- 出金する(成功時true)
+local success2 = exports['Renewed-Banking']:removeAccountMoney(account, 200)
+
+-- 職業(job)ごとの組織口座を新規作成する
+exports['Renewed-Banking']:CreateJobAccount(jobTable, initialBalance)
+```
+> ※`account`にはjob名や個人の識別子を指定する。okokBanking(Tier4-06)とは別の銀行スクリプトで、両方を同時に導入することは通常ない(どちらか一方を選ぶ)。バージョンによって仕様が変わる場合があるため公式ドキュメントも確認すること。
+
 ---
 
 ## Tier 5: 上級(⚫ advanced)— 安定したサーバーを作れるようになる
@@ -279,12 +471,17 @@ window.addEventListener('message', (event) => {
 | `t5-03-statebags` | StateBagsによる同期 | `events`, `performance` | t4-01 | Entity StateBag / Player StateBagを使った効率的なデータ同期(頻繁なイベント発火の代替) |
 | `t5-04-security-hardening` | セキュリティ強化(チート対策) | `security` | t3-05 | サーバー権威設計の徹底、よくある改ざん手口とその対策パターン |
 | `t5-05-advanced-nui` | 高度なNUI(React等の活用) | `nui` | t3-02 | ビルドツール(Vite等)を使ったNUI構築の考え方と、この学習サイトのようなビルドレス構成との違い・使い分け |
+| `t5-06-metatables-oop` | メタテーブルで疑似クラスを作る | `lua-basics` | t1-06 | `setmetatable`/`__index`でLuaにクラス・インスタンスの概念を持ち込む |
+| `t5-07-coroutines-basics` | コルーチンの基礎 | `lua-basics` | t2-05 | `coroutine.create`/`resume`/`yield`の仕組みと`CreateThread`との違い |
+| `t5-08-routing-buckets` | ルーティングバケットでインスタンスを分ける | `performance`, `world` | t4-01 | `SetPlayerRoutingBucket`/`SetEntityRoutingBucket`でプレイヤーごとに異なるインスタンス(次元)を作る |
+| `t5-09-statebags-advanced` | StateBagsの応用パターン | `performance`, `events` | t5-03 | 複雑なテーブルを持たせる設計、変更検知の絞り込み、ルーティングバケットとの併用 |
+| `t5-10-streaming-culling` | エンティティのストリーミング距離・カリング調整 | `performance` | t5-01 | `SetEntityDistanceCullingRadius`等で大量エンティティ配置時の負荷を制御 |
 
 ---
 
 ## カテゴリキー一覧(`docs/ARCHITECTURE.md`と同期させること)
 
-`environment`, `lua-basics`, `npc-entity`, `nui`, `database`, `framework`, `okok`, `lb-phone`, `events`, `performance`, `security`, `vehicle`, `animation`, `targeting`, `ui-library`, `world`
+`environment`, `lua-basics`, `npc-entity`, `nui`, `database`, `framework`, `okok`, `lb-phone`, `events`, `performance`, `security`, `vehicle`, `animation`, `targeting`, `ui-library`, `world`, `effects`, `appearance`, `camera`, `gameplay`, `admin-tools`, `voice`, `dispatch`
 
 ## 今後レッスンを追加する場合のルール
 
