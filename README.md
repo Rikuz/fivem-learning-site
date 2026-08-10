@@ -1,30 +1,42 @@
-# FiveM スクリプト学習サイト — 設計一式
+# FiveM スクリプト学習サイト
 
-このフォルダは、Claude Codeに実装を依頼するための**設計ドキュメント一式**です。まだサイト本体(HTML/CSS/JS)は含まれていません。
+FiveM(GTA Vのマルチプレイヤー拡張フレームワーク)のスクリプト開発を、初めて触る人でも難易度を少しずつ上げながら学べる学習サイトです。ビルド不要の素のHTML/CSS/JavaScriptのみで作られています。
 
-## 使い方
+**公開URL: https://rikuz.github.io/fivem-learning-site/**
 
-1. このフォルダをそのままGitリポジトリのルートにする(`fivem-learning-site`などにリネームして良い)。
-2. Claude Codeをこのフォルダで起動する。`CLAUDE.md`が自動的に読み込まれる。
-3. `docs/IMPLEMENTATION_PLAN.md`のPhase 0から順に実装を依頼する。
+## 特徴
 
-## ファイル構成
+- **難易度別ロードマップ**(入門→初級→中級→中上級→上級、全25レッスン)と**カテゴリ別横断検索**(NPC配置・UI表示・DB連携など)の両方から同じレッスンにアクセスできます。
+- 各レッスンは実際に動くコード例つき(結論→説明→コード例→注意点→補足の構成で統一)。
+- 進捗は`localStorage`に保存され、次回訪問時も続きから再開できます。
+- 他スクリプトとの連携は**okokシリーズ**・**lb-phone**・**ESX/QBCore/Qbox/ox**に対応。実際のドキュメントで確認した構文を使用しています(詳細は各レッスンの補足を参照)。
 
-| ファイル | 役割 |
+## ローカルでの確認方法
+
+`index.html`をダブルクリックして直接開くだけで動作します(`file://`でも`fetch()`を使わない設計のため動作します)。
+
+簡易サーバーで確認したい場合は以下でも起動できます。
+
+```bash
+python3 -m http.server 8000
+# または
+npx serve .
+```
+
+## ディレクトリ構成
+
+| パス | 役割 |
 |---|---|
-| `CLAUDE.md` | Claude Codeへの最重要指示書。技術方針・レッスンの書き方ルール・テンプレートを定義 |
+| `CLAUDE.md` | Claude Codeへの実装指示書(技術方針・レッスンの書き方ルール・テンプレート) |
 | `docs/ARCHITECTURE.md` | ページ構成、データモデル(lessons-data.js)、進捗管理(localStorage)の設計 |
-| `docs/CONTENT_OUTLINE.md` | 全25レッスンのカリキュラム一覧。okok/lb-phone連携の正確な構文もここに記載済み |
+| `docs/CONTENT_OUTLINE.md` | 全25レッスンのカリキュラム一覧。okok/lb-phone/ox_inventory連携の正確な構文もここに記載 |
 | `docs/DESIGN_SYSTEM.md` | カラー・タイポグラフィ・コンポーネントのデザイン仕様 |
 | `docs/IMPLEMENTATION_PLAN.md` | Phase 0〜6の段階的な実装計画 |
-
-## この設計の要点(サマリー)
-
-- **難易度別ロードマップ**(入門→初級→中級→中上級→上級)と**カテゴリ別横断検索**(NPC配置・UI表示・DB連携など)の両方から同じレッスンにアクセスできる構成。
-- ビルドツール不要の素のHTML/CSS/JSで、`file://`で直接開いても動く設計。
-- 進捗は`localStorage`に保存され、次回訪問時も続きから再開できる。
-- 他スクリプトとの連携は**okokシリーズ**と**lb-phone**の2種類。実際のドキュメントで確認した正確なexport構文を`CONTENT_OUTLINE.md`に明記済み。
-- 本番公開先は **GitHub Pages**(プロジェクトページ)。サブディレクトリ配下で配信されるため、CSS/JS/リンクは全て相対パスで統一する(`CLAUDE.md`参照)。
+| `index.html` / `category.html` | トップ(難易度別ロードマップ)/ カテゴリ別一覧 |
+| `assets/css/` | 共通スタイル(base / components / lesson) |
+| `assets/js/` | レッスンデータ・進捗管理・描画ロジック |
+| `assets/vendor/prism/` | コードハイライト用Prism.js(ローカル同梱、CDN依存なし) |
+| `lessons/tier1-beginner/` 〜 `lessons/tier5-advanced/` | 各tierのレッスン本体(各5レッスン、計25) |
 
 ## 公開方法(GitHub Pages)
 
@@ -33,3 +45,5 @@
 3. **Source** を「Deploy from a branch」、**Branch** を `main` / `(root)` に設定して保存する。
 4. 数分後、`https://<GitHubユーザー名>.github.io/<リポジトリ名>/` で公開される。
 5. 公開後、相対パスの参照が正しく動いているか(CSS崩れ・リンク切れがないか)を必ず確認する。
+
+サブディレクトリ配下で配信されるプロジェクトページのため、CSS/JS/リンクの参照は全て相対パスで統一しています(`/assets/...`のようなルート相対パスは使用していません)。
