@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>証拠品・押収品管理 | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t4-31-evidence-management">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="4">🔴 中上級</span>
+      <span class="badge category-badge">👮 警察業務</span>
+      <span class="badge category-badge">🗄️ DB連携</span>
+    </div>
+
+    <h1>証拠品・押収品管理</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>逮捕時に押収したアイテムを警察専用の保管庫(evidence bag)に記録し、いつ・誰が・何を押収したかを事件番号(ケースID)ごとに管理できる</strong>ようになります。Tier3-37で学んだ<code>RegisterStash</code>の応用と、oxmysqlでの記録を組み合わせます。</p>
+      <p><strong>こんな時に使う:</strong> 逮捕(Tier4-29)や投獄(Tier4-30)の際に押収した違法薬物・盗品を、警察側が後から確認・処分できる形で保管したいとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>証拠品管理は「①アイテムの実体(所持品としての在庫)」と「②いつ誰が何を押収したかという記録(ログ)」の2つを分けて考えると設計しやすくなります。①はTier3-37の<code>RegisterStash</code>で警察専用のスタッシュを用意することで実現し、②は自作のDBテーブル(<code>evidence_log</code>)にオートセーブ(Tier3-15)と同じ考え方で記録します。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>server.lua: 証拠品保管庫をJobで制限して登録する(Tier3-37参照)</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">CreateThread(function()
+    -- RegisterStash(id, label, slots, weight, owner, groups)
+    -- owner=falseで共有、groups={ police = 0 }でpolice Jobのみアクセス可能にする
+    exports.ox_inventory:RegisterStash('police_evidence', '警察の証拠品保管庫', 100, 500000, false, { police = 0 })
+end)</code></pre>
+      </div>
+
+      <h3>SQL: 押収記録用テーブル(自作、evidence_log)</h3>
+      <div class="code-block">
+        <pre><code class="language-sql">CREATE TABLE IF NOT EXISTS `evidence_log` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `case_id` VARCHAR(50) NOT NULL,
+  `item_name` VARCHAR(50) NOT NULL,
+  `amount` INT NOT NULL,
+  `officer_identifier` VARCHAR(64) NOT NULL,
+  `suspect_identifier` VARCHAR(64) NOT NULL,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP
+);</code></pre>
+      </div>
+
+      <h3>server.lua: 押収処理(対象から没収し、保管庫に入れ、ログを残す)</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">RegisterNetEvent('evidence:seizeItem')
+AddEventHandler('evidence:seizeItem', function(targetId, itemName, amount, caseId)
+    local officerId = source
+
+    if not IsPlayerAceAllowed(officerId, 'job.police') then return end
+
+    local count = exports.ox_inventory:GetItemCount(targetId, itemName)
+    if not amount or amount < 1 or count < amount then
+        TriggerClientEvent('myscript:notify', officerId, '対象がそのアイテムを十分に所持していません', 'error')
+        return
+    end
+
+    -- 対象から没収する(Tier3-30のアイテム操作)
+    exports.ox_inventory:RemoveItem(targetId, itemName, amount)
+
+    -- 証拠品保管庫に入れる(RegisterStashで登録したスタッシュのidを指定する)
+    -- ※スタッシュへの直接AddItemは公式ドキュメントの表記通りに動作するはずですが、
+    --   バージョンによって差異が出る可能性があるため、導入時は必ず動作確認してください。
+    exports.ox_inventory:AddItem('police_evidence', itemName, amount)
+
+    -- 押収記録をDBに残す(Tier3-32のモダンAPI)
+    local officerIdentifier = GetPlayerIdentifierByType(officerId, 'license') -- Tier4-13のGetPlayerIdentifiers参照
+    local suspectIdentifier = GetPlayerIdentifierByType(targetId, 'license')
+
+    MySQL.insert('INSERT INTO evidence_log (case_id, item_name, amount, officer_identifier, suspect_identifier) VALUES (?, ?, ?, ?, ?)', {
+        caseId, itemName, amount, officerIdentifier, suspectIdentifier
+    })
+
+    TriggerClientEvent('myscript:notify', officerId, ('%sを%d個押収しました(ケース: %s)'):format(itemName, amount, caseId), 'success')
+end)</code></pre>
+      </div>
+
+      <h3>server.lua: ケースIDで押収履歴を検索する(MDT連携)</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">RegisterNUICallback('mdt:searchEvidence', function(data, cb)
+    local records = MySQL.query.await('SELECT * FROM evidence_log WHERE case_id = ? ORDER BY created_at DESC', {
+        data.caseId
+    })
+
+    cb(records or {})
+end)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li>押収処理の権限チェック(<code>job.police</code>)は必ずserver側の<code>evidence:seizeItem</code>ハンドラ内で行ってください。Tier3-20の管理者メニューと同じ注意点です。</li>
+        <li><code>police_evidence</code>スタッシュへの<code>AddItem</code>がバージョンによって想定通り動かない場合は、対象から<code>RemoveItem</code>した後、保管庫を開いた警察官が手動でアイテムをスタッシュにドラッグする運用に切り替えることも検討してください。</li>
+        <li>押収記録(<code>evidence_log</code>)は個人の識別子を含む機微な情報です。Tier3-21の通報システムと同様、閲覧できる対象を警察官のみに限定してください。</li>
+        <li>ケースID(<code>caseId</code>)の発行ルールを事前に決めておかないと、押収記録がバラバラになり後から追跡できなくなります。逮捕時に自動採番する仕組み(例: 日付+連番)を用意するのがおすすめです。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p class="version-note">スタッシュへの直接<code>AddItem</code>呼び出しは、ox_inventoryのバージョンによって挙動が変わる可能性があるため、導入時は必ず動作確認と公式ドキュメント(overextended.dev)の確認を行ってください。これで演習ex-11「麻薬密売シンジケート」で使う、犯罪側・警察側の両方の主要な仕組みが揃いました。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

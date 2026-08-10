@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>盗難車両の解体(チョップショップ) | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t4-26-chop-shop">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="4">🔴 中上級</span>
+      <span class="badge category-badge">🚨 犯罪行為</span>
+      <span class="badge category-badge">🚗 車両操作</span>
+    </div>
+
+    <h1>盗難車両の解体(チョップショップ)</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>盗んだ車両を指定エリアに持ち込んで解体し、パーツ(アイテム)として換金する</strong>チョップショップシステムを作れるようになります。Tier2-06の車両操作とTier4-25の故売の考え方を組み合わせた応用です。</p>
+      <p><strong>こんな時に使う:</strong> 盗難車両をそのまま乗り回すだけでなく、解体して部品として売る選択肢を用意したいとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>チョップショップは、①解体エリアに車両を持ち込む、②ox_targetで解体処理を開始する、③プログレスバー完了後に車両を削除しパーツアイテムを付与する、という流れです。所有者登録済みの車両(Tier3-18のガレージシステムで管理されている車両)を解体できないようにする判定も重要です。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>client.lua: 解体エリアでのインタラクション</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">exports.ox_target:addBoxZone({
+    coords = vec3(950.0, -50.0, 30.0),
+    size = vec3(10.0, 10.0, 4.0),
+    options = {
+        {
+            name = 'chop_vehicle',
+            icon = 'fa-solid fa-screwdriver-wrench',
+            label = '車両を解体する',
+            onSelect = function()
+                local vehicle = GetVehiclePedIsIn(PlayerPedId(), false)
+                if vehicle == 0 then
+                    TriggerEvent('myscript:notify', '車両に乗っていません')
+                    return
+                end
+
+                local plate = GetVehicleNumberPlateText(vehicle)
+                local netId = NetworkGetNetworkIdFromEntity(vehicle)
+
+                if lib.progressBar({ duration = 8000, label = '解体しています...', canCancel = true }) then
+                    TriggerServerEvent('chopshop:chopVehicle', netId, plate)
+                end
+            end,
+        }
+    }
+})</code></pre>
+      </div>
+
+      <h3>server.lua: 所有者登録済みでないことを確認してから解体する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">RegisterNetEvent('chopshop:chopVehicle')
+AddEventHandler('chopshop:chopVehicle', function(vehicleNetId, plate)
+    local playerId = source
+    local vehicle = NetworkGetEntityFromNetworkId(vehicleNetId)
+
+    if vehicle == 0 or not DoesEntityExist(vehicle) then return end
+
+    -- Tier3-18のowned_vehiclesテーブルに存在するプレートは解体禁止(自分の正規の車を誤って壊さないため)
+    -- Tier3-32の.awaitスタイル: コールバックを使わず、結果が返るまでこの行で待つ
+    local ownedId = MySQL.scalar.await('SELECT id FROM owned_vehicles WHERE plate = ? LIMIT 1', { plate })
+    if ownedId then
+        TriggerClientEvent('myscript:notify', playerId, 'この車両は登録済みのため解体できません', 'error')
+        return
+    end
+
+    -- 解体パーツをランダムに1〜3種類付与する
+    local parts = { 'car_engine_part', 'car_door_part', 'car_wheel_part' }
+    for _, part in ipairs(parts) do
+        if math.random() < 0.7 then -- 70%の確率で各パーツを入手
+            exports.ox_inventory:AddItem(playerId, part, 1)
+        end
+    end
+
+    SetEntityAsMissionEntity(vehicle, true, true)
+    DeleteEntity(vehicle)
+
+    TriggerClientEvent('myscript:notify', playerId, '車両を解体しました', 'success')
+    exports['my-wanted-system']:AddWantedLevel(playerId, 10, '車両解体')
+end)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li><code>MySQL.scalar.await</code>(Tier3-32参照)の中でDB問い合わせをしてから解体可否を判定してください。所有車両かどうかの確認をclient側だけで済ませると、改造クライアントで正規の車両も解体されてしまいます。</li>
+        <li>解体対象の車両は、必ず<code>NetworkGetEntityFromNetworkId</code>でネットワークID経由に取得し、存在確認(<code>DoesEntityExist</code>)をしてから処理してください。既に他プレイヤーが解体済みの車両に対して二重に処理が走ることを防げます。</li>
+        <li>パーツの入手確率を100%にすると、車両を壊すだけで確実に稼げてしまいバランスが崩れます。適度な失敗要素(上記コード例の70%抽選)を入れましょう。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>入手したパーツアイテムは、Tier4-25の故売システムでfence NPCに売却する、または将来的な整備・改造システムの材料として使う、といった発展ができます。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

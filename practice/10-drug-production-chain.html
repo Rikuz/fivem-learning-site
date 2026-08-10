@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>【犯罪トラック】違法薬物の生産チェーン | 実践演習 | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+  <link rel="stylesheet" href="../assets/css/lesson.css">
+</head>
+<body data-lesson-id="ex-10-drug-production-chain">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta exercise-difficulty">
+      <span class="badge tier-badge" data-tier="3">🟠 難易度: 中級</span>
+    </div>
+
+    <h1>【犯罪トラック】違法薬物の生産チェーン</h1>
+
+    <section class="conclusion">
+      <h2>概要</h2>
+      <p>「栽培→精製→販売」という複数工程からなる違法薬物の生産チェーンを作ります。ex-03(採掘ミニゲーム)の抽選パターンを、複数工程が連なる生産ラインへ発展させる演習です。</p>
+    </section>
+
+    <section class="directory-structure">
+      <h2>ディレクトリ構造</h2>
+      <pre class="directory-tree">ex10-drug-chain/
+├── fxmanifest.lua
+├── client.lua
+└── server.lua</pre>
+    </section>
+
+    <section class="spec">
+      <h2>処理仕様</h2>
+      <ul class="spec-list">
+        <li>「栽培」「精製」「販売」の3工程それぞれに、専用の座標(またはox_targetのゾーン)を用意する。</li>
+        <li>栽培工程: プログレスバー(t3-08)を伴う採取アクションで「生の原料」アイテムを一定確率・一定時間間隔で入手できるようにする(ex-03の抽選ロジックを流用してよい)。</li>
+        <li>精製工程: 「生の原料」を一定数消費し、プログレスバーの完了後に「完成品」アイテムに変換する(t3-23のクラフトシステムのレシピパターンを流用する)。</li>
+        <li>販売工程: t4-25(故売/闇市場)のfence NPCに「完成品」を売却して現金化する。</li>
+        <li>各工程には成功率・失敗(材料を失う等)のリスクを持たせ、単純作業にならないようにする。</li>
+        <li>生産量が多すぎると不自然にならないよう、Tier5-04の考え方でクールダウン(連続実行の制限)を設ける。</li>
+      </ul>
+    </section>
+
+    <section class="expected-behavior">
+      <h2>期待する動作</h2>
+      <ul class="spec-list">
+        <li>栽培→精製→販売の順に工程を進めないと完成品が作れない(精製をスキップして売却はできない)。</li>
+        <li>各工程でプログレスバーが表示され、キャンセルすると工程が失敗する。</li>
+        <li>完成品をfence NPCに売却すると、正しい金額が支払われる。</li>
+        <li>短時間に連続して同じ工程を繰り返そうとすると、クールダウンによって制限される。</li>
+      </ul>
+    </section>
+
+    <section class="dependencies">
+      <h2>利用する依存関係</h2>
+      <table class="dependency-table">
+        <thead><tr><th>依存</th><th>用途</th></tr></thead>
+        <tbody>
+          <tr><td>ox_lib</td><td>プログレスバー表示</td></tr>
+          <tr><td>ox_target</td><td>各工程の座標へのインタラクション(任意)</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="related-lessons">
+      <h2>関連レッスン</h2>
+      <ul class="related-lessons-list">
+        <li><a href="../lessons/tier3-intermediate/23-crafting-system.html">クラフトシステムの基礎</a><span class="related-lessons-list__note">精製工程のレシピパターン</span></li>
+        <li><a href="../lessons/tier3-intermediate/24-fishing-mining-minigame.html">釣り・採掘などのミニゲームループ</a><span class="related-lessons-list__note">栽培工程の抽選ロジック</span></li>
+        <li><a href="../lessons/tier4-upper-intermediate/25-fence-black-market.html">故売/闇市場(fence NPC)システム</a><span class="related-lessons-list__note">完成品の販売工程</span></li>
+        <li><a href="../lessons/tier3-intermediate/05-server-validation.html">サーバー側バリデーション</a><span class="related-lessons-list__note">各工程の消費・付与をserver側で検証</span></li>
+      </ul>
+    </section>
+
+    <p class="no-solution-note">※このページに完成コードは載せていません。上記の仕様と関連レッスンを参考に、自分で実装してみましょう。</p>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      この演習を完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../assets/js/lessons-data.js"></script>
+  <script src="../assets/js/exercises-data.js"></script>
+  <script src="../assets/js/progress.js"></script>
+  <script src="../assets/js/nav.js"></script>
+</body>
+</html>

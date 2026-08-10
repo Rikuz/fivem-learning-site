@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>故売/闇市場(fence NPC)システム | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t4-25-fence-black-market">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="4">🔴 中上級</span>
+      <span class="badge category-badge">🚨 犯罪行為</span>
+    </div>
+
+    <h1>故売/闇市場(fence NPC)システム</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>盗品や違法な品物を専門のNPC(故売屋/fence)に売却して現金化する</strong>仕組みを作れるようになります。Tier3-26の一般的なショップとは逆方向の「プレイヤーからNPCに売る」フローです。</p>
+      <p><strong>こんな時に使う:</strong> 演習ex-10の薬物生産チェーンの完成品を換金したい、盗んだ貴金属や電子機器を売却できるようにしたいとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>故売屋(fence)は、正規のショップと違い「特定の品物だけ、正規の店より安い/変動する価格で買い取る」NPCです。Tier3-07のox_targetでインタラクションを追加し、Tier3-04/Tier3-30のアイテム操作で所持品を確認・削除、お金を付与するという組み合わせで実装します。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>Config.lua: 買取品目と価格</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">Config.FenceItems = {
+    { name = 'stolen_jewelry', label = '盗んだ宝石', basePrice = 300 },
+    { name = 'stolen_electronics', label = '盗んだ電子機器', basePrice = 150 },
+    { name = 'processed_drugs', label = '精製済みの違法薬物', basePrice = 500 }, -- 演習ex-10の完成品
+}</code></pre>
+      </div>
+
+      <h3>server.lua: 売却処理</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local function findFenceItem(itemName)
+    for _, item in ipairs(Config.FenceItems) do
+        if item.name == itemName then return item end
+    end
+    return nil
+end
+
+RegisterNetEvent('fence:sellItem')
+AddEventHandler('fence:sellItem', function(itemName, amount)
+    local playerId = source
+    local item = findFenceItem(itemName)
+
+    if not item or not amount or amount < 1 then return end
+
+    local count = exports.ox_inventory:GetItemCount(playerId, itemName)
+    if count < amount then
+        TriggerClientEvent('myscript:notify', playerId, '所持していません', 'error')
+        return
+    end
+
+    -- 買取価格を少し変動させる(毎回同じ額にしない)
+    local priceMultiplier = 0.8 + (math.random() * 0.4) -- 0.8〜1.2倍
+    local totalPrice = math.floor(item.basePrice * amount * priceMultiplier)
+
+    exports.ox_inventory:RemoveItem(playerId, itemName, amount)
+    addPlayerMoney(playerId, totalPrice) -- Tier4-01のフレームワーク連携で実装する想定
+
+    TriggerClientEvent('myscript:notify', playerId, ('$%sで売却しました'):format(totalPrice), 'success')
+
+    -- 犯罪行為として指名手配度を上げる(Tier4-24参照)
+    exports['my-wanted-system']:AddWantedLevel(playerId, 5, '故売')
+end)</code></pre>
+      </div>
+
+      <h3>client.lua: ox_targetでfence NPCにインタラクションを追加する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">exports.ox_target:addModel('g_m_y_mexgoon_01', {
+    {
+        name = 'sell_to_fence',
+        icon = 'fa-solid fa-money-bill-transfer',
+        label = '売却する',
+        onSelect = function()
+            TriggerServerEvent('fence:sellItem', 'stolen_jewelry', 1)
+        end,
+    }
+})</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li>買取品目はTier3-05のバリデーションと同じく、必ずserver側の<code>Config.FenceItems</code>だけを信用してください。clientから任意のアイテム名・金額を送らせて計算させてはいけません。</li>
+        <li>所持数の確認(<code>GetItemCount</code>)と削除(<code>RemoveItem</code>)の間に別の処理が割り込まないよう、一連の処理を1つのイベントハンドラ内で完結させてください(Tier5-02の競合状態の考え方)。</li>
+        <li>故売行為も指名手配度(Tier4-24)を上げる犯罪行為の1つとして扱うのが自然です。加算を忘れないようにしましょう。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>買取価格を完全固定にせず、上記コード例のように毎回わずかに変動させることで、単調な作業感を減らせます。さらに発展させる場合は、「一定時間内に売りすぎると買取価格が下がる」といった需給バランスの仕組みも考えられます。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>マネーロンダリング | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t4-27-money-laundering">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="4">🔴 中上級</span>
+      <span class="badge category-badge">🚨 犯罪行為</span>
+      <span class="badge category-badge">🧩 フレームワーク連携</span>
+    </div>
+
+    <h1>マネーロンダリング</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>犯罪行為で得た「汚れた現金」を、時間経過と手数料をかけて組織口座(Tier4-10)の正規の残高に変換する</strong>マネーロンダリングの仕組みを作れるようになります。Tier4-25・Tier4-26で稼いだお金の「出口」として位置づけられるシステムです。</p>
+      <p><strong>こんな時に使う:</strong> 犯罪で稼いだ現金をそのまま使わせるのではなく、「洗浄」という追加の手間とリスクを挟みたいとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>マネーロンダリングは、①汚れた現金をフロント企業(表向きは合法なビジネス)の口座に一旦投入する、②一定時間待つ、③手数料を差し引いた金額を正規の個人/組織口座から引き出せるようにする、という流れで表現するのが定番です。Tier4-10で学んだ組織口座と、Tier4-06のokokBankingV2の入出金を組み合わせて実装します。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>server.lua: 洗浄処理を開始する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local LAUNDER_FEE_PERCENT = 0.20  -- 手数料20%
+local LAUNDER_DURATION_MS = 30 * 60 * 1000 -- 30分後に受け取れる
+
+local pendingLaundering = {} -- playerId -> { amount, readyAt }
+
+RegisterNetEvent('laundering:startLaundering')
+AddEventHandler('laundering:startLaundering', function(dirtyAmount)
+    local playerId = source
+
+    if not dirtyAmount or dirtyAmount < 100 then
+        TriggerClientEvent('myscript:notify', playerId, '最低洗浄額は$100です', 'error')
+        return
+    end
+
+    -- 汚れた現金(所持金)を減らす(Tier4-01のフレームワーク連携で実装)
+    local removed = removePlayerMoney(playerId, dirtyAmount)
+    if not removed then
+        TriggerClientEvent('myscript:notify', playerId, '所持金が足りません', 'error')
+        return
+    end
+
+    local netAmount = math.floor(dirtyAmount * (1 - LAUNDER_FEE_PERCENT))
+    pendingLaundering[playerId] = {
+        amount = netAmount,
+        readyAt = GetGameTimer() + LAUNDER_DURATION_MS
+    }
+
+    TriggerClientEvent('myscript:notify', playerId, ('$%sの洗浄を開始しました(手数料差引後: $%s)'):format(dirtyAmount, netAmount), 'success')
+end)</code></pre>
+      </div>
+
+      <h3>server.lua: 洗浄完了後に受け取る</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">RegisterNetEvent('laundering:collect')
+AddEventHandler('laundering:collect', function()
+    local playerId = source
+    local pending = pendingLaundering[playerId]
+
+    if not pending then
+        TriggerClientEvent('myscript:notify', playerId, '洗浄中の資金がありません', 'error')
+        return
+    end
+
+    if GetGameTimer() < pending.readyAt then
+        local remainingMinutes = math.ceil((pending.readyAt - GetGameTimer()) / 60000)
+        TriggerClientEvent('myscript:notify', playerId, ('まだ洗浄中です(あと%d分)'):format(remainingMinutes), 'warning')
+        return
+    end
+
+    -- 洗浄済みの資金を正規の口座に入金する(Tier4-06参照)
+    local identifier = getPlayerCitizenId(playerId)
+    exports['okokBanking']:AddMoney(identifier, pending.amount)
+    exports['okokBanking']:AddTransaction(identifier, {
+        value = pending.amount,
+        type = 'deposit',
+        reason = 'ビジネス収益(フロント企業経由)',
+    })
+
+    pendingLaundering[playerId] = nil
+    TriggerClientEvent('myscript:notify', playerId, ('$%sを受け取りました'):format(pending.amount), 'success')
+end)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li>洗浄額・手数料率は必ずserver側の定数(<code>LAUNDER_FEE_PERCENT</code>)を使い、clientから送らせないでください(Tier3-05参照)。</li>
+        <li><code>pendingLaundering</code>をメモリ上のテーブルだけで管理すると、サーバー再起動で洗浄中の資金が消えてしまいます。Tier3-15のオートセーブパターンでDBに保存することを検討してください。</li>
+        <li>1人のプレイヤーが同時に複数件の洗浄を並行して行えるようにするか、1件ずつしか受け付けないか(上記コード例は1件のみ)を、ゲームバランスとして事前に決めておきましょう。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>洗浄の待機時間中にプレイヤーが逮捕・投獄(Tier4-29・Tier4-30)された場合に、洗浄中の資金をどう扱うか(没収する、そのまま続行する等)もRPサーバーとしての設計判断のしどころです。演習ex-11では、この仕組みも含めた集大成に取り組みます。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>逮捕・拘束(handcuff)システム | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t4-29-arrest-handcuff-system">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="4">🔴 中上級</span>
+      <span class="badge category-badge">👮 警察業務</span>
+    </div>
+
+    <h1>逮捕・拘束(handcuff)システム</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>警察役のプレイヤーが対象プレイヤーに手錠をかけ、拘束状態(武器を使えない・アニメーション固定)にする</strong>ことができるようになります。Tier2-07のアニメーション再生とTier2-01のイベント通信を組み合わせた、警察側システムの中核です。</p>
+      <p><strong>こんな時に使う:</strong> 指名手配中のプレイヤー(Tier4-24)を確保し、Tier4-30の投獄システムに送る前段階の処理として。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>手錠(拘束)は「対象プレイヤーの武器使用・特定の操作を無効化し、両手を縛られたアニメーションをループ再生させる」状態です。逮捕する側・される側の両方のclientで座標同期のズレが起きないよう、状態管理はStateBags(Tier5-03)またはイベント経由でserverが一元管理する設計にします。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>server.lua: コマンドでプレイヤーIDを指定して拘束する(Tier2-04のコマンドパターンを応用)</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">RegisterCommand('handcuff', function(source, args)
+    local officerId = source
+    local targetId = tonumber(args[1])
+
+    if not IsPlayerAceAllowed(officerId, 'job.police') then return end -- Tier4-02のJob確認に置き換えてもよい
+    if not targetId then
+        TriggerClientEvent('myscript:notify', officerId, '使い方: /handcuff [プレイヤーID]', 'error')
+        return
+    end
+
+    local officerPed = GetPlayerPed(officerId)
+    local targetPed = GetPlayerPed(targetId)
+    if targetPed == 0 then return end
+
+    -- 近くにいるかサーバー側でも確認する(Tier3-05のバリデーション)
+    local distance = #(GetEntityCoords(officerPed) - GetEntityCoords(targetPed))
+    if distance > 3.0 then
+        TriggerClientEvent('myscript:notify', officerId, '対象に近づいてください', 'error')
+        return
+    end
+
+    -- Tier5-03のStateBagsで拘束状態を同期する(他システムが「拘束中か」を確認できるようにする)
+    Player(targetId).state:set('isHandcuffed', true, true)
+    TriggerClientEvent('arrest:onHandcuffed', targetId, true)
+end, false)</code></pre>
+      </div>
+
+      <h3>server.lua: 拘束を解除する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">RegisterCommand('uncuff', function(source, args)
+    local officerId = source
+    local targetId = tonumber(args[1])
+
+    if not IsPlayerAceAllowed(officerId, 'job.police') then return end
+    if not targetId then return end
+
+    Player(targetId).state:set('isHandcuffed', false, true)
+    TriggerClientEvent('arrest:onHandcuffed', targetId, false)
+end, false)</code></pre>
+      </div>
+
+      <h3>client.lua: 拘束状態を反映する(対象側)</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local isHandcuffed = false
+
+RegisterNetEvent('arrest:onHandcuffed')
+AddEventHandler('arrest:onHandcuffed', function(handcuffed)
+    isHandcuffed = handcuffed
+    local ped = PlayerPedId()
+
+    if handcuffed then
+        RequestAnimDict('mp_arresting')
+        while not HasAnimDictLoaded('mp_arresting') do Wait(0) end
+        TaskPlayAnim(ped, 'mp_arresting', 'idle', 8.0, 8.0, -1, 1, 0, false, false, false)
+        DisablePlayerFiring(ped, true) -- 武器を使用できなくする
+    else
+        ClearPedTasks(ped)
+        DisablePlayerFiring(ped, false)
+    end
+end)
+
+-- 拘束中は移動・攻撃系の操作を無効化する(DisableControlActionは毎フレーム呼ぶ必要がある)
+CreateThread(function()
+    while true do
+        Wait(0)
+        if isHandcuffed then
+            DisableControlAction(0, 24, true)  -- 攻撃(Attack)
+            DisableControlAction(0, 25, true)  -- 狙う(Aim)
+            DisableControlAction(0, 140, true) -- 近接攻撃
+            DisableControlAction(0, 141, true)
+            DisableControlAction(0, 142, true)
+        end
+    end
+end)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li>拘束解除の判定を必ずserver側で行い、client側の判断だけで<code>ClearPedTasks</code>を呼べるようにしないでください。改造クライアントで自分で拘束を解除できてしまいます。</li>
+        <li>拘束中に別のresourceが<code>ClearPedTasks</code>を呼んでしまうと、拘束アニメーションが意図せず解除されることがあります。拘束専用の状態(<code>isHandcuffed</code>)を必ず確認してから他の処理を行うよう、他のシステムとの整合性にも注意してください。</li>
+        <li>距離チェック(<code>#(officerCoords - targetCoords) > 3.0</code>)を省略すると、遠く離れた対象を一方的に拘束できてしまいます。Tier3-05のバリデーションの考え方をここでも適用してください。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>拘束後は、護送(手錠をかけた対象を車両に乗せる、あるいは徒歩で誘導する)処理を追加することが多いです。Tier2-06の<code>SetPedIntoVehicle</code>と組み合わせれば、パトカーへの連行も実装できます。次のレッスン(Tier4-30)では、拘束した対象を実際に投獄する仕組みを扱います。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

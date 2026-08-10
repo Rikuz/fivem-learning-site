@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MDT(警察端末)の基礎 | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t4-28-mdt-police-terminal">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="4">🔴 中上級</span>
+      <span class="badge category-badge">👮 警察業務</span>
+      <span class="badge category-badge">🖥️ UI表示(NUI)</span>
+    </div>
+
+    <h1>MDT(警察端末)の基礎</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>警察官が指名手配情報・犯罪履歴を確認できるMDT(Mobile Data Terminal、警察端末)画面</strong>を作れるようになります。ここでは既存の外部MDTスクリプトには頼らず、これまで学んだNUI・oxmysql・ox_targetの組み合わせだけで構築します。</p>
+      <p><strong>こんな時に使う:</strong> Tier4-24の指名手配度システムと連動して、警察官が「今誰が手配中か」を一覧で確認できるようにしたいとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>MDTの中身は、実は目新しいものではありません。Tier3-01のNUI基礎、Tier3-20の管理者メニューと同じパターン(権限チェック→データ取得→NUI表示)で構築できます。「警察官だけが開ける、指名手配情報に特化した画面」という位置づけで考えると設計しやすくなります。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>client.lua: MDT端末(パソコンプロップ)にインタラクションを追加する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">exports.ox_target:addModel('prop_cctv_pole_01', { -- 実際には警察署内の端末用プロップに差し替える
+    {
+        name = 'open_mdt',
+        icon = 'fa-solid fa-desktop',
+        label = 'MDTを開く',
+        onSelect = function()
+            TriggerServerEvent('mdt:requestOpen')
+        end,
+    }
+})
+
+RegisterNetEvent('mdt:openTerminal')
+AddEventHandler('mdt:openTerminal', function(wantedPlayers)
+    SetNuiFocus(true, true)
+    SendNUIMessage({ action = 'openMdt', wantedPlayers = wantedPlayers })
+end)</code></pre>
+      </div>
+
+      <h3>server.lua: 権限を確認し、指名手配情報を渡す</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">RegisterNetEvent('mdt:requestOpen')
+AddEventHandler('mdt:requestOpen', function()
+    local playerId = source
+
+    -- 実際にはJob確認(Tier4-02)を使う。ここでは簡略化のためACE権限で判定
+    if not IsPlayerAceAllowed(playerId, 'job.police') then return end
+
+    local wantedPlayers = exports['my-wanted-system']:GetAllWantedPlayers() -- Tier4-24参照
+    TriggerClientEvent('mdt:openTerminal', playerId, wantedPlayers)
+end)</code></pre>
+      </div>
+
+      <h3>server.lua: 犯罪履歴を検索する(DB連携、Tier3-32参照)</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">RegisterNUICallback('mdt:searchRecord', function(data, cb)
+    local records = MySQL.query.await('SELECT * FROM criminal_records WHERE citizenid = ? ORDER BY created_at DESC', {
+        data.citizenid
+    })
+
+    cb(records or {})
+end)</code></pre>
+      </div>
+
+      <h3>ui/script.js: 一覧を表示する(Tier3-01のNUI基礎の応用)</h3>
+      <div class="code-block">
+        <pre><code class="language-javascript">window.addEventListener('message', (event) => {
+  const data = event.data;
+  if (data.action !== 'openMdt') return;
+
+  const list = document.getElementById('wanted-list');
+  list.innerHTML = '';
+
+  data.wantedPlayers.forEach((player) => {
+    const row = document.createElement('div');
+    row.textContent = `${player.name}(指名手配度: ${player.level})`;
+    list.appendChild(row);
+  });
+
+  document.getElementById('app').style.display = 'block';
+});</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li>MDTを開く権限チェックは、必ずserver側の<code>mdt:requestOpen</code>イベントハンドラの中で行ってください。client側の<code>onSelect</code>だけでJob確認をしても、直接イベントを発火されると回避されます(Tier3-20の管理者メニューと同じ注意点)。</li>
+        <li>犯罪履歴のような機微な個人情報を扱う画面なので、Tier3-21の通報システムと同様、閲覧できる対象(警察官のみ)を厳格に制限してください。</li>
+        <li>指名手配情報はTier4-24で学んだ通りリアルタイムに変化するデータです。MDTを開いた瞬間のスナップショットのままにせず、定期的に再取得する、またはMDTを開いている間だけ更新イベントを購読する設計も検討してください。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p class="version-note">実運用のRPサーバーでは、より高機能な既製のMDTスクリプトを導入することも多いですが、それらの構文はスクリプトごとに大きく異なり本サイトでは検証していません。このレッスンで学んだ「NUI+DB+権限チェック」という基本構造を理解しておけば、どのMDTスクリプトを導入しても内部の仕組みを推測しやすくなります。既製スクリプトを導入する場合は、必ずそのスクリプトの公式ドキュメントを確認してください。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

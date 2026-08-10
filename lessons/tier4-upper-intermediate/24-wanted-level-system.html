@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>指名手配度(Wanted Level)システム | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t4-24-wanted-level-system">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="4">🔴 中上級</span>
+      <span class="badge category-badge">🚨 犯罪行為</span>
+    </div>
+
+    <h1>指名手配度(Wanted Level)システム</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>犯罪行為を行うたびにプレイヤーの指名手配度が上がり、その情報を警察側(Tier4-28のMDT)から確認できる</strong>仕組みを自作できるようになります。ここから始まる犯罪script系レッスンの土台となる、最も基本的なシステムです。</p>
+      <p><strong>こんな時に使う:</strong> 強盗・薬物取引など「見つかったらまずい行為」をしたプレイヤーに、ゲーム内でのペナルティ・警察の追跡対象という状態を持たせたいとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>指名手配度は「プレイヤーIDに紐付いた数値」というシンプルなデータですが、①犯罪行為で加算する、②時間経過で自然に減少させる、③警察側から一覧で確認できるようにする、という3つの動きを組み合わせて設計します。GTA Vのゲーム内の星マーク(<code>SetPlayerWantedLevel</code>)とは別に、RPサーバー独自の「スコア」として管理するのが一般的です。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>server.lua: 指名手配度を管理する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local wantedLevels = {} -- playerId -> 数値(0〜100等)
+
+local function addWantedLevel(playerId, amount, reason)
+    local current = wantedLevels[playerId] or 0
+    wantedLevels[playerId] = math.min(100, current + amount)
+
+    print(('プレイヤー%sの指名手配度が%sになりました(理由: %s)'):format(playerId, wantedLevels[playerId], reason))
+    TriggerClientEvent('myscript:notify', playerId, '指名手配度が上昇しました', 'warning')
+end
+
+local function getWantedLevel(playerId)
+    return wantedLevels[playerId] or 0
+end
+
+exports('AddWantedLevel', addWantedLevel)
+exports('GetWantedLevel', getWantedLevel)</code></pre>
+      </div>
+
+      <h3>server.lua: 時間経過で自然に減少させる</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">CreateThread(function()
+    while true do
+        Wait(60 * 1000) -- 1分ごと
+
+        for playerId, level in pairs(wantedLevels) do
+            if level > 0 then
+                wantedLevels[playerId] = math.max(0, level - 5)
+            end
+        end
+    end
+end)</code></pre>
+      </div>
+
+      <h3>使用例: 薬物取引を行うと指名手配度が上がる</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">RegisterNetEvent('drugs:sellToNpc')
+AddEventHandler('drugs:sellToNpc', function()
+    local playerId = source
+    -- 実際の販売処理(Tier4-25参照)
+
+    exports['my-wanted-system']:AddWantedLevel(playerId, 15, '薬物取引')
+end)</code></pre>
+      </div>
+
+      <h3>警察側から一覧を取得する(Tier4-28 MDTで使用)</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local function getAllWantedPlayers()
+    local result = {}
+    for playerId, level in pairs(wantedLevels) do
+        if level > 0 and GetPlayerName(playerId) then -- オンライン中のプレイヤーのみ
+            table.insert(result, { id = playerId, name = GetPlayerName(playerId), level = level })
+        end
+    end
+    return result
+end
+
+exports('GetAllWantedPlayers', getAllWantedPlayers)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li>指名手配度の加算は、必ずTier3-05のサーバー側バリデーションを経た正当な犯罪行為の結果としてのみ行ってください。clientから直接「指名手配度を上げて」と送らせる設計は、逆にチートで指名手配度を消される危険があります。</li>
+        <li>時間経過での減少処理を入れないと、一度犯罪を犯したプレイヤーが永久に指名手配され続けてしまいます。ゲームバランスとして減少速度を調整してください。</li>
+        <li>切断したプレイヤーのエントリ(<code>wantedLevels[playerId]</code>)を放置すると、再接続時に別のプレイヤーIDへ再割り当てされたときに古いデータが誤って引き継がれる可能性があります。Tier2-15の<code>playerDropped</code>と組み合わせ、切断時にDBへ保存してからメモリを片付ける設計が安全です(再接続時は識別子ベースで復元する)。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>GTA V本編の<code>SetPlayerWantedLevel</code>(画面上の星マーク)と、このレッスンで作った独自の指名手配度は別物です。両方を連動させたい場合(星の数に応じてNPC警官が追ってくる等)は、このスコアの値に応じて<code>SetPlayerWantedLevel</code>を呼ぶ処理を追加で組み合わせてください。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

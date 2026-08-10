@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>投獄(Jail)システム | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t4-30-jail-system">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="4">🔴 中上級</span>
+      <span class="badge category-badge">👮 警察業務</span>
+    </div>
+
+    <h1>投獄(Jail)システム</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>拘束(Tier4-29)した対象を刑務所エリアに送り、行動を制限したまま時間経過で自動的に釈放する</strong>投獄システムを作れるようになります。あわせて、プレイヤーがエリア外に出ようとする「脱獄」への基本的な対策も学びます。</p>
+      <p><strong>こんな時に使う:</strong> 逮捕した犯罪者に、単なる所持品没収だけでなく「一定時間プレイができなくなる」という実際のペナルティを与えたいとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>投獄システムは、①対象を刑務所座標にテレポートさせる、②「釈放予定時刻」をserverで記録する、③一定間隔でチェックし、時刻が来たら自動的に釈放してテレポートを戻す、という3ステップで構成します。Tier4-29のStateBagsで拘束状態を扱ったのと同じ考え方で、投獄状態(<code>isJailed</code>)もserverが一元管理します。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>server.lua: 投獄する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local JAIL_COORDS = vec3(1651.0, 2570.0, 45.5) -- 刑務所内の座標(実際のマップに合わせて調整)
+local jailedPlayers = {} -- playerId -> { releaseAt = <GetGameTimerの値> }
+
+local function jailPlayer(playerId, minutes, reason)
+    local releaseAt = GetGameTimer() + (minutes * 60 * 1000)
+    jailedPlayers[playerId] = { releaseAt = releaseAt }
+
+    Player(playerId).state:set('isJailed', true, true)
+    TriggerClientEvent('jail:onJailed', playerId, true, JAIL_COORDS, minutes)
+
+    TriggerClientEvent('myscript:notify', playerId, ('投獄されました(%d分、理由: %s)'):format(minutes, reason), 'error')
+end
+
+RegisterCommand('jail', function(source, args)
+    local officerId = source
+    local targetId = tonumber(args[1])
+    local minutes = tonumber(args[2])
+    local reason = table.concat(args, ' ', 3) -- 3番目以降を理由として結合
+
+    if not IsPlayerAceAllowed(officerId, 'job.police') then return end
+    if not targetId or not minutes then
+        TriggerClientEvent('myscript:notify', officerId, '使い方: /jail [プレイヤーID] [分数] [理由]', 'error')
+        return
+    end
+
+    jailPlayer(targetId, minutes, reason ~= '' and reason or '理由未記載')
+end, false)</code></pre>
+      </div>
+
+      <h3>server.lua: 時間経過での自動釈放をチェックする</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local function releasePlayer(playerId)
+    jailedPlayers[playerId] = nil
+    Player(playerId).state:set('isJailed', false, true)
+    TriggerClientEvent('jail:onJailed', playerId, false)
+    TriggerClientEvent('myscript:notify', playerId, '釈放されました', 'success')
+end
+
+CreateThread(function()
+    while true do
+        Wait(30000) -- 30秒おきに確認する(毎フレームチェックする必要はない)
+
+        for playerId, data in pairs(jailedPlayers) do
+            if GetGameTimer() >= data.releaseAt then
+                releasePlayer(playerId)
+            end
+        end
+    end
+end)</code></pre>
+      </div>
+
+      <h3>client.lua: 投獄状態を反映し、脱獄を防ぐ</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local isJailed = false
+local jailCoords = nil
+
+RegisterNetEvent('jail:onJailed')
+AddEventHandler('jail:onJailed', function(jailed, coords, minutes)
+    isJailed = jailed
+    jailCoords = coords
+
+    if jailed then
+        SetEntityCoords(PlayerPedId(), coords.x, coords.y, coords.z, false, false, false, false)
+    end
+end)
+
+-- 刑務所エリアから離れようとしたら座標を戻す(簡易的な脱獄対策)
+CreateThread(function()
+    while true do
+        Wait(1000)
+
+        if isJailed and jailCoords then
+            local ped = PlayerPedId()
+            local distance = #(GetEntityCoords(ped) - jailCoords)
+
+            if distance > 30.0 then
+                SetEntityCoords(ped, jailCoords.x, jailCoords.y, jailCoords.z, false, false, false, false)
+                TriggerEvent('myscript:notify', 'エリア外には出られません', 'error')
+            end
+        end
+    end
+end)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li>上記コード例は<code>jailedPlayers</code>をメモリ上のテーブルだけで管理しているため、<strong>サーバーを再起動すると投獄記録が消えて即座に釈放されてしまいます</strong>。実運用ではTier3-15のオートセーブパターンで<code>releaseAt</code>をDBに保存し、resource起動時に読み込み直す設計にしてください。</li>
+        <li>脱獄対策の距離チェックは1秒ごとの簡易実装です。プレイヤーが投獄中に切断した場合の再接続時の座標復帰(<code>playerSpawned</code>イベントで<code>isJailed</code>を確認して座標を戻す処理)も忘れずに追加しましょう。</li>
+        <li><code>/jail</code>コマンドの権限チェックは必ずserver側で行い、分数や対象IDをclientから信用しないでください(Tier3-05参照)。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>より本格的な脱獄対策としては、刑務所エリア全体を<code>ox_lib</code>のゾーン機能で囲み、範囲外に出た瞬間にイベントを発火させる方法もあります。また、看守役のNPCや他プレイヤーが投獄状況を確認できるよう、Tier4-28で作ったMDTに投獄中プレイヤーの一覧を表示する発展も考えられます。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>
