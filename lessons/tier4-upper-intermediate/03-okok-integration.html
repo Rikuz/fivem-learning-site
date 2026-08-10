@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>okokシリーズと連携する | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t4-03-okok-integration">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="4">🔴 中上級</span>
+      <span class="badge category-badge">🔔 okok連携</span>
+      <span class="badge category-badge">🖥️ UI表示(NUI)</span>
+    </div>
+
+    <h1>okokシリーズと連携する</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>okokNotifyで通知を表示し、okokTextUIで画面下部などにテキストUIを表示する</strong>ことができるようになります。okokシリーズは多くのFiveM RPサーバーで導入されている有償/コミュニティ製スクリプト群です。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>okokNotify・okokTextUIは、自分のスクリプトから<code>exports</code>(他のresourceが公開している関数を呼び出す仕組み)経由で呼び出します。通知やテキストUIそのものの見た目・アニメーションはokok側が管理しているため、自分で1からNUIを作らなくても、決まった書き方で呼び出すだけで利用できます。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>okokNotify: 通知を表示する(client側から)</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">exports['okokNotify']:Alert('タイトル', 'メッセージ', 5000, 'success', true)
+-- 第3引数: 表示時間(ミリ秒, 例 5000 = 5秒)
+-- 第4引数: タイプ(success=緑 / info=青 / warning=黄 / error=赤 / neutral=灰)
+-- 第5引数: 効果音を鳴らすか(true/false)</code></pre>
+      </div>
+
+      <h3>okokNotify: サーバー側から特定プレイヤーに通知を送る</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">TriggerClientEvent('okokNotify:Alert', source, 'タイトル', 'メッセージ', 5000, 'success', true)</code></pre>
+      </div>
+
+      <h3>okokTextUI: テキストUIの表示・非表示</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">-- 表示
+exports['okokTextUI']:Open('[E] 拾う', 'lightblue', 'right')
+-- 第2引数: 色(例: lightblue, darkblue など)
+-- 第3引数: 位置(left / right)
+
+-- 非表示
+exports['okokTextUI']:Close()</code></pre>
+      </div>
+
+      <h3>組み合わせた実例: アイテムに近づいたらテキストUI、拾ったら通知</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local itemLocation = vector3(100.0, 200.0, 30.0)
+local isShowingUI = false
+
+CreateThread(function()
+    while true do
+        local playerCoords = GetEntityCoords(PlayerPedId())
+        local distance = #(playerCoords - itemLocation)
+
+        if distance < 2.0 and not isShowingUI then
+            exports['okokTextUI']:Open('[E] 拾う', 'lightblue', 'right')
+            isShowingUI = true
+        elseif distance >= 2.0 and isShowingUI then
+            exports['okokTextUI']:Close()
+            isShowingUI = false
+        end
+
+        if distance < 2.0 and IsControlJustPressed(0, 38) then -- 38 = Eキー
+            TriggerServerEvent('myscript:pickupItem')
+        end
+
+        Wait(0)
+    end
+end)
+
+RegisterNetEvent('myscript:itemPickedUp')
+AddEventHandler('myscript:itemPickedUp', function()
+    exports['okokNotify']:Alert('入手', 'アイテムを拾いました', 5000, 'success', true)
+end)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li>okokNotify/okokTextUIが<code>ensure</code>されていない、または起動順序が自分のresourceより後だと、exportの呼び出しでエラーになります。<code>fxmanifest.lua</code>に<code>dependency 'okokNotify'</code>のように指定して起動順序を保証してください。</li>
+        <li>okokTextUIは<code>Open</code>を呼びっぱなしにすると表示され続けます。プレイヤーが離れた・条件を満たさなくなったタイミングで確実に<code>Close()</code>を呼んでください(上記コード例のように状態フラグで二重に呼ばないよう管理するのがおすすめです)。</li>
+        <li>これらのexportはclient側のnative関数と組み合わせて使うことが多いですが、通知の元になった判定(アイテムを本当に拾えたか等)はサーバー側で行い、通知はその結果を受けて表示するだけにしましょう(Tier3「サーバー側バリデーション」参照)。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p class="version-note">※okokシリーズはサーバーごとに購入・導入するスクリプトであり、バージョンによって引数が増減する場合があります。導入しているokokNotify/okokTextUIのconfig.luaやREADME.mdも必ず確認してください。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

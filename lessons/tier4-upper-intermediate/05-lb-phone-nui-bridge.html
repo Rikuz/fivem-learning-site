@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>lb-phoneアプリのUIとLua間通信 | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t4-05-lb-phone-nui-bridge">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="4">🔴 中上級</span>
+      <span class="badge category-badge">📱 lb-phone連携</span>
+      <span class="badge category-badge">🖥️ UI表示(NUI)</span>
+    </div>
+
+    <h1>lb-phoneアプリのUIとLua間通信</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>lb-phoneのカスタムアプリ画面に対して、通常のNUIとは異なる専用の仕組みでデータを送受信する</strong>ことができるようになります。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>Tier3で学んだ通常のNUIでは<code>SendNUIMessage</code>を使いましたが、lb-phoneのアプリ画面(iframeとして電話UIの中に埋め込まれている)へは、代わりに<strong><code>SendCustomAppMessage</code></strong>という専用exportを使います。JS側での受け取り方自体は通常のNUIコールバックと同じ<code>window.addEventListener('message', ...)</code>で書けます。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>Lua側: アプリUIへメッセージを送信する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">-- lb-phoneのアプリUIには SendNUIMessage ではなく、専用のエクスポートを使う
+exports['lb-phone']:SendCustomAppMessage('my_custom_app', {
+    action = 'updateData',
+    payload = { balance = 1500 }
+})</code></pre>
+      </div>
+
+      <h3>JS側: メッセージを受け取る(通常のNUIコールバックと同じ書き方)</h3>
+      <div class="code-block">
+        <pre><code class="language-javascript">window.addEventListener('message', (event) => {
+  if (event.data.action === 'updateData') {
+    // event.data.payload を使って画面を更新する
+    document.getElementById('balance').textContent = event.data.payload.balance;
+  }
+});</code></pre>
+      </div>
+
+      <h3>アプリが開かれたタイミングの扱い方</h3>
+      <div class="code-block">
+        <pre><code class="language-javascript">// ❌ 悪い例: onOpen直後にUIがまだ読み込み中の可能性がある
+// (lb-phone側のイベント名は導入バージョンのドキュメントを参照してください)
+
+// ✅ 良い例: UI側から「準備完了」をLuaに伝えてもらってから、Lua側がデータを送る
+document.addEventListener('DOMContentLoaded', () => {
+  fetch(`https://${GetParentResourceName()}/appReady`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json; charset=UTF-8' },
+    body: JSON.stringify({})
+  });
+});</code></pre>
+      </div>
+      <div class="code-block">
+        <pre><code class="language-lua">RegisterNUICallback('appReady', function(data, cb)
+    -- UI側の準備が整ったと分かった後で初めてデータを送る
+    exports['lb-phone']:SendCustomAppMessage('my_custom_app', {
+        action = 'updateData',
+        payload = { balance = 1500 }
+    })
+    cb('ok')
+end)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li><code>onOpen</code>コールバックのタイミングでは、UI(iframe)がまだ読み込み中の場合があります。<code>onOpen</code>から直接初期データを送らないでください。UI側から「準備完了」を伝えるコールバックを送ってもらい、それを受けてからLua側がデータを送る設計にします(上記コード例参照)。</li>
+        <li>通常のNUIの<code>SendNUIMessage</code>とlb-phoneアプリの<code>SendCustomAppMessage</code>を混同しないでください。lb-phoneアプリに対して<code>SendNUIMessage</code>を呼んでも、アプリ画面には届きません。</li>
+        <li><code>SendCustomAppMessage</code>の第1引数(アプリ識別子)は、前レッスンの<code>Config.CustomApps</code>のキーと完全に一致させる必要があります。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p class="version-note">※このレッスンで扱った構文(<code>SendCustomAppMessage</code>、<code>Config.CustomApps</code>、<code>AddCustomApp</code>/<code>RemoveCustomApp</code>)は実際のlb-phoneドキュメントで確認済みのものですが、バージョンによって仕様が変わる場合があります。公式ドキュメントも必ず確認してください。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

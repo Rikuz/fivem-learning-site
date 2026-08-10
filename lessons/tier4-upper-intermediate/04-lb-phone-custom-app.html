@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>lb-phoneにカスタムアプリを追加する | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t4-04-lb-phone-custom-app">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="4">🔴 中上級</span>
+      <span class="badge category-badge">📱 lb-phone連携</span>
+    </div>
+
+    <h1>lb-phoneにカスタムアプリを追加する</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>lb-phone(FiveMで広く使われるスマートフォンリソース)に自作のアプリを登録し、動的に追加・削除する</strong>ことができるようになります。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>lb-phoneのカスタムアプリは、<code>lb-phone/config/config.lua</code>の<code>Config.CustomApps</code>にアプリ情報を登録することで追加できます。加えて、条件によってアプリを持たせたり取り上げたりしたい場合(例: 警察官だけが持つ専用アプリ)は、<code>AddCustomApp</code>/<code>RemoveCustomApp</code>というexportをスクリプトから呼び出します。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>lb-phone/config/config.lua: アプリの登録</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">Config.CustomApps = {
+    ["my_custom_app"] = { -- アプリの識別子(ユーザーには表示されない)
+        name = "マイアプリ",                 -- ユーザーに表示されるアプリ名
+        description = "自作の連携アプリです",  -- 説明文
+        developer = "自分の名前",             -- 任意
+        defaultApp = true,                   -- trueならダウンロード不要で最初から入っている
+        ui = "my-resource/ui/index.html",    -- カスタムUIを使う場合のパス
+    },
+}</code></pre>
+      </div>
+
+      <h3>Lua側エクスポート: アプリの動的な追加・削除</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">-- アプリを追加する
+exports['lb-phone']:AddCustomApp('my_custom_app')
+
+-- アプリを削除する
+exports['lb-phone']:RemoveCustomApp('my_custom_app')</code></pre>
+      </div>
+
+      <h3>実例: 警察官のときだけ専用アプリを持たせる</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">RegisterNetEvent('myscript:updateJob')
+AddEventHandler('myscript:updateJob', function(jobName)
+    if jobName == 'police' then
+        exports['lb-phone']:AddCustomApp('police_app')
+    else
+        exports['lb-phone']:RemoveCustomApp('police_app')
+    end
+end)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li><code>Config.CustomApps</code>のキー(<code>"my_custom_app"</code>)と、<code>AddCustomApp</code>/<code>RemoveCustomApp</code>に渡す文字列は<strong>完全に一致</strong>している必要があります。1文字でも違うとアプリが認識されません。</li>
+        <li><code>defaultApp = true</code>にすると、条件に関わらず全プレイヤーに最初からアプリが入った状態になります。「特定のJobの人だけ」のように条件付きで持たせたい場合は<code>defaultApp = false</code>にし、上記のように<code>AddCustomApp</code>を条件分岐で呼び出してください。</li>
+        <li><code>ui</code>に指定するパスの起点はlb-phone側の解決ルールに従います(resource名を含めた相対パス)。実際に導入しているlb-phoneのバージョンのドキュメント内の記法に合わせてください。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>アプリのUI(HTML/CSS/JS)自体は、通常のNUI(Tier3で学んだもの)とほぼ同じように作りますが、Lua⇔JS間の通信方法だけがlb-phone専用の仕組みになります。詳しくは次のレッスンで扱います。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

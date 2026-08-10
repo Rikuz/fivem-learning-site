@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>フレームワークで職業(Job)システムを使う | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t4-02-framework-jobs">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="4">🔴 中上級</span>
+      <span class="badge category-badge">🧩 フレームワーク連携</span>
+    </div>
+
+    <h1>フレームワークで職業(Job)システムを使う</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>プレイヤーの職業(Job)を確認し、職業専用のエリア・NPCへのアクセスを制限し、一定時間ごとに給料を支払う</strong>仕組みが作れるようになります。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>ESX・QBCore・Qboxでは「Job(職業)」という概念でプレイヤーの所属(警察官・救急隊員など)と階級(grade)を管理します。ox_coreでは考え方が近い概念として「group(グループ)」が使われます。これらを条件分岐に使うことで、「警察官だけが入れる部屋」「タクシー運転手だけが使える車両」といった制御ができます。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>ESX: Jobの確認</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local ESX = exports['es_extended']:getSharedObject()
+
+RegisterNetEvent('myscript:enterPoliceRoom')
+AddEventHandler('myscript:enterPoliceRoom', function()
+    local xPlayer = ESX.GetPlayerFromId(source)
+
+    if xPlayer.job.name ~= 'police' then
+        TriggerClientEvent('myscript:notify', source, '警察官専用エリアです')
+        return
+    end
+
+    TriggerClientEvent('myscript:teleportToPoliceRoom', source)
+end)</code></pre>
+      </div>
+
+      <h3>QBCore / Qbox: Jobの確認</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local QBCore = exports['qb-core']:GetCoreObject()
+
+RegisterNetEvent('myscript:enterPoliceRoom')
+AddEventHandler('myscript:enterPoliceRoom', function()
+    local Player = QBCore.Functions.GetPlayer(source)
+
+    if Player.PlayerData.job.name ~= 'police' then
+        TriggerClientEvent('myscript:notify', source, '警察官専用エリアです')
+        return
+    end
+
+    TriggerClientEvent('myscript:teleportToPoliceRoom', source)
+end)</code></pre>
+      </div>
+
+      <h3>給料処理の実装例(QBCore)</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">-- 30分ごとに、勤務中の全プレイヤーへJobの給料を支払う
+CreateThread(function()
+    while true do
+        Wait(30 * 60 * 1000) -- 30分
+
+        for _, playerId in ipairs(QBCore.Functions.GetPlayers()) do
+            local Player = QBCore.Functions.GetPlayer(playerId)
+            if Player and Player.PlayerData.job.onduty then
+                local salary = Player.PlayerData.job.payment
+                Player.Functions.AddMoney('bank', salary, 'job-salary')
+                TriggerClientEvent('myscript:notify', playerId, ('給料 $%s を受け取りました'):format(salary))
+            end
+        end
+    end
+end)</code></pre>
+      </div>
+
+      <h3>Job専用NPCの表示制御(client.lua)</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">-- サーバー側からclientへ現在のJobを通知しておき、clientはそれに応じてNPC等の表示を切り替える
+local myJob = nil
+
+RegisterNetEvent('myscript:updateJob')
+AddEventHandler('myscript:updateJob', function(jobName)
+    myJob = jobName
+end)
+
+CreateThread(function()
+    while true do
+        Wait(1000)
+        if myJob == 'police' then
+            -- 警察専用の武器庫NPCなどをここで表示する処理を書く
+        end
+    end
+end)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li>Job名の文字列(<code>'police'</code>など)は、実際にフレームワーク側で登録されているJob名と完全に一致している必要があります。タイプミスがあると常に「専用エリアです」と判定されてしまいます。</li>
+        <li>給料処理を<strong>client側</strong>で判定・送金してしまうと、チートでオンデューティ状態を偽装され放題になります。給料の支払い判定・実行は必ずserver側で行ってください。</li>
+        <li>QBCoreの<code>onduty</code>(勤務中かどうか)を確認せずに給料を配ると、オフデューティ中のプレイヤーにも支払われてしまいます。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>ox_coreの場合は<code>group</code>という概念でアクセス制御を行う設計になっています(例: <code>player.getGroup('police')</code>のようなアクセサで所属や階級を確認する想定)。</p>
+      <p class="version-note">⚠️ ox_coreのgroup関連の具体的なメソッド名は、前レッスン同様に本セッションでは一字一句の裏取りができていません。実際に導入するバージョンの公式ドキュメントを確認してください。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>
