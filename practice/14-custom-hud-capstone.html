@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>【HUDトラック集大成】カスタムHUD | 実践演習 | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+  <link rel="stylesheet" href="../assets/css/lesson.css">
+</head>
+<body data-lesson-id="ex-14-custom-hud-capstone">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta exercise-difficulty">
+      <span class="badge tier-badge" data-tier="2">🟡 難易度: 初級</span>
+    </div>
+
+    <h1>【HUDトラック集大成】カスタムHUD</h1>
+
+    <section class="conclusion">
+      <h2>概要</h2>
+      <p>常駐表示・スピードメーター/ミニマップカスタマイズ・ステータスバーを1つのHUDリソースにまとめた自作HUDを作ります。</p>
+    </section>
+
+    <section class="directory-structure">
+      <h2>ディレクトリ構造</h2>
+      <pre class="directory-tree">ex14-custom-hud/
+├── fxmanifest.lua
+├── client.lua
+└── ui/
+    ├── index.html
+    ├── style.css
+    └── script.js</pre>
+    </section>
+
+    <section class="spec">
+      <h2>処理仕様</h2>
+      <ul class="spec-list">
+        <li><code>SetNuiFocus</code>を使わず、resource起動時からHUDが常時表示され続けるようにする。</li>
+        <li>乗車中のみスピードメーターを表示し、下車すると自動的に非表示にする。</li>
+        <li>ミニマップの位置をHUDのレイアウトに合わせて調整する。</li>
+        <li>体力・満腹度・喉の渇き(満腹度/喉の渇きはダミー値でよい)をバー表示し、一定間隔で更新する。</li>
+        <li>HUDの更新間隔は値の変化頻度に応じて分ける(体力は短く、ステータスバーは長く)。</li>
+      </ul>
+    </section>
+
+    <section class="expected-behavior">
+      <h2>期待する動作</h2>
+      <ul class="spec-list">
+        <li>resourceを起動すると、マウス操作を奪わずにHUDが表示される。</li>
+        <li>車両に乗ると速度計が表示され、降りると消える。</li>
+        <li>体力を減らす(ダメージを受ける)と、体力バーの表示が連動して変化する。</li>
+        <li>ミニマップがデフォルト位置からHUDのレイアウトに合わせた位置に移動している。</li>
+      </ul>
+    </section>
+
+    <section class="dependencies">
+      <h2>利用する依存関係</h2>
+      <table class="dependency-table">
+        <thead><tr><th>依存</th><th>用途</th></tr></thead>
+        <tbody>
+          <tr><td colspan="2">なし(FiveM標準native + NUIのみ)</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="related-lessons">
+      <h2>関連レッスン</h2>
+      <ul class="related-lessons-list">
+        <li><a href="../lessons/tier3-intermediate/39-persistent-hud-basics.html">常駐HUDの基礎設計</a><span class="related-lessons-list__note">SetNuiFocusを使わない常時表示パターン</span></li>
+        <li><a href="../lessons/tier3-intermediate/40-speedometer-minimap-hud.html">スピードメーター・ミニマップのカスタマイズ</a><span class="related-lessons-list__note">速度取得とミニマップ位置調整</span></li>
+        <li><a href="../lessons/tier3-intermediate/41-status-bar-hud-sync.html">ステータスバーの同期</a><span class="related-lessons-list__note">体力・満腹度・喉の渇きのバー表示</span></li>
+      </ul>
+    </section>
+
+    <p class="no-solution-note">※このページに完成コードは載せていません。上記の仕様と関連レッスンを参考に、自分で実装してみましょう。</p>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      この演習を完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../assets/js/lessons-data.js"></script>
+  <script src="../assets/js/exercises-data.js"></script>
+  <script src="../assets/js/progress.js"></script>
+  <script src="../assets/js/nav.js"></script>
+</body>
+</html>

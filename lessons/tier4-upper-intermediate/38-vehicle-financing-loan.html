@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>分割払い(ローン)システム | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t4-38-vehicle-financing-loan">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="4">🔴 中上級</span>
+      <span class="badge category-badge">🎮 経済・ゲームプレイ</span>
+      <span class="badge category-badge">🧩 フレームワーク連携</span>
+    </div>
+
+    <h1>分割払い(ローン)システム</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>頭金+分割回数を指定して車両を購入し、定期的に自動で分割金が引き落とされる</strong>ローンシステムを作れるようになります。Tier4-27のマネーロンダリングで扱った「時間経過で処理が進む」パターンの、経済システムへの応用です。</p>
+      <p><strong>こんな時に使う:</strong> Tier4-12の中古車販売店で、車両価格が高額な場合に一括購入以外の選択肢を用意したいとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>ローンは「①頭金を先に支払う」「②残額を分割回数で割った金額を、一定間隔ごとに口座から自動で引き落とす」「③滞納した場合の扱いを決めておく」という3要素で設計します。引き落とし処理はサーバーが常に起動しているとは限らないため、<strong>「前回いつ支払ったか」をDBに記録し、resource起動時に未払い分をまとめて確認する</strong>設計にしておくと、再起動をまたいでも正しく動作します。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>SQL: ローンテーブル</h3>
+      <div class="code-block">
+        <pre><code class="language-sql">CREATE TABLE IF NOT EXISTS `vehicle_loans` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `owner_identifier` VARCHAR(64) NOT NULL,
+  `plate` VARCHAR(12) NOT NULL,
+  `remaining_amount` INT NOT NULL,
+  `installment_amount` INT NOT NULL,
+  `last_paid_at` DATETIME DEFAULT CURRENT_TIMESTAMP
+);</code></pre>
+      </div>
+
+      <h3>server.lua: ローンを組んで購入する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local DOWN_PAYMENT_RATE = 0.2 -- 頭金は車両価格の20%
+
+RegisterNetEvent('dealership:purchaseWithLoan')
+AddEventHandler('dealership:purchaseWithLoan', function(vehiclePrice, plate, installmentCount)
+    local playerId = source
+    local identifier = GetPlayerIdentifierByType(playerId, 'license')
+
+    if not installmentCount or installmentCount < 2 or installmentCount > 24 then
+        TriggerClientEvent('myscript:notify', playerId, '分割回数は2〜24回で指定してください', 'error')
+        return
+    end
+
+    local downPayment = math.floor(vehiclePrice * DOWN_PAYMENT_RATE)
+    local paid = removePlayerMoney(playerId, downPayment) -- Tier4-01のフレームワーク連携で実装する想定
+    if not paid then
+        TriggerClientEvent('myscript:notify', playerId, '頭金分の所持金が足りません', 'error')
+        return
+    end
+
+    local remaining = vehiclePrice - downPayment
+    local installmentAmount = math.ceil(remaining / installmentCount)
+
+    MySQL.insert('INSERT INTO vehicle_loans (owner_identifier, plate, remaining_amount, installment_amount) VALUES (?, ?, ?, ?)', {
+        identifier, plate, remaining, installmentAmount
+    })
+
+    TriggerClientEvent('myscript:notify', playerId, ('頭金$%sで購入しました(残り$%sを%d回で分割払い)'):format(downPayment, remaining, installmentCount), 'success')
+end)</code></pre>
+      </div>
+
+      <h3>server.lua: 定期的に分割金を引き落とす</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local PAYMENT_INTERVAL_MS = 24 * 60 * 60 * 1000 -- 24時間ごとに引き落とす
+
+CreateThread(function()
+    while true do
+        Wait(60 * 60 * 1000) -- 1時間おきに「支払い期限が来ていないか」を確認する
+
+        local dueLoans = MySQL.query.await(
+            'SELECT * FROM vehicle_loans WHERE remaining_amount > 0 AND last_paid_at <= DATE_SUB(NOW(), INTERVAL 1 DAY)', {}
+        )
+
+        for _, loan in ipairs(dueLoans or {}) do
+            local playerId = getOnlinePlayerIdByIdentifier(loan.owner_identifier) -- Tier2-20の識別子とオンラインプレイヤーの紐付けを利用する想定
+
+            if playerId then
+                local amount = math.min(loan.installment_amount, loan.remaining_amount)
+                local paid = removePlayerMoney(playerId, amount)
+
+                if paid then
+                    MySQL.update('UPDATE vehicle_loans SET remaining_amount = remaining_amount - ?, last_paid_at = NOW() WHERE id = ?', {
+                        amount, loan.id
+                    })
+                    TriggerClientEvent('myscript:notify', playerId, ('車両ローンの分割金$%sが引き落とされました'):format(amount), 'success')
+                else
+                    -- 滞納。Tier4-24の指名手配度とは別に「信用スコア」等の仕組みを別途設計するのも一案
+                    TriggerClientEvent('myscript:notify', playerId, '分割金の支払いに失敗しました(所持金不足)', 'error')
+                end
+            end
+        end
+    end
+end)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li>頭金・分割回数の妥当性チェック(上記コード例の<code>installmentCount</code>の範囲確認)は必ずserver側で行ってください。clientから任意の回数・金額を送らせてはいけません(Tier3-05参照)。</li>
+        <li>プレイヤーがオフラインの間は引き落としができません。上記コード例は<code>last_paid_at</code>を基準に「支払い期限が来ているか」をDB側で判定しているため、再ログイン後に自然と追いつく設計になっています。</li>
+        <li>滞納が続いた場合の対応(車両の差し押さえ、信用情報への影響等)を決めずに実装すると、無限に滞納し続けられる抜け穴になります。ペナルティを必ず設計しておきましょう。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>上記コード例の<code>getOnlinePlayerIdByIdentifier</code>は概念を示す関数名です。実際には、ログイン時にidentifierとプレイヤーIDの対応表をメモリ上に保持しておくなどの実装が必要です。これで車両ディーラートラックの主要機能(在庫・試乗・購入・分割払い)が揃いました。演習ex-16ではこれらを1つのディーラーresourceに統合します。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

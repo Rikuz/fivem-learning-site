@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ジョブループの基本設計(受注→実行→納品→報酬) | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t4-32-job-loop-pattern">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="4">🔴 中上級</span>
+      <span class="badge category-badge">🧩 フレームワーク連携</span>
+      <span class="badge category-badge">🎮 経済・ゲームプレイ</span>
+    </div>
+
+    <h1>ジョブループの基本設計(受注→実行→納品→報酬)</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>「仕事」を1つの状態遷移(受注→実行→納品→報酬)として設計する</strong>考え方が身につきます。デリバリー・トラッカー・タクシーなど、あらゆるジョブ系スクリプトに共通して使える核心パターンです。</p>
+      <p><strong>こんな時に使う:</strong> Tier4-02でJobの確認方法は学んだが、「実際に1つの仕事をどう組み立てればいいか分からない」というとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>ジョブは複雑に見えますが、分解すると「①受注(仕事を開始する)」「②実行(目的地に向かう・作業する)」「③納品(成果物を渡す)」「④報酬(お金を受け取る)」という4つの状態を順番に進むだけです。各状態をプレイヤーごとのテーブルで管理し、<strong>今どの状態にいるかをserverが必ず把握しておく</strong>ことで、「納品をスキップして報酬だけ受け取る」といった不正を防げます。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>server.lua: ジョブの状態をプレイヤーごとに管理する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local activeJobs = {} -- playerId -> { state = 'idle'|'accepted'|'delivering'|'completed', startedAt }
+
+RegisterNetEvent('deliveryjob:accept')
+AddEventHandler('deliveryjob:accept', function()
+    local playerId = source
+
+    if activeJobs[playerId] and activeJobs[playerId].state ~= 'idle' then
+        TriggerClientEvent('myscript:notify', playerId, '既に仕事を受注中です', 'error')
+        return
+    end
+
+    activeJobs[playerId] = { state = 'accepted', startedAt = GetGameTimer() }
+    TriggerClientEvent('deliveryjob:onAccepted', playerId)
+end)</code></pre>
+      </div>
+
+      <h3>server.lua: 状態を確認しながら次の工程に進める</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">RegisterNetEvent('deliveryjob:startDelivering')
+AddEventHandler('deliveryjob:startDelivering', function()
+    local playerId = source
+    local job = activeJobs[playerId]
+
+    -- 「受注済み」の状態からしか「配達中」には進めない、というルールをserverが強制する
+    if not job or job.state ~= 'accepted' then return end
+
+    job.state = 'delivering'
+    TriggerClientEvent('deliveryjob:onDeliveringStarted', playerId)
+end)
+
+RegisterNetEvent('deliveryjob:completeDelivery')
+AddEventHandler('deliveryjob:completeDelivery', function()
+    local playerId = source
+    local job = activeJobs[playerId]
+
+    if not job or job.state ~= 'delivering' then return end
+
+    local payout = 150 -- 報酬額は必ずserver側の定数で決める(Tier3-05参照)
+    addPlayerMoney(playerId, payout) -- Tier4-01のフレームワーク連携で実装する想定
+
+    activeJobs[playerId] = nil -- 次の仕事をまた受注できるよう状態をリセットする
+    TriggerClientEvent('myscript:notify', playerId, ('配達完了。報酬$%sを受け取りました'):format(payout), 'success')
+end)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li>状態遷移(<code>idle → accepted → delivering → completed</code>)を必ずserver側の<code>activeJobs</code>テーブルで管理し、client側の判断だけで報酬イベントを発火できるようにしないでください。改造クライアントで受注をスキップして報酬だけ得られてしまいます。</li>
+        <li>各イベントハンドラの先頭で「今どの状態にいるか」を必ず確認し、想定外の状態からの遷移は無視してください(上記コード例の<code>if not job or job.state ~= '...'</code>がこれにあたります)。</li>
+        <li><code>activeJobs</code>はメモリ上のテーブルのため、サーバー再起動で受注中の仕事が消えます。長時間かかるジョブを扱う場合はTier3-15のオートセーブパターンでDB保存も検討してください。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>この4状態パターンは、デリバリー以外にも「強盗ミッション」「クラフトの受注生産」など、あらゆる「一連の作業」の設計に応用できます。次のレッスン(Tier4-33)では、この仕事に「オンデューティ管理」と「専用車両の貸出」を組み合わせます。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

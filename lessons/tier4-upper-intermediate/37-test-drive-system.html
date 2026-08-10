@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>試乗(テストドライブ)システム | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t4-37-test-drive-system">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="4">🔴 中上級</span>
+      <span class="badge category-badge">🚗 車両操作</span>
+      <span class="badge category-badge">🎮 経済・ゲームプレイ</span>
+    </div>
+
+    <h1>試乗(テストドライブ)システム</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>ディーラーの車両を制限時間付きで無料貸し出しし、時間切れやエリア外逸脱時に自動回収する</strong>試乗システムを作れるようになります。Tier4-12の中古車販売店に、実際のディーラー体験に欠かせない試乗機能を追加します。</p>
+      <p><strong>こんな時に使う:</strong> Tier4-12で作った販売店に、「購入前に乗り心地を確認できる」機能を追加したいとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>試乗は「①試乗車をスポーンする」「②制限時間のタイマーを開始する」「③時間切れ、またはディーラーエリアから離れすぎたら車両を回収する」という流れです。Tier4-30の投獄システムで使った「エリア外に出たら強制的に戻す」考え方と、Tier4-33のジョブ専用車両の貸出/回収の考え方を組み合わせるだけで実装できます。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>client.lua: 試乗を開始する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local DEALERSHIP_COORDS = vec3(-56.0, -1096.0, 26.0)
+local TEST_DRIVE_DURATION_MS = 3 * 60 * 1000 -- 3分間
+
+local testDriveVehicle = nil
+local testDriveEndsAt = nil
+
+RegisterNetEvent('dealership:startTestDrive')
+AddEventHandler('dealership:startTestDrive', function(model)
+    RequestModel(model)
+    while not HasModelLoaded(model) do Wait(0) end
+
+    testDriveVehicle = CreateVehicle(model, DEALERSHIP_COORDS.x, DEALERSHIP_COORDS.y, DEALERSHIP_COORDS.z, 0.0, true, false)
+    SetVehicleOnGroundProperly(testDriveVehicle)
+    SetModelAsNoLongerNeeded(model)
+
+    local ped = PlayerPedId()
+    TaskWarpPedIntoVehicle(ped, testDriveVehicle, -1)
+
+    testDriveEndsAt = GetGameTimer() + TEST_DRIVE_DURATION_MS
+    TriggerEvent('myscript:notify', '試乗開始(3分間)', 'success')
+end)</code></pre>
+      </div>
+
+      <h3>client.lua: 時間切れ・エリア外逸脱で回収する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local function endTestDrive(reason)
+    if not testDriveVehicle or not DoesEntityExist(testDriveVehicle) then return end
+
+    local ped = PlayerPedId()
+    if IsPedInVehicle(ped, testDriveVehicle, false) then
+        TaskLeaveVehicle(ped, testDriveVehicle, 0)
+    end
+
+    SetEntityAsMissionEntity(testDriveVehicle, true, true)
+    DeleteEntity(testDriveVehicle)
+    testDriveVehicle = nil
+    testDriveEndsAt = nil
+
+    TriggerEvent('myscript:notify', ('試乗を終了しました(%s)'):format(reason), 'warning')
+end
+
+CreateThread(function()
+    while true do
+        Wait(1000)
+
+        if testDriveEndsAt then
+            if GetGameTimer() >= testDriveEndsAt then
+                endTestDrive('時間切れ')
+            elseif testDriveVehicle and DoesEntityExist(testDriveVehicle) then
+                local distance = #(GetEntityCoords(testDriveVehicle) - DEALERSHIP_COORDS)
+                if distance > 500.0 then -- 販売店から離れすぎたら強制終了する
+                    endTestDrive('エリア外')
+                end
+            end
+        end
+    end
+end)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li>試乗車は<strong>売却不可・改造不可</strong>にする必要があります。試乗中に別のショップで転売されたり改造されたりしないよう、既存のショップ・改造系イベント側で「試乗車かどうか」を確認する処理を追加することを検討してください。</li>
+        <li>試乗車が事故で破損した場合の扱い(修理費を請求する、単に回収するだけにする等)を事前に決めておきましょう。</li>
+        <li>時間切れの判定を長い間隔(上記コード例は1秒)で行っているため、正確に3分ちょうどで切れるわけではありません。誤差を許容できる範囲で間隔を調整してください。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>試乗中に購入ボタンを押せるようにし、そのまま試乗車を正式に購入できるようにする(Tier4-12の購入処理に接続する)と、UXが向上します。次のレッスン(Tier4-38)では、購入時の分割払い(ローン)システムを扱います。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

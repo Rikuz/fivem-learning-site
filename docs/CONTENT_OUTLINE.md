@@ -95,6 +95,11 @@
 | `t3-36-ox-inventory-shops` | ox_inventory組み込みのショップ登録 | `database` | t3-04 | 下記「ox_inventory RegisterShop 正確な構文」を使用。`RegisterShop`で商品リスト・座標・グループ制限を一括登録する(Tier3-26の自作版との比較) |
 | `t3-37-ox-inventory-stashes` | ox_inventory組み込みのスタッシュ登録 | `database` | t3-04 | 下記「ox_inventory RegisterStash 正確な構文」を使用。`RegisterStash`とclient側`openInventory`で永続化された倉庫を作る(演習ex-04の自作版との比較) |
 | `t3-38-nui-escape-key` | NUIをEscキーで閉じる標準パターン | `nui` | t3-02 | JS側の`keydown`イベントでEscapeを検知し、`RegisterNUICallback`経由でLua側に通知して`SetNuiFocus(false, false)`する定番実装 |
+| `t3-39-persistent-hud-basics` | 常駐HUDの基礎設計(NUIを常時表示するパターン) | `nui` | t3-01 | 通常のNUI(開く/閉じる)と異なり`SetNuiFocus`を使わず常時表示し続ける設計。マウス操作を奪わないための注意点 |
+| `t3-40-speedometer-minimap-hud` | スピードメーター・ミニマップのカスタマイズ | `nui`, `vehicle` | t3-39, t2-06 | `GetEntitySpeed`での速度取得とHUDへの反映、`SetMinimapComponentPosition`等でのミニマップ位置・サイズ調整 |
+| `t3-41-status-bar-hud-sync` | ステータスバー(体力/満腹度/喉の渇き等)の同期 | `nui`, `events` | t3-39 | `GetEntityHealth`等のnativeと、フレームワーク非依存の汎用ステータス値をHUDに同期する設計 |
+| `t3-42-admin-permission-tiers` | 管理者権限レベル(Permission Tier)の設計 | `admin-tools`, `security` | t3-20 | Ace権限とJobを組み合わせた多段階権限(モデレーター/管理者/開発者)の設計パターン |
+| `t3-43-admin-player-list-spectate` | オンラインプレイヤー一覧とスペクテイト/ノークリップ | `admin-tools` | t3-42, t2-20 | NUIでのオンラインプレイヤー一覧表示、`NetworkSetInSpectatorMode`でのスペクテイト、`FREEZE_ENTITY_POSITION`を用いたノークリップの実装 |
 
 ### exports 正確な構文(FiveM公式ドキュメント準拠)
 
@@ -436,6 +441,13 @@ end)
 | `t4-29-arrest-handcuff-system` | 逮捕・拘束(handcuff)システム | `law-enforcement` | t2-07, t2-01 | 対象プレイヤーを拘束・護送するアニメーション同期の基本 |
 | `t4-30-jail-system` | 投獄(Jail)システム | `law-enforcement` | t4-29 | 行動制限+時間経過での自動釈放。脱獄対策の考え方 |
 | `t4-31-evidence-management` | 証拠品・押収品管理 | `law-enforcement`, `database` | t3-37 | `RegisterStash`(t3-37)の応用でevidence bagを実装し、押収品を記録する |
+| `t4-32-job-loop-pattern` | ジョブループの基本設計(受注→実行→納品→報酬) | `framework`, `gameplay` | t4-02, t2-01 | 「仕事」を1つの状態遷移として設計する考え方。他のジョブ系スクリプト全般に応用できる核心パターン |
+| `t4-33-job-duty-vehicle` | オンデューティ管理とジョブ専用車両の貸出 | `framework`, `vehicle` | t4-32, t2-06 | `job:setDuty`のトグルパターンと、勤務中のみ貸し出す専用車両のスポーン/返却処理 |
+| `t4-34-property-ownership-basics` | 物件購入システムの基礎(所有権テーブル設計) | `housing`, `database` | t3-03, t3-07 | 物件マスタ・所有権テーブルの設計、購入・転売処理。演習ex-04(共有倉庫)との所有権設計の違い |
+| `t4-35-furniture-placement-system` | 家具設置システム(プロップの設置・削除・保存) | `housing`, `database` | t4-34, t2-09 | 設置モード(仮配置→座標確定)、DBへの家具配置の永続化、resource再起動時の復元処理 |
+| `t4-36-housing-storage-lock` | 自宅の収納・施錠システム(ox_inventory + ox_doorlockとの連携) | `housing`, `targeting` | t4-34, t3-37, t4-14 | 所有者以外は開錠・収納アクセス不可にする権限制御。複数物件所有時の管理設計 |
+| `t4-37-test-drive-system` | 試乗(テストドライブ)システム | `vehicle`, `gameplay` | t4-12 | 制限時間付きの試乗車貸出、エリア外に出た場合の強制返却処理 |
+| `t4-38-vehicle-financing-loan` | 分割払い(ローン)システム | `gameplay`, `framework` | t4-12, t4-06 | 頭金+分割回数の設計、定期的な引き落とし処理、滞納時の扱い |
 
 ### okokBankingV2 正確な構文(要順守・憶測禁止。docs.okokscripts.io/scripts/okokbankingv2/exports で確認済み)
 
@@ -697,7 +709,7 @@ exports['Renewed-Banking']:CreateJobAccount(jobTable, initialBalance)
 
 ## カテゴリキー一覧(`docs/ARCHITECTURE.md`と同期させること)
 
-`environment`, `lua-basics`, `npc-entity`, `nui`, `database`, `framework`, `okok`, `lb-phone`, `events`, `performance`, `security`, `vehicle`, `animation`, `targeting`, `ui-library`, `world`, `effects`, `appearance`, `camera`, `gameplay`, `admin-tools`, `voice`, `dispatch`, `crime`, `law-enforcement`
+`environment`, `lua-basics`, `npc-entity`, `nui`, `database`, `framework`, `okok`, `lb-phone`, `events`, `performance`, `security`, `vehicle`, `animation`, `targeting`, `ui-library`, `world`, `effects`, `appearance`, `camera`, `gameplay`, `admin-tools`, `voice`, `dispatch`, `crime`, `law-enforcement`, `housing`
 
 ## 今後レッスンを追加する場合のルール
 

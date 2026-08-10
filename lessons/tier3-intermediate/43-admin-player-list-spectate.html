@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>オンラインプレイヤー一覧とスペクテイト/ノークリップ | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t3-43-admin-player-list-spectate">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="3">🟡 中級</span>
+      <span class="badge category-badge">🛠️ 管理者ツール</span>
+    </div>
+
+    <h1>オンラインプレイヤー一覧とスペクテイト/ノークリップ</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>オンライン中のプレイヤー一覧をNUIに表示し、選択したプレイヤーをスペクテイト(観戦)する</strong>ことと、<strong>管理者自身がノークリップ(壁抜け飛行)で自由に移動する</strong>ことができるようになります。Tier3-42の権限レベルと組み合わせて、実用的な管理者ツールの中核機能を実装します。</p>
+      <p><strong>こんな時に使う:</strong> 通報(Tier3-21)を受けた際に、対象プレイヤーの様子を離れた場所からこっそり確認したいとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>プレイヤー一覧は<code>GetPlayers()</code>(接続中の全プレイヤーIDを返す)から作れます。スペクテイトは<code>NetworkSetInSpectatorMode</code>で対象のpedにカメラを切り替える仕組みです。ノークリップは単一のnativeではなく、<strong>「衝突判定を無効化」「重力を無効化」「移動速度を上げる」という複数のnativeを組み合わせて自作する</strong>のが一般的です。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>server.lua: 権限を確認してプレイヤー一覧を送る</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">RegisterNetEvent('adminpanel:requestPlayerList')
+AddEventHandler('adminpanel:requestPlayerList', function()
+    local playerId = source
+    if not hasPermission(playerId, 'moderator') then return end -- Tier3-42参照
+
+    local playerList = {}
+    for _, targetId in ipairs(GetPlayers()) do
+        table.insert(playerList, {
+            id = tonumber(targetId),
+            name = GetPlayerName(targetId),
+        })
+    end
+
+    TriggerClientEvent('adminpanel:receivePlayerList', playerId, playerList)
+end)</code></pre>
+      </div>
+
+      <h3>client.lua: 選択したプレイヤーをスペクテイトする</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local isSpectating = false
+
+RegisterNetEvent('adminpanel:spectatePlayer')
+AddEventHandler('adminpanel:spectatePlayer', function(targetServerId)
+    local targetPed = GetPlayerPed(GetPlayerFromServerId(targetServerId))
+    if targetPed == 0 then return end
+
+    NetworkSetInSpectatorMode(true, targetPed)
+    isSpectating = true
+end)
+
+RegisterCommand('stopspectate', function()
+    if not isSpectating then return end
+    NetworkSetInSpectatorMode(false, PlayerPedId())
+    isSpectating = false
+end, false)</code></pre>
+      </div>
+
+      <h3>client.lua: ノークリップ(壁抜け飛行)を実装する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local noclipEnabled = false
+
+RegisterCommand('togglenoclip', function()
+    local ped = PlayerPedId()
+    noclipEnabled = not noclipEnabled
+
+    SetEntityCollision(ped, not noclipEnabled, not noclipEnabled)
+    SetEntityInvincible(ped, noclipEnabled)
+    SetEntityVisible(ped, not noclipEnabled, false)
+end, false)
+
+CreateThread(function()
+    while true do
+        Wait(0)
+        if noclipEnabled then
+            local ped = PlayerPedId()
+            local coords = GetEntityCoords(ped)
+            local forward = GetEntityForwardVector(ped)
+            local speed = 0.5
+
+            -- 前進キー(control 32)が押されている間、向いている方向に移動する
+            if IsControlPressed(0, 32) then
+                SetEntityCoords(ped, coords.x + forward.x * speed, coords.y + forward.y * speed, coords.z + forward.z * speed, false, false, false, false)
+            end
+        end
+    end
+end)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li>プレイヤー一覧・スペクテイト機能は必ずTier3-42の権限チェックを通してください。誰でも他人をスペクテイトできると、プライバシー上の問題になります。</li>
+        <li>スペクテイトを終了する際は、必ず<code>NetworkSetInSpectatorMode(false, PlayerPedId())</code>を呼んでカメラを自分のpedに戻してください。呼び忘れると視点が対象プレイヤーに固定されたままになります。</li>
+        <li>ノークリップ終了時は、<code>SetEntityCollision</code>・<code>SetEntityVisible</code>を元に戻すのを忘れないでください。衝突判定が無効なままだと、地面に埋まったり壁を抜けたままプレイを続けてしまう不具合になります。</li>
+        <li>上記のノークリップ実装は概念を示す簡略版です。カメラの向きに応じた自由な移動(上下移動・視点連動)まで作り込む場合は、<code>GetGameplayCamRot</code>と組み合わせた発展が必要になります。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p class="version-note">スペクテイト・ノークリップは管理者ツールの中でも強い権限を伴う機能です。誰がいつ使用したかをTier3-22のDiscord Webhookログに記録しておくと、後から利用状況を追跡できます。これで管理者パネルの主要機能(権限レベル・プレイヤー一覧・スペクテイト・ノークリップ)が揃いました。演習ex-15ではこれらとTier4-07・Tier4-11・Tier3-21・Tier3-22を1つのパネルに統合します。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>家具設置システム(プロップの設置・削除・保存) | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t4-35-furniture-placement-system">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="4">🔴 中上級</span>
+      <span class="badge category-badge">🏠 住居・不動産</span>
+      <span class="badge category-badge">🗄️ DB連携</span>
+    </div>
+
+    <h1>家具設置システム(プロップの設置・削除・保存)</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>家具(プロップ)を仮配置してから座標を確定し、DBに保存してresource再起動後も復元される</strong>家具設置システムを作れるようになります。Tier2-09のオブジェクト生成を「配置モード」という形に発展させます。</p>
+      <p><strong>こんな時に使う:</strong> Tier4-34で購入できるようにした物件の内部に、プレイヤー自身が家具を配置できるようにしたいとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>家具設置は「①プレビュー用のオブジェクトをプレイヤーの少し前方に仮生成する」「②キー操作で位置・向きを微調整する」「③確定キーで座標をDBに保存し、プレビューを本設置に切り替える」という3ステップで作ります。設置した家具はresource起動時にDBから読み込んで再生成することで、サーバー再起動後も家具が消えないようにします。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>SQL: 家具配置テーブル</h3>
+      <div class="code-block">
+        <pre><code class="language-sql">CREATE TABLE IF NOT EXISTS `property_furniture` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `property_id` VARCHAR(50) NOT NULL,
+  `model` VARCHAR(50) NOT NULL,
+  `x` FLOAT NOT NULL,
+  `y` FLOAT NOT NULL,
+  `z` FLOAT NOT NULL,
+  `heading` FLOAT NOT NULL
+);</code></pre>
+      </div>
+
+      <h3>client.lua: プレビューを生成し、キーで位置を微調整する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local previewObject = nil
+
+local function startPlacement(model)
+    RequestModel(model)
+    while not HasModelLoaded(model) do Wait(0) end
+
+    local ped = PlayerPedId()
+    local coords = GetEntityCoords(ped)
+
+    previewObject = CreateObject(model, coords.x, coords.y, coords.z, false, false, false)
+    SetEntityAlpha(previewObject, 150, false) -- 半透明にしてプレビューだと分かるようにする
+    SetEntityCollision(previewObject, false, false)
+    FreezeEntityPosition(previewObject, true)
+    SetModelAsNoLongerNeeded(model)
+end
+
+CreateThread(function()
+    while true do
+        Wait(0)
+        if previewObject then
+            local coords = GetEntityCoords(previewObject)
+            local heading = GetEntityHeading(previewObject)
+
+            -- 上下矢印キー(control 172/173)で前後移動、左右矢印キー(control 174/175)で回転する
+            if IsControlJustPressed(0, 172) then SetEntityCoords(previewObject, coords.x, coords.y + 0.1, coords.z, false, false, false, false) end
+            if IsControlJustPressed(0, 173) then SetEntityCoords(previewObject, coords.x, coords.y - 0.1, coords.z, false, false, false, false) end
+            if IsControlJustPressed(0, 174) then SetEntityHeading(previewObject, heading - 5.0) end
+            if IsControlJustPressed(0, 175) then SetEntityHeading(previewObject, heading + 5.0) end
+        end
+    end
+end)</code></pre>
+      </div>
+
+      <h3>client.lua / server.lua: 設置を確定してDBに保存する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">-- client.lua: Enterキー(control 191)で確定する
+RegisterCommand('confirm_placement', function()
+    if not previewObject then return end
+
+    local coords = GetEntityCoords(previewObject)
+    local heading = GetEntityHeading(previewObject)
+    local model = GetEntityModel(previewObject)
+
+    SetEntityAlpha(previewObject, 255, false)
+    SetEntityCollision(previewObject, true, true)
+    previewObject = nil -- プレビュー管理から外す(実体は残す)
+
+    TriggerServerEvent('housing:saveFurniture', GetCurrentPropertyId(), model, coords.x, coords.y, coords.z, heading)
+end, false)
+RegisterKeyMapping('confirm_placement', '家具の設置を確定する', 'keyboard', 'RETURN')</code></pre>
+      </div>
+      <div class="code-block">
+        <pre><code class="language-lua">-- server.lua: 所有者本人であることを確認してから保存する
+RegisterNetEvent('housing:saveFurniture')
+AddEventHandler('housing:saveFurniture', function(propertyId, model, x, y, z, heading)
+    local playerId = source
+    local identifier = GetPlayerIdentifierByType(playerId, 'license')
+
+    local owner = MySQL.scalar.await('SELECT owner_identifier FROM property_owners WHERE property_id = ?', { propertyId })
+    if owner ~= identifier then return end -- Tier4-34の所有権確認と同じパターン
+
+    MySQL.insert('INSERT INTO property_furniture (property_id, model, x, y, z, heading) VALUES (?, ?, ?, ?, ?, ?)', {
+        propertyId, model, x, y, z, heading
+    })
+end)</code></pre>
+      </div>
+
+      <h3>client.lua: 物件に入る際、保存済みの家具を復元する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">RegisterNetEvent('housing:loadFurniture')
+AddEventHandler('housing:loadFurniture', function(furnitureList)
+    for _, item in ipairs(furnitureList) do
+        RequestModel(item.model)
+        while not HasModelLoaded(item.model) do Wait(0) end
+
+        local obj = CreateObject(item.model, item.x, item.y, item.z, false, false, false)
+        SetEntityHeading(obj, item.heading)
+        FreezeEntityPosition(obj, true)
+        SetModelAsNoLongerNeeded(item.model)
+    end
+end)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li>設置確定の保存処理は必ずserver側で所有権を確認してください。他人の物件に無断で家具を設置されることを防げます(Tier4-34と同じ考え方)。</li>
+        <li>プレビュー用のオブジェクト(<code>previewObject</code>)は半透明・当たり判定なしにしておき、確定後の実体と見分けがつくようにしましょう。</li>
+        <li>家具を大量に設置できてしまうとパフォーマンスに影響します。1物件あたりの設置上限数をserver側でチェックする処理を追加することをおすすめします。</li>
+        <li>物件から退出する際、復元した家具オブジェクトを<code>DeleteEntity</code>で確実に削除してください。放置するとクライアントのメモリを圧迫します。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>上記コード例は方向キーでの簡易的な微調整ですが、発展させる場合はカメラの向きに応じた移動(<code>GetGameplayCamRot</code>との組み合わせ)や、マウスホイールでの回転など、より直感的な操作方法も検討できます。次のレッスン(Tier4-36)では、この物件に収納・施錠の機能を追加します。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

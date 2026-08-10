@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>オンデューティ管理とジョブ専用車両の貸出 | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t4-33-job-duty-vehicle">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="4">🔴 中上級</span>
+      <span class="badge category-badge">🧩 フレームワーク連携</span>
+      <span class="badge category-badge">🚗 車両操作</span>
+    </div>
+
+    <h1>オンデューティ管理とジョブ専用車両の貸出</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>「勤務中(オンデューティ)」かどうかをserverで管理し、勤務中のみジョブ専用車両を貸し出して勤務終了時に自動回収する</strong>仕組みを作れるようになります。Tier4-32のジョブループと組み合わせることで、より実際のジョブスクリプトに近い完成度になります。</p>
+      <p><strong>こんな時に使う:</strong> Tier4-32で作ったデリバリージョブに、「出勤中しか仕事を受けられない」「専用車両は勤務中しか使えない」という制約を追加したいとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>オンデューティ管理は、プレイヤーごとに「勤務中かどうか」のフラグをserverで持つだけのシンプルな仕組みです。重要なのは、<strong>ジョブに関わる処理(仕事の受注・専用車両のスポーン)を全て「勤務中である」ことのチェックから始める</strong>という設計上の徹底です。専用車両は、勤務終了時や切断時に必ず削除することで、車両が街に放置されるのを防ぎます。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>server.lua: オンデューティの切り替え</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local onDutyPlayers = {} -- playerId -> true
+
+RegisterNetEvent('deliveryjob:toggleDuty')
+AddEventHandler('deliveryjob:toggleDuty', function()
+    local playerId = source
+    local isNowOnDuty = not onDutyPlayers[playerId]
+
+    onDutyPlayers[playerId] = isNowOnDuty or nil
+    TriggerClientEvent('deliveryjob:onDutyChanged', playerId, isNowOnDuty)
+end)
+
+local function isOnDuty(playerId)
+    return onDutyPlayers[playerId] == true
+end</code></pre>
+      </div>
+
+      <h3>server.lua: 勤務中かどうかをジョブ受注のチェックに組み込む</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">RegisterNetEvent('deliveryjob:accept')
+AddEventHandler('deliveryjob:accept', function()
+    local playerId = source
+
+    if not isOnDuty(playerId) then
+        TriggerClientEvent('myscript:notify', playerId, '出勤してから仕事を受けてください', 'error')
+        return
+    end
+
+    -- Tier4-32のジョブループ処理へ続く
+end)</code></pre>
+      </div>
+
+      <h3>client.lua: 勤務開始時に専用車両をスポーンし、勤務終了時に回収する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local jobVehicle = nil
+
+RegisterNetEvent('deliveryjob:onDutyChanged')
+AddEventHandler('deliveryjob:onDutyChanged', function(isOnDuty)
+    if isOnDuty then
+        local model = `speedo` -- Tier1-11のハッシュ文字列(コンパイル時定数のためbacktick表記が使える)
+        RequestModel(model)
+        while not HasModelLoaded(model) do Wait(0) end
+
+        local coords = vec3(-45.0, -1000.0, 26.0) -- 配送拠点の座標
+        jobVehicle = CreateVehicle(model, coords.x, coords.y, coords.z, 0.0, true, false)
+        SetVehicleOnGroundProperly(jobVehicle)
+        SetModelAsNoLongerNeeded(model)
+
+        TriggerEvent('myscript:notify', '配送車両が貸し出されました', 'success')
+    else
+        if jobVehicle and DoesEntityExist(jobVehicle) then
+            SetEntityAsMissionEntity(jobVehicle, true, true)
+            DeleteEntity(jobVehicle)
+            jobVehicle = nil
+        end
+        TriggerEvent('myscript:notify', 'お疲れさまでした。車両を返却しました', 'success')
+    end
+end)
+
+-- 切断時にも確実に車両を削除する(Tier2-15の切断イベントの応用)
+AddEventHandler('onResourceStop', function(resourceName)
+    if GetCurrentResourceName() ~= resourceName then return end
+    if jobVehicle and DoesEntityExist(jobVehicle) then
+        DeleteEntity(jobVehicle)
+    end
+end)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li>「勤務中かどうか」の最終判定は必ずserver側の<code>onDutyPlayers</code>を使ってください。client側の変数だけで判定すると、改造クライアントで勤務外でも仕事を受注できてしまいます。</li>
+        <li>専用車両はプレイヤーごとに1台までに制限してください(既にスポーン済みなら再スポーンしない、または既存の車両を削除してから新しく出す)。制限しないと勤務のたびに車両が増え続けます。</li>
+        <li>プレイヤーが車両に乗ったまま切断した場合の扱い(車両を残す/削除する)も、サーバーの運用方針として事前に決めておきましょう。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>実際のRPフレームワーク(ESX/QBCore/Qbox)には、Job自体にJobごとの車両情報を持たせる仕組みが用意されていることも多いです。導入しているフレームワークにその機能がある場合は、自作の車両貸出処理をそちらに寄せることも検討してください(Tier4-01参照)。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

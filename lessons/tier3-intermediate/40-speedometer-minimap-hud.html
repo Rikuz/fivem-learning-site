@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>スピードメーター・ミニマップのカスタマイズ | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t3-40-speedometer-minimap-hud">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="3">🟡 中級</span>
+      <span class="badge category-badge">🖥️ UI表示(NUI)</span>
+      <span class="badge category-badge">🚗 車両操作</span>
+    </div>
+
+    <h1>スピードメーター・ミニマップのカスタマイズ</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>車両の速度を取得してHUDに表示するスピードメーター</strong>と、<strong>ミニマップの位置・サイズを自作HUDに合わせて調整する</strong>ことができるようになります。Tier3-39の常駐HUDの実践的な応用です。</p>
+      <p><strong>こんな時に使う:</strong> Tier4-33で貸し出す配送車両にスピード表示を付けたい、自作HUDのレイアウトに合わせてミニマップの位置をずらしたいとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>速度の取得は<code>GetEntitySpeed</code>という1つのnativeで完結します(戻り値はm/sなので、km/h表示にするには3.6倍します)。ミニマップの位置調整は<code>SetMinimapComponentPosition</code>というnativeで、<code>frontend.xml</code>で定義されている座標系を上書きする形で行います。どちらもTier3-39で作った常駐HUDのスレッド内で扱います。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>client.lua: 乗車中の車両の速度をHUDに送る</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">CreateThread(function()
+    while true do
+        Wait(200)
+
+        local ped = PlayerPedId()
+        local vehicle = GetVehiclePedIsIn(ped, false)
+
+        if vehicle ~= 0 then
+            local speedMs = GetEntitySpeed(vehicle)
+            local speedKmh = math.floor(speedMs * 3.6) -- m/s → km/hに変換
+
+            SendNUIMessage({ action = 'updateSpeed', visible = true, speed = speedKmh })
+        else
+            SendNUIMessage({ action = 'updateSpeed', visible = false })
+        end
+    end
+end)</code></pre>
+      </div>
+
+      <h3>ui/script.js: スピードメーターの表示切り替え</h3>
+      <div class="code-block">
+        <pre><code class="language-javascript">window.addEventListener('message', (event) => {
+  const data = event.data;
+  if (data.action !== 'updateSpeed') return;
+
+  const speedo = document.getElementById('speedometer');
+  speedo.style.display = data.visible ? 'block' : 'none';
+  if (data.visible) {
+    speedo.textContent = `${data.speed} km/h`;
+  }
+});</code></pre>
+      </div>
+
+      <h3>client.lua: ミニマップの位置・サイズを自作HUDに合わせて調整する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">CreateThread(function()
+    Wait(1000) -- HUDの初期化を待ってから適用する
+
+    -- SetMinimapComponentPosition(name, alignX, alignY, posX, posY, sizeX, sizeY)
+    -- alignX/alignYは "L"(左) "R"(右) "T"(上) "B"(下) を組み合わせて基準位置を指定する
+    SetMinimapComponentPosition('minimap', 'L', 'B', 0.0, -0.047, 0.1638, 0.183)
+    SetMinimapComponentPosition('minimap_mask', 'L', 'B', 0.020, 0.020, 0.128, 0.20)
+    SetMinimapComponentPosition('minimap_blur', 'L', 'B', -0.008, 0.010, 0.170, 0.240)
+end)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li><code>GetEntitySpeed</code>は徒歩中のped(プレイヤー自身)にも使えますが、車両のスピードメーターとしては必ず<code>GetVehiclePedIsIn</code>で取得した車両ハンドルに対して呼び出してください。</li>
+        <li><code>SetMinimapComponentPosition</code>の座標系は画面解像度に対する相対値(0.0〜1.0程度)です。数値を大きく変えるとミニマップが画面外にはみ出すので、少しずつ調整しながら確認してください。</li>
+        <li>ミニマップ位置の調整は、他のリソース(既存のHUDリソースなど)と競合すると意図しない位置に表示されることがあります。同じ機能を持つリソースを重複して導入しないよう注意してください。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p class="version-note">解像度やアスペクト比(ウルトラワイドモニター等)によってミニマップの見え方が変わることがあります。本番導入時は複数の解像度で見た目を確認することをおすすめします。次のレッスン(Tier3-41)では、体力・満腹度・喉の渇きといったステータスバーをHUDに追加します。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

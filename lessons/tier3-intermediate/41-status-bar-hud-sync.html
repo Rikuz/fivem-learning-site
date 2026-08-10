@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ステータスバー(体力/満腹度/喉の渇き等)の同期 | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t3-41-status-bar-hud-sync">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="3">🟡 中級</span>
+      <span class="badge category-badge">🖥️ UI表示(NUI)</span>
+      <span class="badge category-badge">📡 イベント/通信</span>
+    </div>
+
+    <h1>ステータスバー(体力/満腹度/喉の渇き等)の同期</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>体力・満腹度・喉の渇きといった複数のステータス値をHUDのバー表示に同期する</strong>ことができるようになります。体力はFiveM標準nativeから、満腹度・喉の渇きのようなフレームワーク独自の値は<strong>汎用的な取得関数を経由する設計</strong>にすることで、ESX/QBCore/Qboxのどれでも同じHUDコードが使い回せます。</p>
+      <p><strong>こんな時に使う:</strong> Tier3-39・Tier3-40で作ったHUDに、体力バーと満腹度・喉の渇きバーを追加したいとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>体力(<code>GetEntityHealth</code>)はFiveM標準のnativeで直接取得できますが、満腹度・喉の渇きはフレームワークごとにデータの持ち方が異なります(例: ESXは<code>xPlayer.hunger</code>、QBCoreは<code>PlayerData.metadata.hunger</code>など)。この違いをHUD側のコードに直接書いてしまうと、フレームワークを変えるたびにHUDを書き直すことになります。そこで<strong>「満腹度を取得する」という汎用関数だけをHUD側が呼び、中身の実装はフレームワークごとに差し替える</strong>という設計にします。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>client.lua: 体力とステータス値をまとめてHUDに送る</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">-- getHungerValue/getThirstValueは、導入しているフレームワークに合わせて実装する想定の関数(Tier4-01参照)
+-- ここでは概念を示すため、固定値を返すダミー実装にしている
+
+local function getHungerValue()
+    return 80 -- 実際にはESX/QBCore等のプレイヤーデータから取得する
+end
+
+local function getThirstValue()
+    return 65
+end
+
+CreateThread(function()
+    while true do
+        Wait(1000) -- 体力ほど頻繁に変わらないため、更新間隔を長めにする
+
+        local ped = PlayerPedId()
+        SendNUIMessage({
+            action = 'updateStatusBars',
+            health = GetEntityHealth(ped) - 100, -- GetEntityHealthは最低値100を返すため補正する
+            hunger = getHungerValue(),
+            thirst = getThirstValue(),
+        })
+    end
+end)</code></pre>
+      </div>
+
+      <h3>ui/script.js: バーの幅を割合で反映する</h3>
+      <div class="code-block">
+        <pre><code class="language-javascript">window.addEventListener('message', (event) => {
+  const data = event.data;
+  if (data.action !== 'updateStatusBars') return;
+
+  document.getElementById('health-bar').style.width = `${Math.max(0, data.health)}%`;
+  document.getElementById('hunger-bar').style.width = `${data.hunger}%`;
+  document.getElementById('thirst-bar').style.width = `${data.thirst}%`;
+});</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li><code>GetEntityHealth</code>はGTA V内部の仕様上、<strong>最低値が100(死亡状態の少し手前)</strong>です。バーの割合として使う場合は<code>GetEntityHealth(ped) - 100</code>のように補正し、0〜100の範囲になるよう変換してください。</li>
+        <li>満腹度・喉の渇きの取得処理をHUDのコードに直接ベタ書きすると、フレームワークを変更した際に修正箇所が分散します。上記コード例のように専用関数(<code>getHungerValue</code>等)にまとめておくと、差し替えが1箇所で済みます。</li>
+        <li>更新間隔を体力・満腹度・喉の渇きで別々にする(体力は短く、満腹度・喉の渇きは長く)と、無駄な<code>SendNUIMessage</code>呼び出しを減らせます。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>ESX/QBCore/Qboxそれぞれの満腹度・喉の渇きの正確なデータ構造は、フレームワークのバージョンによって変わることがあります。実際に導入する際は、各フレームワークの公式ドキュメントで最新のプレイヤーデータ構造を確認してください。これでカスタムHUDの主要な3要素(常駐表示・スピードメーター/ミニマップ・ステータスバー)が揃いました。演習ex-14ではこれらを1つのHUDリソースに統合します。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

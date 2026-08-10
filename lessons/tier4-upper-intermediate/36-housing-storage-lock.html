@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>自宅の収納・施錠システム(ox_inventory + ox_doorlockとの連携) | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t4-36-housing-storage-lock">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="4">🔴 中上級</span>
+      <span class="badge category-badge">🏠 住居・不動産</span>
+      <span class="badge category-badge">🎯 ターゲティング</span>
+    </div>
+
+    <h1>自宅の収納・施錠システム(ox_inventory + ox_doorlockとの連携)</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>自宅の玄関をox_doorlockで施錠し、所有者専用の収納(スタッシュ)をox_inventoryで用意する</strong>ことができるようになります。Tier4-34で作った所有権テーブルと、Tier3-37・Tier4-14で学んだ既存の仕組みを組み合わせるだけで実装できます。</p>
+      <p><strong>こんな時に使う:</strong> Tier4-34で購入できるようになった物件に、「他人は入れない」「収納にアイテムを保管できる」という住居らしい機能を追加したいとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>住居の収納・施錠は、Tier3-37の<code>RegisterStash</code>とTier4-14の<code>ox_doorlock</code>を「所有権テーブルと連動させる」だけで実現できます。ポイントは、スタッシュのid・ドアのidを<strong>物件idから一意に導出する</strong>ことです(例: <code>house_stash_ + propertyId</code>)。こうすることで、物件が増えてもコードを複製せずに済みます。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>server.lua: 物件ごとの収納をまとめて登録する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">CreateThread(function()
+    local properties = MySQL.query.await('SELECT id FROM properties', {})
+
+    for _, property in ipairs(properties or {}) do
+        -- RegisterStash(id, label, slots, weight, owner, groups) — Tier3-37参照
+        -- owner/groupsは指定せず、「誰でも開けるが実際のアクセス制御はox_target側で行う」設計にする
+        exports.ox_inventory:RegisterStash('house_stash_' .. property.id, '自宅の収納', 40, 80000)
+    end
+end)</code></pre>
+      </div>
+
+      <h3>client.lua: 玄関にox_targetで施錠・入室インタラクションを追加する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local function addPropertyDoorTarget(propertyId, coords)
+    exports.ox_target:addBoxZone({
+        coords = coords,
+        size = vec3(1.5, 1.5, 2.5),
+        options = {
+            {
+                name = 'enter_property_' .. propertyId,
+                icon = 'fa-solid fa-door-open',
+                label = '中に入る',
+                onSelect = function()
+                    TriggerServerEvent('housing:requestEnter', propertyId)
+                end,
+            },
+            {
+                name = 'open_property_stash_' .. propertyId,
+                icon = 'fa-solid fa-box',
+                label = '収納を開ける',
+                onSelect = function()
+                    TriggerServerEvent('housing:requestOpenStash', propertyId)
+                end,
+            },
+        }
+    })
+end</code></pre>
+      </div>
+
+      <h3>server.lua: 所有者本人であることを確認してから入室・収納アクセスを許可する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local function isOwner(playerId, propertyId)
+    local identifier = GetPlayerIdentifierByType(playerId, 'license')
+    local owner = MySQL.scalar.await('SELECT owner_identifier FROM property_owners WHERE property_id = ?', { propertyId })
+    return owner == identifier
+end
+
+RegisterNetEvent('housing:requestEnter')
+AddEventHandler('housing:requestEnter', function(propertyId)
+    local playerId = source
+
+    if not isOwner(playerId, propertyId) then
+        TriggerClientEvent('myscript:notify', playerId, 'この物件の所有者ではありません', 'error')
+        return
+    end
+
+    local furniture = MySQL.query.await('SELECT model, x, y, z, heading FROM property_furniture WHERE property_id = ?', { propertyId })
+    TriggerClientEvent('housing:loadFurniture', playerId, furniture or {}) -- Tier4-35参照
+end)
+
+RegisterNetEvent('housing:requestOpenStash')
+AddEventHandler('housing:requestOpenStash', function(propertyId)
+    local playerId = source
+
+    if not isOwner(playerId, propertyId) then
+        TriggerClientEvent('myscript:notify', playerId, 'この物件の所有者ではありません', 'error')
+        return
+    end
+
+    TriggerClientEvent('housing:openStash', playerId, 'house_stash_' .. propertyId)
+end)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li>ox_inventoryの<code>RegisterStash</code>自体には所有者を絞る<code>owner</code>引数がありますが、物件ごとに動的に変わる所有者(購入・転売で変化する)を都度<code>RegisterStash</code>し直すのは非効率です。上記コード例のように、<strong>アクセス制御はox_target側の<code>onSelect</code>→server側の所有権確認</strong>で行う設計の方が扱いやすくなります。</li>
+        <li>入室・収納アクセスの権限チェックは必ずserver側の<code>housing:requestEnter</code>/<code>housing:requestOpenStash</code>ハンドラで行ってください。client側の<code>onSelect</code>だけで判定すると、直接イベントを発火されて回避されます(これまでの管理者メニュー等と同じ注意点)。</li>
+        <li>物件を転売(Tier4-34)した場合、旧所有者が収納の中身を持ち逃げできないよう、売却時に収納を空にする、または中身ごと引き継がれる仕様にするかを事前に決めておきましょう。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>複数物件を所有できる設計にする場合、プレイヤーが物件一覧から入りたい家を選べるUI(ox_libのコンテキストメニュー、Tier3-35参照)を用意すると使い勝手が向上します。これで住居システムの主要機能(購入・家具設置・収納・施錠)が揃いました。演習ex-13ではこれらを1つのresourceとして統合します。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>【車両ディーラートラック集大成】車両ディーラー | 実践演習 | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+  <link rel="stylesheet" href="../assets/css/lesson.css">
+</head>
+<body data-lesson-id="ex-16-dealership-capstone">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta exercise-difficulty">
+      <span class="badge tier-badge" data-tier="3">🟠 難易度: 中級</span>
+    </div>
+
+    <h1>【車両ディーラートラック集大成】車両ディーラー</h1>
+
+    <section class="conclusion">
+      <h2>概要</h2>
+      <p>在庫表示・試乗・購入・分割払いを1つのディーラーresourceに統合した車両販売店を作ります。</p>
+    </section>
+
+    <section class="directory-structure">
+      <h2>ディレクトリ構造</h2>
+      <pre class="directory-tree">ex16-dealership/
+├── fxmanifest.lua
+├── client.lua
+└── server.lua</pre>
+    </section>
+
+    <section class="spec">
+      <h2>処理仕様</h2>
+      <ul class="spec-list">
+        <li>販売中の車両一覧をox_target経由で表示する。</li>
+        <li>各車両は試乗ができ、制限時間・エリア外逸脱で自動回収される。</li>
+        <li>購入方法として「一括払い」と「頭金+分割払い」の2種類を用意する。</li>
+        <li>分割払いを選んだ場合、定期的に分割金が自動で引き落とされる。</li>
+        <li>納車時、車両のダメージ状態を初期化してから引き渡す。</li>
+      </ul>
+    </section>
+
+    <section class="expected-behavior">
+      <h2>期待する動作</h2>
+      <ul class="spec-list">
+        <li>試乗を開始すると制限時間付きで車両を借りられ、時間切れかエリア外に出ると自動回収される。</li>
+        <li>一括払いを選ぶと即座に所有権が移り、車両を受け取れる。</li>
+        <li>分割払いを選ぶと頭金のみ支払われ、以降定期的に残額が引き落とされる。</li>
+        <li>納車された車両は常に無傷の状態になっている。</li>
+      </ul>
+    </section>
+
+    <section class="dependencies">
+      <h2>利用する依存関係</h2>
+      <table class="dependency-table">
+        <thead><tr><th>依存</th><th>用途</th></tr></thead>
+        <tbody>
+          <tr><td>oxmysql</td><td>ローン・所有権の永続化</td></tr>
+          <tr><td>ESXまたはQBCore</td><td>所持金の操作</td></tr>
+          <tr><td>okokBankingV2(任意)</td><td>分割金の引き落とし先</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="related-lessons">
+      <h2>関連レッスン</h2>
+      <ul class="related-lessons-list">
+        <li><a href="../lessons/tier4-upper-intermediate/12-used-car-dealership.html">中古車販売店(ディーラー)システム</a><span class="related-lessons-list__note">在庫・購入処理の核</span></li>
+        <li><a href="../lessons/tier4-upper-intermediate/37-test-drive-system.html">試乗(テストドライブ)システム</a><span class="related-lessons-list__note">制限時間付きの試乗車貸出</span></li>
+        <li><a href="../lessons/tier4-upper-intermediate/38-vehicle-financing-loan.html">分割払い(ローン)システム</a><span class="related-lessons-list__note">頭金+分割払いの実装</span></li>
+      </ul>
+    </section>
+
+    <p class="no-solution-note">※このページに完成コードは載せていません。上記の仕様と関連レッスンを参考に、自分で実装してみましょう。</p>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      この演習を完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../assets/js/lessons-data.js"></script>
+  <script src="../assets/js/exercises-data.js"></script>
+  <script src="../assets/js/progress.js"></script>
+  <script src="../assets/js/nav.js"></script>
+</body>
+</html>

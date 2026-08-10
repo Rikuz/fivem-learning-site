@@ -144,6 +144,7 @@ window.LESSONS = LESSONS;
 | `dispatch` | ディスパッチ通知 |
 | `crime` | 犯罪行為(ゲーム内) |
 | `law-enforcement` | 警察業務 |
+| `housing` | 住居・不動産 |
 
 ---
 

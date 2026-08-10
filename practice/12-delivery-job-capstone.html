@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>【配送ジョブトラック集大成】配送ジョブ | 実践演習 | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+  <link rel="stylesheet" href="../assets/css/lesson.css">
+</head>
+<body data-lesson-id="ex-12-delivery-job-capstone">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta exercise-difficulty">
+      <span class="badge tier-badge" data-tier="3">🟠 難易度: 中級</span>
+    </div>
+
+    <h1>【配送ジョブトラック集大成】配送ジョブ</h1>
+
+    <section class="conclusion">
+      <h2>概要</h2>
+      <p>受注→実行→納品→報酬のジョブループに、複数の配達先を持つルート配送と、距離に応じた報酬スケーリングを組み合わせた配送ジョブを作ります。</p>
+    </section>
+
+    <section class="directory-structure">
+      <h2>ディレクトリ構造</h2>
+      <pre class="directory-tree">ex12-delivery-job/
+├── fxmanifest.lua
+├── client.lua
+└── server.lua</pre>
+    </section>
+
+    <section class="spec">
+      <h2>処理仕様</h2>
+      <ul class="spec-list">
+        <li>オンデューティのトグルコマンド/インタラクションを用意し、勤務中のみ仕事を受注できるようにする。</li>
+        <li>仕事を受注すると、2〜4箇所のランダムな配達先座標が決まり、それぞれにBlipが表示される。</li>
+        <li>各配達先に到着したら、プログレスバーを伴う「荷下ろし」アクションを行う。</li>
+        <li>全ての配達先を回り終えたら仕事が完了し、報酬を受け取る。報酬額は「配達先の総移動距離」に応じてserver側で計算する。</li>
+        <li>勤務終了時、受注中の仕事があれば強制終了し、専用車両を回収する。</li>
+      </ul>
+    </section>
+
+    <section class="expected-behavior">
+      <h2>期待する動作</h2>
+      <ul class="spec-list">
+        <li>出勤していない状態では仕事を受注できない。</li>
+        <li>受注すると全ての配達先にBlipが表示され、1箇所ずつ順番に納品できる。</li>
+        <li>全ての配達先を回り終えると、距離に応じた報酬が支払われる(距離が長いほど高額)。</li>
+        <li>勤務終了(オフデューティ)にすると、受注中の仕事と専用車両がリセットされる。</li>
+      </ul>
+    </section>
+
+    <section class="dependencies">
+      <h2>利用する依存関係</h2>
+      <table class="dependency-table">
+        <thead><tr><th>依存</th><th>用途</th></tr></thead>
+        <tbody>
+          <tr><td>ox_lib</td><td>プログレスバー表示</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="related-lessons">
+      <h2>関連レッスン</h2>
+      <ul class="related-lessons-list">
+        <li><a href="../lessons/tier4-upper-intermediate/32-job-loop-pattern.html">ジョブループの基本設計(受注→実行→納品→報酬)</a><span class="related-lessons-list__note">仕事全体の状態遷移設計</span></li>
+        <li><a href="../lessons/tier4-upper-intermediate/33-job-duty-vehicle.html">オンデューティ管理とジョブ専用車両の貸出</a><span class="related-lessons-list__note">勤務中のみ受注・専用車両の貸出</span></li>
+        <li><a href="../lessons/tier2-novice/03-blip-marker.html">Blip/Markerを表示する</a><span class="related-lessons-list__note">配達先の可視化</span></li>
+        <li><a href="../lessons/tier3-intermediate/08-ox-lib-notify-progress.html">ox_libで通知・プログレスバーを出す</a><span class="related-lessons-list__note">荷下ろしアクションの演出</span></li>
+      </ul>
+    </section>
+
+    <p class="no-solution-note">※このページに完成コードは載せていません。上記の仕様と関連レッスンを参考に、自分で実装してみましょう。</p>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      この演習を完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../assets/js/lessons-data.js"></script>
+  <script src="../assets/js/exercises-data.js"></script>
+  <script src="../assets/js/progress.js"></script>
+  <script src="../assets/js/nav.js"></script>
+</body>
+</html>

@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>【管理者パネルトラック集大成】管理者パネル | 実践演習 | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+  <link rel="stylesheet" href="../assets/css/lesson.css">
+</head>
+<body data-lesson-id="ex-15-admin-panel-capstone">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta exercise-difficulty">
+      <span class="badge tier-badge" data-tier="3">🟠 難易度: 中級</span>
+    </div>
+
+    <h1>【管理者パネルトラック集大成】管理者パネル</h1>
+
+    <section class="conclusion">
+      <h2>概要</h2>
+      <p>権限レベル・オンラインプレイヤー一覧・BAN/キック・スクリーンショット・監視ログを1つのNUIパネルに統合した管理者パネルを作ります。</p>
+    </section>
+
+    <section class="directory-structure">
+      <h2>ディレクトリ構造</h2>
+      <pre class="directory-tree">ex15-admin-panel/
+├── fxmanifest.lua
+├── client.lua
+├── server.lua
+└── ui/
+    ├── index.html
+    ├── style.css
+    └── script.js</pre>
+    </section>
+
+    <section class="spec">
+      <h2>処理仕様</h2>
+      <ul class="spec-list">
+        <li>ACE権限のprincipal入れ子構造でmoderator/admin/developerの3段階権限を用意する。</li>
+        <li>パネルを開くコマンドを用意し、権限を持つプレイヤーのみNUIが開けるようにする。</li>
+        <li>オンラインプレイヤー一覧をNUIに表示し、対象を選んでスペクテイトできるようにする。</li>
+        <li>admin以上の権限を持つプレイヤーのみ、一覧からBAN・キックを実行できるようにする。</li>
+        <li>BAN・キック等の重要操作を実行するたびにscreenshot-basicで証拠を残し、Discord Webhookにログを送信する。</li>
+        <li>通報・チケット一覧もパネル内の別タブとして表示する。</li>
+      </ul>
+    </section>
+
+    <section class="expected-behavior">
+      <h2>期待する動作</h2>
+      <ul class="spec-list">
+        <li>moderator権限のプレイヤーはプレイヤー一覧・スペクテイトは使えるが、BAN・キックのボタンは表示されない(または実行できない)。</li>
+        <li>admin以上の権限を持つプレイヤーはBAN・キックを実行でき、実行するとスクリーンショットとログがDiscordに送信される。</li>
+        <li>権限を持たないプレイヤーはコマンドを実行してもパネルが開かない。</li>
+      </ul>
+    </section>
+
+    <section class="dependencies">
+      <h2>利用する依存関係</h2>
+      <table class="dependency-table">
+        <thead><tr><th>依存</th><th>用途</th></tr></thead>
+        <tbody>
+          <tr><td>screenshot-basic</td><td>証拠保全用のスクリーンショット取得</td></tr>
+          <tr><td>Discord Webhook</td><td>操作ログの送信</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="related-lessons">
+      <h2>関連レッスン</h2>
+      <ul class="related-lessons-list">
+        <li><a href="../lessons/tier3-intermediate/42-admin-permission-tiers.html">管理者権限レベル(Permission Tier)の設計</a><span class="related-lessons-list__note">moderator/admin/developerの階層設計</span></li>
+        <li><a href="../lessons/tier3-intermediate/43-admin-player-list-spectate.html">オンラインプレイヤー一覧とスペクテイト/ノークリップ</a><span class="related-lessons-list__note">プレイヤー一覧・観戦機能</span></li>
+        <li><a href="../lessons/tier4-upper-intermediate/07-ban-kick-system.html">BAN・キック機能を実装する</a><span class="related-lessons-list__note">パネルからのBAN・キック実行</span></li>
+        <li><a href="../lessons/tier3-intermediate/21-report-ticket-system.html">通報・チケットシステムの基礎</a><span class="related-lessons-list__note">パネル内の通報一覧タブ</span></li>
+        <li><a href="../lessons/tier3-intermediate/22-discord-webhook-log.html">重要操作をDiscord Webhookでログ収集する</a><span class="related-lessons-list__note">BAN・キック実行時のログ送信</span></li>
+      </ul>
+    </section>
+
+    <p class="no-solution-note">※このページに完成コードは載せていません。上記の仕様と関連レッスンを参考に、自分で実装してみましょう。</p>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      この演習を完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../assets/js/lessons-data.js"></script>
+  <script src="../assets/js/exercises-data.js"></script>
+  <script src="../assets/js/progress.js"></script>
+  <script src="../assets/js/nav.js"></script>
+</body>
+</html>

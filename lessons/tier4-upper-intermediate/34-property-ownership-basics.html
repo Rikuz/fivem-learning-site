@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>物件購入システムの基礎(所有権テーブル設計) | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t4-34-property-ownership-basics">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="4">🔴 中上級</span>
+      <span class="badge category-badge">🏠 住居・不動産</span>
+      <span class="badge category-badge">🗄️ DB連携</span>
+    </div>
+
+    <h1>物件購入システムの基礎(所有権テーブル設計)</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>物件の一覧(マスタデータ)と、誰がどの物件を所有しているか(所有権)を分けてDB設計し、購入・転売処理を実装する</strong>ことができるようになります。住居システム全体の土台になるレッスンです。</p>
+      <p><strong>こんな時に使う:</strong> 「家を買う」機能をゼロから作りたいが、DBテーブルをどう分ければいいか分からないとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>物件データは「①物件そのものの情報(座標・価格・内装ID等、変化しない情報)」と「②誰が所有しているか(変化する情報)」の2つのテーブルに分けて設計するのが定石です。演習ex-04の共有倉庫は「誰でもアクセスできる」設計でしたが、住居は「所有者だけがアクセスできる」という点が大きく異なります。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>SQL: 物件マスタと所有権テーブル</h3>
+      <div class="code-block">
+        <pre><code class="language-sql">CREATE TABLE IF NOT EXISTS `properties` (
+  `id` VARCHAR(50) PRIMARY KEY,     -- 例: 'house_vinewood_01'
+  `label` VARCHAR(100) NOT NULL,
+  `coords_x` FLOAT NOT NULL,
+  `coords_y` FLOAT NOT NULL,
+  `coords_z` FLOAT NOT NULL,
+  `price` INT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS `property_owners` (
+  `property_id` VARCHAR(50) PRIMARY KEY,
+  `owner_identifier` VARCHAR(64) NOT NULL,
+  `purchased_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`property_id`) REFERENCES `properties`(`id`)
+);</code></pre>
+      </div>
+
+      <h3>server.lua: 物件を購入する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">RegisterNetEvent('housing:purchaseProperty')
+AddEventHandler('housing:purchaseProperty', function(propertyId)
+    local playerId = source
+    local identifier = GetPlayerIdentifierByType(playerId, 'license') -- Tier4-13参照
+
+    local property = MySQL.single.await('SELECT * FROM properties WHERE id = ?', { propertyId })
+    if not property then return end
+
+    local existingOwner = MySQL.scalar.await('SELECT owner_identifier FROM property_owners WHERE property_id = ?', { propertyId })
+    if existingOwner then
+        TriggerClientEvent('myscript:notify', playerId, 'この物件は既に売却済みです', 'error')
+        return
+    end
+
+    -- 所持金の確認・減算は必ずserver側で行う(Tier3-05参照)
+    local paid = removePlayerMoney(playerId, property.price) -- Tier4-01のフレームワーク連携で実装する想定
+    if not paid then
+        TriggerClientEvent('myscript:notify', playerId, '所持金が足りません', 'error')
+        return
+    end
+
+    MySQL.insert('INSERT INTO property_owners (property_id, owner_identifier) VALUES (?, ?)', {
+        propertyId, identifier
+    })
+
+    TriggerClientEvent('myscript:notify', playerId, ('%sを購入しました'):format(property.label), 'success')
+end)</code></pre>
+      </div>
+
+      <h3>server.lua: 転売(所有権の解除)</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">RegisterNetEvent('housing:sellProperty')
+AddEventHandler('housing:sellProperty', function(propertyId)
+    local playerId = source
+    local identifier = GetPlayerIdentifierByType(playerId, 'license')
+
+    local owner = MySQL.scalar.await('SELECT owner_identifier FROM property_owners WHERE property_id = ?', { propertyId })
+    if owner ~= identifier then return end -- 自分の物件以外は売却できない
+
+    local property = MySQL.single.await('SELECT * FROM properties WHERE id = ?', { propertyId })
+    local refund = math.floor(property.price * 0.7) -- 転売価格は購入価格の70%(下取りロスを設ける)
+
+    MySQL.query('DELETE FROM property_owners WHERE property_id = ?', { propertyId })
+    addPlayerMoney(playerId, refund)
+
+    TriggerClientEvent('myscript:notify', playerId, ('%sを$%sで売却しました'):format(property.label, refund), 'success')
+end)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li>所有権の確認(<code>owner_identifier</code>との比較)は、家具設置(Tier4-35)や施錠(Tier4-36)など、この後のあらゆる機能で繰り返し必要になります。共通の確認関数として切り出しておくと再利用しやすくなります。</li>
+        <li>物件マスタ(<code>properties</code>)と所有権(<code>property_owners</code>)を1つのテーブルにまとめてしまうと、未購入物件の情報を表示する際に扱いにくくなります。分離しておくのが安全です。</li>
+        <li>転売価格を購入価格と同額にすると「買ってすぐ売る」を繰り返して実質無コストになってしまいます。上記コード例のように下取りロスを設けるとバランスが取りやすくなります。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>複数のキャラクターを持てるフレームワークの場合、<code>owner_identifier</code>をアカウント単位(license)にするかキャラクター単位(citizenid等)にするかで挙動が変わります。「アカウント内のどのキャラでも住居に入れる」か「購入したキャラでしか入れない」かは、サーバーの設計方針として事前に決めておきましょう。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

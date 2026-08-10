@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>常駐HUDの基礎設計(NUIを常時表示するパターン) | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t3-39-persistent-hud-basics">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="3">🟡 中級</span>
+      <span class="badge category-badge">🖥️ UI表示(NUI)</span>
+    </div>
+
+    <h1>常駐HUDの基礎設計(NUIを常時表示するパターン)</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>「開く/閉じる」タイプのNUI(Tier3-01)とは異なり、ゲームプレイ中ずっと画面に表示され続けるHUDをNUIで作る</strong>ことができるようになります。スピードメーターやステータスバーなど、あらゆる自作HUDの土台です。</p>
+      <p><strong>こんな時に使う:</strong> デフォルトのGTA V HUDではなく、サーバー独自のHUDを画面に常時表示したいとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>Tier3-01で学んだNUIは「<code>SetNuiFocus(true, true)</code>でマウス操作を奪い、閉じたら<code>false, false</code>に戻す」という一時的な表示でした。HUDはこれと違い、<strong>マウス・キーボード操作を奪わず、ゲームプレイ中ずっと表示され続ける</strong>必要があります。そのため<code>SetNuiFocus</code>は一切呼ばず、CSS側で「クリックを無視する」設定をしておくことがポイントです。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>fxmanifest.lua: HUD用のui_pageを登録する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">fx_version 'cerulean'
+game 'gta5'
+
+ui_page 'ui/index.html'
+
+files {
+    'ui/index.html',
+    'ui/style.css',
+    'ui/script.js'
+}
+
+client_script 'client.lua'</code></pre>
+      </div>
+
+      <h3>ui/style.css: HUD全体をクリック透過にする</h3>
+      <div class="code-block">
+        <pre><code class="language-css">html, body {
+  background: transparent;
+  margin: 0;
+  /* HUD自体はゲームの操作を邪魔してはいけないので、クリックを常に透過させる */
+  pointer-events: none;
+}
+
+#hud {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  font-family: sans-serif;
+  color: white;
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.8);
+}</code></pre>
+      </div>
+
+      <h3>client.lua: SetNuiFocusを一切呼ばず、resource起動時から表示され続ける</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">-- HUDは「開く/閉じる」操作がなく、resourceが起動している間はずっと表示されたままにする
+-- (SetNuiFocusを呼んでいないため、プレイヤーの操作は一切妨げない)
+
+CreateThread(function()
+    while true do
+        Wait(500) -- 更新間隔。Wait(0)は無駄に負荷をかけるので避ける(Tier5-01参照)
+
+        local ped = PlayerPedId()
+        SendNUIMessage({
+            action = 'updateHud',
+            health = GetEntityHealth(ped),
+        })
+    end
+end)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li>HUD用のNUIに<code>SetNuiFocus(true, true)</code>を呼んでしまうと、常時マウス操作を奪ってしまい、ゲームがプレイできなくなります。HUDは基本的に<code>SetNuiFocus</code>を呼ばない設計にしてください。</li>
+        <li>CSSで<code>pointer-events: none</code>を忘れると、HUDの要素がゲーム画面のクリックを吸収してしまうことがあります。HUD全体に必ず設定しておきましょう。</li>
+        <li>更新頻度を<code>Wait(0)</code>(毎フレーム)にすると、不要な<code>SendNUIMessage</code>呼び出しが大量に発生しパフォーマンスを悪化させます(Tier5-01参照)。体力等の頻繁に変わらない値は数百ms間隔で十分です。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>次のレッスン(Tier3-40)では、この常駐HUDにスピードメーターとミニマップのカスタマイズを追加します。値が変化した時だけ<code>SendNUIMessage</code>を送る(前回値との比較)という工夫も、パフォーマンスを保つ上で有効です。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>
