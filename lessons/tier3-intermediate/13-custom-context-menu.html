@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>独自のコンテキストメニューを自作する | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t3-13-custom-context-menu">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="3">🟠 中級</span>
+      <span class="badge category-badge">🖥️ UI表示(NUI)</span>
+    </div>
+
+    <h1>独自のコンテキストメニューを自作する</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>ox_libに頼らず、Lua側から選択肢のリストを渡して選ばせるコンテキストメニューを自作</strong>できるようになります。ox_lib(Tier3-08)の内部で何が行われているかの理解にもつながります。</p>
+      <p><strong>こんな時に使う:</strong> ox_libを導入せずに軽量なメニューだけ実装したい、既存のNUIデザインに合わせた独自の見た目のメニューが欲しいとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>コンテキストメニューは、Tier3-01・Tier3-02で学んだNUIの基本パターン(<code>SendNUIMessage</code>で選択肢を渡し、<code>RegisterNUICallback</code>で選ばれた項目を受け取る)をそのまま応用したものです。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>client.lua: メニューを開く</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local function openContextMenu(options)
+    SetNuiFocus(true, true)
+    SendNUIMessage({
+        action = 'openMenu',
+        options = options
+    })
+end
+
+RegisterCommand('shopmenu', function()
+    openContextMenu({
+        { id = 'buy_water', label = '水を買う ($20)' },
+        { id = 'buy_bread', label = 'パンを買う ($30)' },
+        { id = 'close',     label = '閉じる' },
+    })
+end, false)</code></pre>
+      </div>
+
+      <h3>ui/script.js: 選択肢を描画し、選ばれたら通知する</h3>
+      <div class="code-block">
+        <pre><code class="language-javascript">window.addEventListener('message', (event) => {
+  const data = event.data;
+  if (data.action === 'openMenu') {
+    const list = document.getElementById('menu-list');
+    list.innerHTML = '';
+
+    data.options.forEach((option) => {
+      const item = document.createElement('button');
+      item.textContent = option.label;
+      item.addEventListener('click', () => selectOption(option.id));
+      list.appendChild(item);
+    });
+
+    document.getElementById('app').style.display = 'block';
+  }
+});
+
+function selectOption(optionId) {
+  fetch(`https://${GetParentResourceName()}/menuSelect`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json; charset=UTF-8' },
+    body: JSON.stringify({ id: optionId })
+  });
+  document.getElementById('app').style.display = 'none';
+}</code></pre>
+      </div>
+
+      <h3>client.lua: 選択結果を受け取る</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">RegisterNUICallback('menuSelect', function(data, cb)
+    SetNuiFocus(false, false)
+
+    if data.id == 'buy_water' then
+        TriggerServerEvent('shop:buyItem', 'water')
+    elseif data.id == 'buy_bread' then
+        TriggerServerEvent('shop:buyItem', 'bread')
+    end
+
+    cb('ok')
+end)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li>メニューの選択肢に含まれる「価格」等の表示用テキストは、あくまで<strong>表示のためだけ</strong>に使ってください。実際の購入処理(Tier3-05)では、Lua側(server)で保持している正しい価格を使い、JS側から送られてきた表示用の値は信用しないでください。</li>
+        <li>選択肢が多くなるメニューでは、Tier3-14「通知のキュー管理」と同様に、UIの表示状態(開いているか/閉じているか)をJS側で正しく管理しないと、複数回開いたときに表示が重なるバグが起きやすくなります。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>ox_lib(Tier3-08)の<code>lib.registerContext</code>/<code>lib.showContext</code>は、この自作パターンをより洗練させ、アイコン・アニメーション・ネストしたメニュー(サブメニュー)まで含めて提供してくれるものです。シンプルな用途では自作、複雑な用途ではox_libの利用も検討してください。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

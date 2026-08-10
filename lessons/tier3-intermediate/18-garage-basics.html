@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ガレージシステムの基礎設計 | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t3-18-garage-basics">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="3">🟠 中級</span>
+      <span class="badge category-badge">🚗 車両操作</span>
+      <span class="badge category-badge">🧩 フレームワーク連携</span>
+    </div>
+
+    <h1>ガレージシステムの基礎設計</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>プレイヤーが所有する車両をDBに記録し、ガレージで出し入れ(格納・出庫)できる</strong>基本的な仕組みを実装できるようになります。</p>
+      <p><strong>こんな時に使う:</strong> 自分の車を保管しておきたい、複数の車両を切り替えて使いたい、車両購入システム(Tier4-12)の受け皿としたいとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>ガレージシステムの核となる考え方は、「車両は<strong>DB上に存在するデータ</strong>であり、実際にワールドに出ている車両(Tier2-06)はその一時的な表現にすぎない」というものです。格納中はDBの行として存在するだけで、ワールドには実体を作りません。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>テーブル設計の例</h3>
+      <div class="code-block">
+        <pre><code class="language-bash"># owned_vehicles テーブル
+# id | identifier | model      | plate     | garage    | stored
+# 1  | abc123     | adder      | MYCAR01   | legion    | true</code></pre>
+      </div>
+
+      <h3>server.lua: 車両を購入してDBに登録する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local function registerOwnedVehicle(identifier, model, plate, garage)
+    MySQL.Async.execute(
+        'INSERT INTO owned_vehicles (identifier, model, plate, garage, stored) VALUES (@id, @model, @plate, @garage, 1)',
+        { ['@id'] = identifier, ['@model'] = model, ['@plate'] = plate, ['@garage'] = garage }
+    )
+end</code></pre>
+      </div>
+
+      <h3>server.lua: ガレージの所有車両一覧を取得する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">RegisterNetEvent('garage:requestVehicles')
+AddEventHandler('garage:requestVehicles', function(garageName)
+    local playerId = source
+    local identifier = GetPlayerIdentifiers(playerId)[1]
+
+    MySQL.Async.fetchAll('SELECT * FROM owned_vehicles WHERE identifier = @id AND garage = @garage', {
+        ['@id'] = identifier,
+        ['@garage'] = garageName
+    }, function(vehicles)
+        TriggerClientEvent('garage:showVehicleList', playerId, vehicles)
+    end)
+end)</code></pre>
+      </div>
+
+      <h3>client.lua: 選んだ車両を出庫する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">RegisterNetEvent('garage:spawnVehicle')
+AddEventHandler('garage:spawnVehicle', function(vehicleData, spawnCoords)
+    -- 変数のハッシュ化にはバッククォート記法が使えないため、GetHashKeyを使う(Tier1-11参照)
+    local model = GetHashKey(vehicleData.model)
+    RequestModel(model)
+    while not HasModelLoaded(model) do Wait(0) end
+
+    local vehicle = CreateVehicle(model, spawnCoords.x, spawnCoords.y, spawnCoords.z, spawnCoords.w, true, false)
+    SetVehicleNumberPlateText(vehicle, vehicleData.plate)
+
+    TriggerServerEvent('garage:markAsStored', vehicleData.id, false) -- storedフラグをfalseに更新
+end)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li>「格納済み(<code>stored = true</code>)」の車両を、出庫処理をせずにもう一度出そうとすると、同じ車両が複数体存在してしまう(複製バグ)ことがあります。出庫時に必ず<code>stored</code>フラグを確認・更新してください。</li>
+        <li>プレイヤーが車両に乗ったまま切断した場合の扱い(自動的に格納するか、その場に残すか)を決めておかないと、車両が野ざらしのままDBの状態と食い違うことがあります。Tier2-15「切断理由の取得と後処理」と組み合わせて設計してください。</li>
+        <li>車両の色・カスタムパーツ(Tier2-14のダメージ管理とは別の見た目のカスタム)まで保存したい場合は、追加のカラムやJSON列(Tier3-17参照)が必要になります。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>ガレージの「どこから出すか」の座標選択や、複数ガレージ間での移動などは、要件に応じて発展させていく部分です。まずは「1つのガレージに、DBの車両を出し入れする」という最小限の流れを固めることが大切です。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

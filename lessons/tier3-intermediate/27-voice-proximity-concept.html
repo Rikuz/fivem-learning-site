@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>音声近接チャットの考え方 | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t3-27-voice-proximity-concept">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="3">🟠 中級</span>
+      <span class="badge category-badge">🎙️ ボイス・無線</span>
+    </div>
+
+    <h1>音声近接チャットの考え方</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>pma-voiceのような近接ボイスチャットリソースが、どのような仕組みで「近くにいる人にだけ声が届く」を実現しているか</strong>を理解できるようになります。</p>
+      <p><strong>こんな時に使う:</strong> ボイスチャットリソースを導入する前に仕組みを理解しておきたい、無線システム(Tier3-28)を自作する前提知識として学びたいとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>FiveMのゲームエンジン自体には、Discordのようなボイスチャット機能は組み込まれていません。近接ボイスチャットは、<strong>Mumble</strong>(FiveMに統合されている音声通信プロトコル)の仕組みを、resource側からnative関数で制御することで実現されています。</p>
+      <p>基本的な考え方は次の3ステップです。①プレイヤーの座標を継続的に把握する、②距離に応じて音量を計算する(近いほど大きく、一定距離を超えたら聞こえなくする)、③<code>MumbleSetVolumeOverride</code>のようなnative関数で、プレイヤーごとの音量を個別に設定する。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>client.lua: 距離に応じてボイスの音量を調整する概念</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local MAX_VOICE_DISTANCE = 15.0
+
+CreateThread(function()
+    while true do
+        Wait(500)
+        local myCoords = GetEntityCoords(PlayerPedId())
+
+        for _, playerId in ipairs(GetActivePlayers()) do
+            if playerId ~= PlayerId() then
+                local targetPed = GetPlayerPed(playerId)
+                local targetCoords = GetEntityCoords(targetPed)
+                local distance = #(myCoords - targetCoords)
+
+                if distance <= MAX_VOICE_DISTANCE then
+                    -- 距離に応じて0.0(無音)〜1.0(最大)の音量を計算する
+                    local volume = 1.0 - (distance / MAX_VOICE_DISTANCE)
+                    -- MumbleSetVolumeOverride(playerId, volume) のようなnativeで反映する(概念的な例)
+                else
+                    -- 範囲外のプレイヤーの音量を0にする
+                end
+            end
+        end
+    end
+end)</code></pre>
+      </div>
+
+      <h3>チャンネル分けの考え方(無線との組み合わせ)</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">-- MumbleSetSubChannel(channelId) のようなnativeで、
+-- 距離に関わらず特定のグループ内だけで通信できる「チャンネル」に切り替えられる
+-- (この仕組みがTier3-28「無線チャンネルシステムの基礎」の土台になる)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li>実際のMumble制御用native関数(<code>MumbleSetVolumeOverride</code>等)は細かい仕様・引数がバージョンによって異なることがあるため、このレッスンでは<strong>考え方の解説</strong>にとどめています。実装する際は、実績のあるpma-voiceのようなリソースを導入するのが現実的です(自作するとバグの発生源になりやすい領域です)。</li>
+        <li>音量計算を毎フレーム(<code>Wait(0)</code>)で全プレイヤー分行うと負荷が高くなります。上記コード例のように間隔を空けて計算するのが基本です(Tier5-01参照)。</li>
+        <li>ボイスチャットは音声データそのものを扱う特殊な領域のため、一般的なLuaスクリプトだけで完全に自作するのは難易度が非常に高い分野です。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>実運用では、pma-voice・saltychat・tokovoipのような実績あるボイスチャットリソースを導入し、その設定・連携方法を学ぶ方が現実的です。このレッスンは「中で何が起きているか」を理解するための土台として位置づけてください。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

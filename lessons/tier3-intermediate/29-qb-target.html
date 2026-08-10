@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>qb-targetでインタラクションを作る | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t3-29-qb-target">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="3">🟠 中級</span>
+      <span class="badge category-badge">🎯 ターゲティング</span>
+    </div>
+
+    <h1>qb-targetでインタラクションを作る</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>ox_target(Tier3-07)の代替としてよく使われるqb-targetで、同じようなインタラクションゾーンを作る</strong>ことができるようになります。</p>
+      <p><strong>こんな時に使う:</strong> 導入しているサーバーがQBCoreベースで、qb-target系のリソースが標準になっているとき(ox_targetとqb-targetは似た役割のライブラリで、どちらか一方を選んで使います)。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>qb-targetはox_targetと同じ「third-eye」型のターゲティングライブラリですが、export名や引数の形が異なります。QBCoreエコシステムに合わせて作られており、<code>job</code>による表示制限などQBCore特有のオプションも用意されています。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>ボックス型のゾーンを追加する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">exports['qb-target']:AddBoxZone("MissionRowDutyClipboard", vector3(441.7989, -982.0529, 30.67834), 0.45, 0.35, {
+    name = "MissionRowDutyClipboard",
+    heading = 11.0,
+    debugPoly = false,
+    minZ = 30.77834,
+    maxZ = 30.87834,
+}, {
+    options = {
+        {
+            type = "client",
+            event = "myscript:openClipboard",
+            icon = "fas fa-clipboard",
+            label = "クリップボードを見る",
+            job = "police", -- この職業のプレイヤーにしか表示しない(省略可)
+        },
+    },
+    distance = 2.5
+})</code></pre>
+      </div>
+
+      <h3>client.lua: 選択されたイベントを受け取る</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">RegisterNetEvent('myscript:openClipboard')
+AddEventHandler('myscript:openClipboard', function()
+    print('クリップボードを開く処理をここに書く')
+end)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li><code>AddBoxZone</code>の第1引数(ゾーン名)と第7引数のテーブル内<code>name</code>は<strong>同じ値にする</strong>のが基本です(ゾーンの識別に使われます)。</li>
+        <li>ox_targetとqb-targetを<strong>同時に導入するのは避けてください</strong>。どちらもプレイヤーの照準を監視する処理を持っており、両方動かすと余計な負荷がかかったり、UIが二重に出たりする原因になります。サーバー全体でどちらか一方に統一しましょう。</li>
+        <li><code>type = "client"</code>と<code>type = "server"</code>で、発火するイベントの実行場所が変わります。お金の増減などサーバー権威が必要な処理を直接<code>type = "client"</code>のイベントに書かないよう注意してください(Tier3-05参照)。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p><code>AddTargetModel</code>(モデル指定)、<code>AddTargetEntity</code>(エンティティ指定)、<code>RemoveZone</code>といった関数もox_targetの<code>addModel</code>/<code>addEntity</code>/<code>removeZone</code>に相当する機能として用意されています。基本的な設計思想はox_targetと共通しているため、片方を理解していればもう片方も習得しやすいはずです。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

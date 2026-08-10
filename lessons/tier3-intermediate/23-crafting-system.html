@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>クラフト(製作)システムの基礎 | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t3-23-crafting-system">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="3">🟠 中級</span>
+      <span class="badge category-badge">🎮 経済・ゲームプレイ</span>
+    </div>
+
+    <h1>クラフト(製作)システムの基礎</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>「必要な素材が揃っているか確認→素材を消費→完成品を付与する」という、クラフトシステムの基本的な処理フロー</strong>を実装できるようになります。</p>
+      <p><strong>こんな時に使う:</strong> 料理・薬品・武器改造など、複数の素材から新しいアイテムを作れるようにしたいとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>クラフトの本質は、Tier3-04で学んだインベントリ操作(<code>addItem</code>/<code>removeItem</code>)を「レシピ」に沿って組み合わせることです。レシピを<code>Config.lua</code>(Tier1-09)にデータとして定義しておくと、新しい製作物を追加するのも簡単になります。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>Config.lua: レシピの定義</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">Config.Recipes = {
+    {
+        result = { name = 'bandage', amount = 1 },
+        ingredients = {
+            { name = 'cloth', amount = 2 },
+            { name = 'alcohol', amount = 1 },
+        },
+        craftTimeMs = 5000,
+    },
+}</code></pre>
+      </div>
+
+      <h3>server.lua: レシピに沿って製作する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local function findRecipe(itemName)
+    for _, recipe in ipairs(Config.Recipes) do
+        if recipe.result.name == itemName then
+            return recipe
+        end
+    end
+    return nil
+end
+
+local function hasEnoughIngredients(playerId, recipe)
+    for _, ingredient in ipairs(recipe.ingredients) do
+        local count = exports.ox_inventory:GetItemCount(playerId, ingredient.name)
+        if count < ingredient.amount then
+            return false
+        end
+    end
+    return true
+end
+
+RegisterNetEvent('crafting:craftItem')
+AddEventHandler('crafting:craftItem', function(itemName)
+    local playerId = source
+    local recipe = findRecipe(itemName)
+
+    if not recipe then return end
+    if not hasEnoughIngredients(playerId, recipe) then
+        TriggerClientEvent('myscript:notify', playerId, '素材が足りません')
+        return
+    end
+
+    -- 素材を全て消費してから、完成品を渡す
+    for _, ingredient in ipairs(recipe.ingredients) do
+        exports.ox_inventory:RemoveItem(playerId, ingredient.name, ingredient.amount)
+    end
+    exports.ox_inventory:AddItem(playerId, recipe.result.name, recipe.result.amount)
+
+    TriggerClientEvent('myscript:notify', playerId, ('%sを製作しました'):format(recipe.result.name))
+end)</code></pre>
+      </div>
+
+      <h3>client.lua: 製作時間を演出する(ox_lib、Tier3-08参照)</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">RegisterCommand('craft', function(args)
+    local itemName = args[1]
+
+    if lib.progressBar({ duration = 5000, label = '製作しています...', canCancel = true }) then
+        TriggerServerEvent('crafting:craftItem', itemName)
+    end
+end, false)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li>素材の消費と完成品の付与を分けて考えず、<strong>必ず「消費に成功してから」完成品を渡す</strong>順序にしてください。先に完成品を渡してしまうと、素材が足りない場合の取り消し処理が複雑になります。</li>
+        <li>製作時間の演出(プログレスバー)はclient側の見た目にすぎません。実際の判定(素材があるか、製作が完了したか)は必ずserver側で行い、client側のプログレスバーが完了したという通知だけを信用しないでください(client側から不正に「完了した」というイベントを送られる可能性があるため)。</li>
+        <li>レシピが増えるほど<code>findRecipe</code>の線形探索(先頭から順に調べる方法)が遅くなります。レシピ数が多い場合は、アイテム名をキーにしたテーブル(連想配列)に変換しておくと高速化できます。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>Tier3-24「釣り・採掘などのミニゲームループ」と組み合わせて「採取した素材でクラフトする」という一連の生産チェーンを作ることもよくあります。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

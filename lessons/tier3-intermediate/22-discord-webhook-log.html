@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>重要操作をDiscord Webhookでログ収集する | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t3-22-discord-webhook-log">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="3">🟠 中級</span>
+      <span class="badge category-badge">🛠️ 管理者ツール</span>
+      <span class="badge category-badge">📡 イベント/通信</span>
+    </div>
+
+    <h1>重要操作をDiscord Webhookでログ収集する</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>お金の増減・BAN・管理者コマンドの実行など、重要な操作が起きたときにDiscordのチャンネルへ自動で通知を送る</strong>ことができるようになります。</p>
+      <p><strong>こんな時に使う:</strong> 「誰が・いつ・いくらお金を配ったか」を後から確認したい、不正操作の証跡を残したい、DBを直接見なくてもDiscordで運用状況を把握したいとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>Discordの<strong>Webhook</strong>(Discordのチャンネルに外部からメッセージを送信できる、あらかじめ発行されたURL)にHTTPリクエストを送ることで、ゲーム内で起きた出来事をDiscordに転送できます。FiveMのLuaには<code>PerformHttpRequest</code>というnative関数が用意されており、これでHTTP通信を行います。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>server.lua: Webhookにログを送信する共通関数</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local WEBHOOK_URL = 'https://discord.com/api/webhooks/xxxxx/yyyyy' -- 実際のWebhook URLに置き換える
+
+local function sendDiscordLog(title, description)
+    local payload = json.encode({
+        embeds = {
+            {
+                title = title,
+                description = description,
+                color = 3066993 -- 緑系の色(10進数のRGB値)
+            }
+        }
+    })
+
+    PerformHttpRequest(WEBHOOK_URL, function(statusCode, responseText, headers) end, 'POST', payload, {
+        ['Content-Type'] = 'application/json'
+    })
+end</code></pre>
+      </div>
+
+      <h3>使用例: 管理者のお金付与をログに残す</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">RegisterCommand('givemoney', function(source, args)
+    if not IsPlayerAceAllowed(source, 'command.givemoney') then return end
+
+    local targetId = tonumber(args[1])
+    local amount = tonumber(args[2])
+
+    -- 実際のお金付与処理はここに書く(省略)
+
+    sendDiscordLog(
+        '💰 お金付与',
+        ('管理者 %s が %s に $%s を付与しました'):format(GetPlayerName(source), GetPlayerName(targetId), amount)
+    )
+end, false)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li><strong>Webhook URLは秘密情報です</strong>。コード中に直接書いた状態でGitHub等の公開リポジトリにコミットしないでください(Tier1-08で学んだ<code>.gitignore</code>で除外するConfig.luaに分離する等の対策を取りましょう)。URLが漏れると誰でもそのチャンネルに投稿できてしまいます。</li>
+        <li><code>PerformHttpRequest</code>は非同期です(Tier3-03のDB処理と同じ考え方)。送信結果を待たずに次の行が実行されるため、送信の成否を厳密に確認したい場合はコールバック内で処理してください。</li>
+        <li>ログを送りすぎるとDiscordのレート制限(短時間に大量のリクエストを送ると一時的に拒否される制限)に引っかかることがあります。本当に重要な操作だけに絞ってログを送るようにしましょう。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>Discordの「Embed」機能(色付きの枠で表示されるリッチな見た目のメッセージ)を使うことで、通常のテキストより見やすいログを作れます。BAN機能(Tier4-07)、通報システム(Tier3-21)など、多くの管理者向け機能と組み合わせて活用されます。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>管理者メニューの基礎設計 | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t3-20-admin-menu-basics">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="3">🟠 中級</span>
+      <span class="badge category-badge">🛠️ 管理者ツール</span>
+    </div>
+
+    <h1>管理者メニューの基礎設計</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>権限を持つ管理者だけが開けるメニューを作り、接続中プレイヤーの一覧を表示して操作ボタンを配置する</strong>基本設計ができるようになります。</p>
+      <p><strong>こんな時に使う:</strong> テレポート・お金付与・キック等をコマンド入力なしでボタン操作でできるようにしたい、管理業務をまとめて1つの画面に集約したいとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>これまで学んできた「権限チェック付きコマンド(Tier2-04)」「NUI(Tier3-01・02)」「プレイヤー一覧取得」を組み合わせると、管理者メニューの基本形が作れます。コマンドを1つずつ覚える必要がなく、視覚的に操作できるのが利点です。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>client.lua: 権限チェック付きでメニューを開く</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">RegisterCommand('adminmenu', function()
+    TriggerServerEvent('admin:requestOpen')
+end, false)
+
+RegisterNetEvent('admin:openMenu')
+AddEventHandler('admin:openMenu', function(players)
+    SetNuiFocus(true, true)
+    SendNUIMessage({ action = 'openAdminMenu', players = players })
+end)</code></pre>
+      </div>
+
+      <h3>server.lua: 権限を確認し、プレイヤー一覧を渡す</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">RegisterNetEvent('admin:requestOpen')
+AddEventHandler('admin:requestOpen', function()
+    local source = source
+    if not IsPlayerAceAllowed(source, 'command.adminmenu') then return end
+
+    local players = {}
+    for _, playerId in ipairs(GetPlayers()) do
+        table.insert(players, {
+            id = tonumber(playerId),
+            name = GetPlayerName(playerId)
+        })
+    end
+
+    TriggerClientEvent('admin:openMenu', source, players)
+end)</code></pre>
+      </div>
+
+      <h3>server.lua: メニューからの操作を受け取る(NUIコールバック経由)</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">RegisterNetEvent('admin:teleportToPlayer')
+AddEventHandler('admin:teleportToPlayer', function(targetId)
+    local source = source
+    if not IsPlayerAceAllowed(source, 'command.adminmenu') then return end -- 呼び出し側でも必ず再チェックする
+
+    local targetPed = GetPlayerPed(targetId)
+    if targetPed and targetPed ~= 0 then
+        local coords = GetEntityCoords(targetPed)
+        TriggerClientEvent('admin:doTeleport', source, coords)
+    end
+end)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li>「メニューを開けた=全ての操作を実行してよい」ではありません。<strong>メニュー内の個別のボタン操作(テレポート・BAN等)も、それぞれのイベントハンドラで改めて権限チェックしてください</strong>。メニューを開く権限チェックだけに頼ると、他のイベントを直接発火されて権限を回避される危険があります。</li>
+        <li>プレイヤー一覧はプレイヤーの入退室で変化します。メニューを開いている間に切断したプレイヤーへの操作がエラーにならないよう、対象が存在するか確認する処理(<code>targetPed ~= 0</code>等)を必ず入れてください。</li>
+        <li>危険な操作(BAN、resource再起動等)には、誤操作防止の確認ダイアログをUI側に用意することを検討してください。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>Tier3-21「通報・チケットシステムの基礎」、Tier4-11「screenshot-basicでスクリーンショットを取得する」も、この管理者メニューの1機能として組み込むことが多い機能です。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>JSON保存 vs リレーショナル設計の使い分け | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t3-17-json-vs-relational">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="3">🟠 中級</span>
+      <span class="badge category-badge">🗄️ DB連携</span>
+    </div>
+
+    <h1>JSON保存 vs リレーショナル設計の使い分け</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>データを1つのJSON列にまとめて保存する方法と、複数のテーブルに分けて保存する方法(正規化)のメリット・デメリットを理解し、状況に応じて選べる</strong>ようになります。</p>
+      <p><strong>こんな時に使う:</strong> Tier3-04のインベントリのようなデータをDBに保存する際、「1列にまとめるか、テーブルを分けるか」で迷ったとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>Tier3-04では、インベントリを<code>json.encode</code>で1つの文字列にして<code>users</code>テーブルの1列に保存する方法を扱いました。これは手軽ですが、常に最適とは限りません。テーブルを分けて1アイテム1行で保存する<strong>正規化</strong>(データの重複や矛盾を防ぐためにテーブルを分割する設計手法)という選択肢もあります。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>方式A: JSON列にまとめる</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">-- テーブル: users (identifier, name, inventory)
+-- inventory列には '{"water":3,"bread":1}' のようなJSON文字列が入る
+
+MySQL.Async.execute('UPDATE users SET inventory = @inventory WHERE identifier = @id', {
+    ['@inventory'] = json.encode({ water = 3, bread = 1 }),
+    ['@id'] = identifier
+})</code></pre>
+      </div>
+
+      <h3>方式B: テーブルを分ける(正規化)</h3>
+      <div class="code-block">
+        <pre><code class="language-sql">-- inventory_items テーブル(1アイテム1行)
+-- identifier | item_name | amount
+-- "abc123"   | "water"   | 3
+-- "abc123"   | "bread"   | 1</code></pre>
+      </div>
+      <div class="code-block">
+        <pre><code class="language-lua">-- アイテムを1件だけ更新する場合、方式Bなら該当行だけ更新すればよい
+MySQL.Async.execute('UPDATE inventory_items SET amount = @amount WHERE identifier = @id AND item_name = @item', {
+    ['@amount'] = 5,
+    ['@id'] = identifier,
+    ['@item'] = 'water'
+})</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li><strong>方式A(JSON)の弱点</strong>: 「アイテムを1件だけ検索・集計する」ようなSQL(「waterを100個以上持っているプレイヤーを探す」等)がとても書きにくくなります。全プレイヤーのJSONを読み込んでLua側で判定する必要が出てくることがあります。</li>
+        <li><strong>方式B(正規化)の弱点</strong>: テーブル数が増え、DBスキーマの設計・マイグレーション(Tier4-08)の手間が増えます。単純なデータには過剰な設計になることもあります。</li>
+        <li>「検索・集計したいか」「構造が固定的か」を基準に選ぶのが実用的な指針です。単純なユーザー設定はJSON、検索や在庫管理が絡むデータ(インベントリ、取引履歴等)はテーブル分割、という使い分けが一般的です。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>実際のox_inventory(Tier3-04)やokokBanking(Tier4-06)のような本格的なリソースは、検索・集計のしやすさを重視してテーブルを分ける正規化設計を採用しています。自作の小規模なスクリプトではJSON方式から始め、必要になったら正規化する、という段階的なアプローチも現実的です。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

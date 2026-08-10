@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>複数resourceにまたがるプロジェクト構成のコツ | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t3-09-multi-resource-structure">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="3">🟠 中級</span>
+      <span class="badge category-badge">⚙️ 環境構築</span>
+    </div>
+
+    <h1>複数resourceにまたがるプロジェクト構成のコツ</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>1つの大きな機能を複数のresourceに分割し、依存関係を整理して破綻しにくいプロジェクト構成にする</strong>ことができるようになります。</p>
+      <p><strong>こんな時に使う:</strong> 「銀行」「インベントリ」「フレームワーク連携」のように性質の異なる機能を1つのresourceに詰め込みすぎて管理が大変になってきたとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>Tier2-19で学んだのは1つのresource内でのファイル分割でしたが、規模が大きくなると<strong>resource自体を分ける</strong>ことも検討します。「core(基盤)」「UI」「機能A」「機能B」のように分け、Tier3-06で学んだ<code>exports</code>で連携させるのが一般的なパターンです。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>分割例: ショップシステムの構成</h3>
+      <div class="code-block">
+        <pre><code class="language-bash">resources/[local]/
+├── myshop-core/       -- 商品定義・購入ロジック(サーバー権威の中心)
+│   └── fxmanifest.lua    -- exportsでAPIを公開する
+├── myshop-ui/          -- NUI画面(myshop-coreのexportsを呼んで使う)
+│   └── fxmanifest.lua    -- dependency 'myshop-core'
+└── myshop-target/      -- ox_target連携部分(店員NPCへのインタラクション追加)
+    └── fxmanifest.lua    -- dependency 'myshop-core', dependency 'ox_target'</code></pre>
+      </div>
+
+      <h3>myshop-core: 他から呼ばれるAPIを整理して公開する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local function BuyItem(source, itemName)
+    -- 購入処理の本体(Tier3-05のサーバー側バリデーションを含む)
+    return true
+end
+
+exports('BuyItem', BuyItem)</code></pre>
+      </div>
+
+      <h3>myshop-ui: coreのexportsを呼ぶ</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">RegisterNUICallback('confirmPurchase', function(data, cb)
+    local success = exports['myshop-core']:BuyItem(source, data.itemName)
+    cb(success)
+end)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li>分割しすぎると、resource間の起動順序(<code>dependency</code>)の管理が複雑になります。「本当に独立して差し替えたい/再利用したい単位か」を基準に分割してください。</li>
+        <li>命名規則を決めておかないと、resourceが増えるほどどれが何のためのものか分かりにくくなります。<code>プロジェクト名-機能名</code>のような接頭辞を統一すると管理しやすくなります。</li>
+        <li>複数resourceに分けると、1箇所の変更で複数のフォルダを触る必要が出てきます。Tier1-08で学んだGitで、プロジェクト全体を1つのリポジトリとして管理すると変更履歴を追いやすくなります。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>okokシリーズやox系リソースも、実際には「core」「UI」「連携用アドオン」のように複数のresourceに分かれていることが多く、この設計パターンの実例と言えます。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

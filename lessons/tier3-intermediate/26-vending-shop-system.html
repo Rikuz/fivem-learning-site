@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>自動販売機・ショップシステム | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t3-26-vending-shop-system">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="3">🟠 中級</span>
+      <span class="badge category-badge">🎮 経済・ゲームプレイ</span>
+      <span class="badge category-badge">🗄️ DB連携</span>
+    </div>
+
+    <h1>自動販売機・ショップシステム</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>商品リストを定義し、所持金を確認してから購入処理を行う</strong>、自動販売機やショップの基本的な仕組みを実装できるようになります。</p>
+      <p><strong>こんな時に使う:</strong> 自動販売機で飲み物を買えるようにしたい、雑貨屋・武器屋のようなNPC店舗を作りたいとき(Tier4-03のokokTextUIや、Tier3-07のox_targetと組み合わせて店員とのインタラクションを作ることもできます)。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>この仕組みは、これまで学んだ要素の組み合わせです。Tier1-09のConfig設計で商品リストを定義し、Tier3-05のサーバー側バリデーションで所持金・在庫を確認し、Tier3-04のインベントリ操作で商品を渡します。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>Config.lua: 商品リスト</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">Config.VendingItems = {
+    { name = 'water', label = '水', price = 20 },
+    { name = 'chips', label = 'ポテトチップス', price = 35 },
+}</code></pre>
+      </div>
+
+      <h3>server.lua: 購入処理</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local function findVendingItem(itemName)
+    for _, item in ipairs(Config.VendingItems) do
+        if item.name == itemName then
+            return item
+        end
+    end
+    return nil
+end
+
+RegisterNetEvent('vending:purchase')
+AddEventHandler('vending:purchase', function(itemName)
+    local playerId = source
+    local item = findVendingItem(itemName)
+
+    if not item then return end -- 存在しない商品名は無視する(Tier3-05参照)
+
+    -- ESX/QBCore等、実際に導入しているフレームワークの所持金取得関数に置き換える(Tier4-01参照)
+    local playerMoney = getPlayerMoney(playerId)
+
+    if playerMoney < item.price then
+        TriggerClientEvent('myscript:notify', playerId, '所持金が足りません')
+        return
+    end
+
+    removePlayerMoney(playerId, item.price)
+    exports.ox_inventory:AddItem(playerId, item.name, 1)
+    TriggerClientEvent('myscript:notify', playerId, ('%sを購入しました'):format(item.label))
+end)</code></pre>
+      </div>
+
+      <h3>client.lua: ox_targetで自動販売機にインタラクションを追加する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">exports.ox_target:addModel('prop_vend_soda_01', {
+    {
+        name = 'use_vending_machine',
+        icon = 'fa-solid fa-cart-shopping',
+        label = '飲み物を買う',
+        onSelect = function()
+            TriggerServerEvent('vending:purchase', 'water')
+        end,
+    }
+})</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li>Tier3-05で学んだ通り、商品の価格はclientから送らせず、server側の<code>Config.VendingItems</code>の値だけを使ってください。clientからは「どの商品を選んだか」という商品名だけを送らせます。</li>
+        <li>在庫管理をしたい場合(自動販売機の中身が有限)は、商品ごとの残数をDBまたはメモリで管理し、購入のたびに減らす処理を追加する必要があります。</li>
+        <li>1つの自動販売機モデルに対して<code>addModel</code>を使うと、<strong>ワールド上の同じモデルの自動販売機全て</strong>にこのインタラクションが付きます。特定の1台だけに付けたい場合は<code>addLocalEntity</code>/<code>addEntity</code>(Tier3-07参照)を使ってください。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>プレイヤーが経営する店舗(Tier4-10のビジネス口座と連携する形)にしたい場合は、商品リストと売上を組織口座に紐付ける設計に発展させることもできます。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

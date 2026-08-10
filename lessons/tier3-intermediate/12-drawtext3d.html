@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>頭上にフローティングテキストを表示する | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t3-12-drawtext3d">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="3">🟠 中級</span>
+      <span class="badge category-badge">🖥️ UI表示(NUI)</span>
+    </div>
+
+    <h1>頭上にフローティングテキストを表示する</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>ワールド上の特定の座標(NPCの頭上など)に文字を表示する自作のDrawText3D</strong>を実装できるようになります。</p>
+      <p><strong>こんな時に使う:</strong> プレイヤーの名前タグを頭上に表示したい、NPCの上に「[E] 話す」のようなヒントを出したいとき(Tier4-03のokokTextUIとは別の、画面固定ではなくワールド追従型の表示方法です)。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>FiveMのnative関数には、3D座標を直接指定してテキストを描画する専用関数はありません。代わりに<code>GetScreenCoordFromWorldCoord</code>のような関数で3D座標を2Dの画面座標に変換し、通常のHUDテキスト描画関数(<code>SetTextEntry</code>系)でその位置に描画する、という2段階の処理を組み合わせます。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>client.lua: DrawText3D関数を自作する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local function drawText3D(x, y, z, text)
+    local onScreen, screenX, screenY = World3dToScreen2d(x, y, z)
+    local playerCoords = GetGameplayCamCoord()
+    local distance = #(playerCoords - vector3(x, y, z))
+
+    local scale = (1.0 / distance) * 2.0
+    local fov = (1.0 / GetGameplayCamFov()) * 100.0
+    scale = scale * fov
+
+    if onScreen then
+        SetTextScale(0.0 * scale, 0.55 * scale)
+        SetTextFont(4)
+        SetTextProportional(1)
+        SetTextColour(255, 255, 255, 215)
+        SetTextDropshadow(0, 0, 0, 0, 255)
+        SetTextEdge(2, 0, 0, 0, 150)
+        SetTextDropShadow()
+        SetTextOutline()
+        SetTextEntry('STRING')
+        SetTextCentre(1)
+        AddTextComponentString(text)
+        DrawText(screenX, screenY)
+    end
+end</code></pre>
+      </div>
+
+      <h3>使用例: NPCの頭上に名前を表示する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local npcCoords = vector3(100.0, 200.0, 31.0) -- 頭の高さ分z座標を足した値
+
+CreateThread(function()
+    while true do
+        local playerCoords = GetEntityCoords(PlayerPedId())
+        local distance = #(playerCoords - npcCoords)
+
+        if distance < 10.0 then
+            drawText3D(npcCoords.x, npcCoords.y, npcCoords.z, '雑貨屋の店員')
+            Wait(0)
+        else
+            Wait(500)
+        end
+    end
+end)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li>Marker(Tier2-03)やScaleform(Tier3-11)と同様、<strong>毎フレーム呼び続けないと表示されません</strong>。表示したい間はループの中で呼び出し続けてください。</li>
+        <li><code>World3dToScreen2d</code>は、指定した座標が画面外(カメラの後ろ側など)にある場合、1つ目の戻り値(<code>onScreen</code>)が<code>false</code>になります。必ずこの値を確認してから描画してください。確認しないと、カメラの後ろにあるテキストが画面に大きく引き伸ばされて表示されるバグになります。</li>
+        <li>距離に応じた文字サイズ調整(<code>scale</code>の計算)を省略すると、遠くのテキストも近くのテキストと同じ大きさで表示され、不自然に見えます。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>この仕組みはコミュニティで広く使われている定番パターンで、多くのフレームワークやスクリプトが同様の自作<code>DrawText3D</code>関数を持っています。Tier2-11で学んだ距離に応じた<code>Wait</code>調整と組み合わせて、負荷を抑えるようにしましょう。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

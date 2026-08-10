@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>無線チャンネルシステムの基礎 | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t3-28-radio-channel-system">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="3">🟠 中級</span>
+      <span class="badge category-badge">🎙️ ボイス・無線</span>
+    </div>
+
+    <h1>無線チャンネルシステムの基礎</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>プレイヤーをチャンネル番号でグループ分けし、同じチャンネルのプレイヤー同士だけでテキスト通信できる</strong>無線システムの基本ロジックを実装できるようになります(音声そのものはTier3-27で触れたボイスチャットリソースとの連携が必要ですが、ここでは「誰に届けるか」というグループ管理の考え方を扱います)。</p>
+      <p><strong>こんな時に使う:</strong> 警察無線、救急無線のように、同じ周波数(チャンネル)にいる人だけで会話できる仕組みを作りたいとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>無線チャンネルの管理は、実は難しい技術ではなく「プレイヤーIDとチャンネル番号を対応付けるテーブルを持ち、メッセージを送るときは同じチャンネルの人にだけ<code>TriggerClientEvent</code>する」というシンプルな仕組みです。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>server.lua: チャンネルの参加・退出</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local playerChannels = {} -- playerId -> チャンネル番号
+
+RegisterNetEvent('radio:joinChannel')
+AddEventHandler('radio:joinChannel', function(channel)
+    local playerId = source
+    playerChannels[playerId] = channel
+    TriggerClientEvent('myscript:notify', playerId, ('チャンネル%dに接続しました'):format(channel))
+end)
+
+RegisterNetEvent('radio:leaveChannel')
+AddEventHandler('radio:leaveChannel', function()
+    local playerId = source
+    playerChannels[playerId] = nil
+end)</code></pre>
+      </div>
+
+      <h3>server.lua: 同じチャンネルの全員にメッセージを送る</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">RegisterNetEvent('radio:sendMessage')
+AddEventHandler('radio:sendMessage', function(message)
+    local senderId = source
+    local channel = playerChannels[senderId]
+
+    if not channel then
+        TriggerClientEvent('myscript:notify', senderId, '無線に接続していません')
+        return
+    end
+
+    for playerId, playerChannel in pairs(playerChannels) do
+        if playerChannel == channel then
+            TriggerClientEvent('radio:receiveMessage', playerId, GetPlayerName(senderId), message)
+        end
+    end
+end)</code></pre>
+      </div>
+
+      <h3>切断時のクリーンアップ(Tier2-15参照)</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">AddEventHandler('playerDropped', function()
+    playerChannels[source] = nil
+end)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li>切断したプレイヤーの<code>playerChannels</code>エントリを消し忘れると、メモリ上にデータが残り続けます。上記コード例のように<code>playerDropped</code>で必ずクリーンアップしてください(Tier2-15参照)。</li>
+        <li>チャンネル参加を誰でも自由にできるようにすると、警察無線に一般人が紛れ込む、といった不自然な状態になります。Tier4-02の職業(Job)確認と組み合わせ、特定のJobだけが特定のチャンネルに参加できるよう制限することを検討してください。</li>
+        <li>実際の「声」を届けるには、Tier3-27で扱ったボイスチャットリソース側の「チャンネル」機能(<code>MumbleSetSubChannel</code>相当)と連携する必要があります。このレッスンのテキストベースの仕組みだけでは音声は届きません。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>Tier4-16「cd_dispatchで警察無線通知を送る」と組み合わせることで、「事件発生の通知」と「無線での会話」の両方を備えた警察無線システムに発展させられます。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

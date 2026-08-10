@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>スキル・経験値(XP)システム | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t3-25-skill-xp-system">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="3">🟠 中級</span>
+      <span class="badge category-badge">🎮 経済・ゲームプレイ</span>
+    </div>
+
+    <h1>スキル・経験値(XP)システム</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>プレイヤーの行動に応じて経験値を加算し、一定量たまったらレベルアップさせ、DBに保存する</strong>スキルシステムの基本設計ができるようになります。</p>
+      <p><strong>こんな時に使う:</strong> 釣りを繰り返すと釣りスキルが上がる、採掘を繰り返すと採掘スキルが上がる、といった熟練度による報酬アップを実装したいとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>XPシステムの核は「現在の経験値」と「レベルごとに必要な経験値」を比較し、超えたらレベルを上げる、というシンプルな計算です。DBには最終的な経験値の数値だけを保存し、レベルは都度計算する設計が一般的です。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>server.lua: レベルと必要経験値の計算</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">-- レベルNに必要な累計経験値を計算する(単純な二次関数の例)
+local function xpRequiredForLevel(level)
+    return level * level * 100
+end
+
+local function calculateLevel(totalXp)
+    local level = 1
+    while totalXp >= xpRequiredForLevel(level + 1) do
+        level = level + 1
+    end
+    return level
+end</code></pre>
+      </div>
+
+      <h3>server.lua: 経験値を加算し、レベルアップを検知する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local playerFishingXp = {} -- playerId -> 経験値(メモリ上で管理し、定期的にDB保存する)
+
+local function addFishingXp(playerId, amount)
+    local currentXp = playerFishingXp[playerId] or 0
+    local oldLevel = calculateLevel(currentXp)
+
+    local newXp = currentXp + amount
+    local newLevel = calculateLevel(newXp)
+
+    playerFishingXp[playerId] = newXp
+
+    if newLevel > oldLevel then
+        TriggerClientEvent('myscript:notify', playerId, ('釣りスキルがレベル%dになりました!'):format(newLevel))
+    end
+end
+
+RegisterNetEvent('fishing:catchFish')
+AddEventHandler('fishing:catchFish', function()
+    local playerId = source
+    addFishingXp(playerId, 10)
+    -- Tier3-24のアイテム付与処理もここで行う
+end)</code></pre>
+      </div>
+
+      <h3>レベルに応じて成功率を上げる例</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local function getRareFishBonus(playerId)
+    local level = calculateLevel(playerFishingXp[playerId] or 0)
+    return level * 2 -- レベルが上がるほど、レアな魚の重み(Tier3-24参照)にボーナスを加える
+end</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li>経験値をメモリ上のテーブル(<code>playerFishingXp</code>)だけで管理していると、サーバー再起動で失われます。Tier3-15「プレイヤーデータの自動保存設計」と組み合わせてDBに保存してください。</li>
+        <li>レベル計算の数式(<code>xpRequiredForLevel</code>)を後から変更すると、既存プレイヤーのレベルが急に変わってしまうことがあります。バランス調整は早い段階でしっかり検討しておくのがおすすめです。</li>
+        <li>経験値の加算処理も、他の重要な数値変更と同様に必ずserver側で行い、client側から「経験値を加算して」と直接指示させないでください(Tier3-05のサーバー側バリデーションと同じ考え方)。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>複数のスキル(釣り、採掘、料理など)を管理したい場合は、<code>playerFishingXp</code>のような変数を種類ごとに複数持つのではなく、<code>playerSkills[playerId][skillName]</code>のようなネストしたテーブルにまとめると管理しやすくなります。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

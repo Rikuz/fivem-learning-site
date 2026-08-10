@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>キャッシュ戦略 | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t3-16-cache-strategy">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="3">🟠 中級</span>
+      <span class="badge category-badge">🗄️ DB連携</span>
+      <span class="badge category-badge">⚡ パフォーマンス</span>
+    </div>
+
+    <h1>キャッシュ戦略</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>頻繁に参照する変化の少ないデータをメモリ上に保持し、同じ内容のDB問い合わせを繰り返さない</strong>設計ができるようになります。</p>
+      <p><strong>こんな時に使う:</strong> ショップの商品リストや設定値のように「めったに変わらないが、何度も参照される」データを扱うとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>DBへの問い合わせ(Tier3-03)は、Luaのテーブル操作に比べてずっと時間がかかります。プレイヤーが操作するたびに同じデータをDBから毎回取得していると、無駄な待ち時間・DB負荷が発生します。<strong>キャッシュ</strong>(一度取得したデータをメモリ上に保持し、次回以降はそこから読む仕組み)を使うことで、この無駄を減らせます。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>server.lua: シンプルなキャッシュの実装</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local shopItemsCache = nil
+
+local function getShopItems(callback)
+    if shopItemsCache then
+        -- キャッシュがあれば、DBに問い合わせずそのまま返す
+        callback(shopItemsCache)
+        return
+    end
+
+    MySQL.Async.fetchAll('SELECT * FROM shop_items', {}, function(result)
+        shopItemsCache = result -- 取得結果をキャッシュに保存する
+        callback(result)
+    end)
+end
+
+RegisterCommand('showshop', function()
+    getShopItems(function(items)
+        print(('商品数: %d'):format(#items))
+    end)
+end, false)</code></pre>
+      </div>
+
+      <h3>キャッシュを無効化する(データが更新されたとき)</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local function addShopItem(name, price)
+    MySQL.Async.execute('INSERT INTO shop_items (name, price) VALUES (@name, @price)', {
+        ['@name'] = name,
+        ['@price'] = price
+    }, function()
+        shopItemsCache = nil -- データが変わったのでキャッシュを破棄し、次回は再取得させる
+    end)
+end</code></pre>
+      </div>
+
+      <h3>一定時間で自動的に古くする(TTLキャッシュ)</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local cache = { data = nil, expiresAt = 0 }
+local CACHE_DURATION_MS = 60 * 1000 -- 1分間キャッシュを有効とする
+
+local function getShopItemsWithTTL(callback)
+    if cache.data and GetGameTimer() < cache.expiresAt then
+        callback(cache.data)
+        return
+    end
+
+    MySQL.Async.fetchAll('SELECT * FROM shop_items', {}, function(result)
+        cache.data = result
+        cache.expiresAt = GetGameTimer() + CACHE_DURATION_MS
+        callback(result)
+    end)
+end</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li>キャッシュを無効化(破棄)する処理を書き忘れると、DB上のデータを更新したのに古いキャッシュがいつまでも返され続ける「データの不整合」が起きます。データを変更する処理には、必ずキャッシュのクリアもセットで書いてください。</li>
+        <li>プレイヤー固有のデータ(所持金など)を安易にキャッシュすると、複数のリクエストが同時に来た際に古い値をもとに計算してしまう競合(レースコンディション)が起きやすくなります。頻繁に変化するデータのキャッシュは慎重に設計してください。</li>
+        <li>「めったに変わらないデータ」以外を無闇にキャッシュしないことも重要です。キャッシュは万能ではなく、複雑さとのトレードオフです。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>本格的な運用では、複数のresource間でキャッシュを共有したい場合にRedisのような外部のキャッシュサーバーを使うこともありますが、単一resource内であれば、このレッスンのようなシンプルなLuaテーブルによるキャッシュで十分なケースがほとんどです。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

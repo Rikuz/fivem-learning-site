@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>死亡・蘇生(リバイブ)システムの基礎 | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t3-10-death-revive-system">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="3">🟠 中級</span>
+      <span class="badge category-badge">🎮 経済・ゲームプレイ</span>
+    </div>
+
+    <h1>死亡・蘇生(リバイブ)システムの基礎</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>プレイヤーが致命傷を負ったことを検知して「ダウン状態」に遷移させ、他プレイヤーや救急隊コマンドで蘇生する</strong>という、RPサーバーの定番システムの土台を実装できるようになります。</p>
+      <p><strong>こんな時に使う:</strong> 撃たれてもすぐにリスポーンさせず、しばらく動けない演出にしたい、救急隊の役割を作りたいとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>GTA Vの標準動作では、プレイヤーは死亡すると自動的にリスポーンしてしまいます。RPサーバーでは、これを乗っ取って「ダウン状態(意識を失っているが死んではいない)」を独自に表現し、他プレイヤーが助けに来るまで待つ、という流れがよく使われます。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>client.lua: 致命傷を検知してダウン状態にする</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local isDowned = false
+
+CreateThread(function()
+    while true do
+        Wait(500)
+        local ped = PlayerPedId()
+
+        if IsEntityDead(ped) and not isDowned then
+            isDowned = true
+            enterDownedState()
+        end
+    end
+end)
+
+function enterDownedState()
+    local ped = PlayerPedId()
+
+    NetworkResurrectLocalPlayer(GetEntityCoords(ped), GetEntityHeading(ped), true, false)
+    SetEntityHealth(ped, 100) -- 完全に死なせず、体力を最低限残す
+    SetPedCanRagdoll(ped, false)
+
+    -- 動けなくする(実際にはアニメーションでうつ伏せにする処理等を組み合わせる)
+    FreezeEntityPosition(ped, true)
+
+    TriggerServerEvent('myscript:notifyDowned')
+end</code></pre>
+      </div>
+
+      <h3>server.lua: 救急隊が蘇生するコマンド</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">RegisterCommand('revive', function(source, args)
+    local targetId = tonumber(args[1])
+    if not targetId then return end
+
+    -- 実運用ではTier4-02のJob確認(救急隊かどうか)や、
+    -- Tier2-17のレイキャストで対象が近くにいるかの確認も組み合わせる
+    TriggerClientEvent('myscript:revivePlayer', targetId)
+end, false)</code></pre>
+      </div>
+
+      <h3>client.lua: 蘇生を受け取る</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">RegisterNetEvent('myscript:revivePlayer')
+AddEventHandler('myscript:revivePlayer', function()
+    local ped = PlayerPedId()
+
+    FreezeEntityPosition(ped, false)
+    SetEntityHealth(ped, 200)
+    SetPedCanRagdoll(ped, true)
+    isDowned = false
+
+    TriggerEvent('myscript:notify', '蘇生しました')
+end)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li><code>SetEntityHealth</code>を0や極端に低い値にしたままにすると、ちょっとした被弾で即座に「本当の死亡」判定に戻ってしまいます。ダウン中は一定の体力を保つよう管理してください。</li>
+        <li>ダウン状態から一定時間経っても誰も助けに来ない場合の救済措置(自動リスポーン、NPC救急隊の自動出動など)を用意しないと、プレイヤーが長時間動けなくなり離脱の原因になります。</li>
+        <li>蘇生コマンドをTier3-05のサーバー側バリデーションなしで誰でも実行できるようにすると、ゲームバランスが崩れます。実運用ではJob確認(救急隊のみ)や道具の所持確認などを組み合わせてください。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>ダウン中の見た目(地面に横たわる等)は、Tier2-07で学んだアニメーション再生(<code>TaskPlayAnim</code>にループフラグを付けたもの)と組み合わせて実現します。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

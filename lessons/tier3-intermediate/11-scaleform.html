@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Scaleform(GTA組み込みUI部品)を使う | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t3-11-scaleform">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="3">🟠 中級</span>
+      <span class="badge category-badge">🖥️ UI表示(NUI)</span>
+    </div>
+
+    <h1>Scaleform(GTA組み込みUI部品)を使う</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>GTA V本編に標準で入っているUI部品(ミッション通知やインストラクショナルボタン等)を、自分のスクリプトから表示する</strong>ことができるようになります。</p>
+      <p><strong>こんな時に使う:</strong> NUIを1から作るほどではない、GTA本編と統一感のあるシンプルな通知・案内を表示したいとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p><strong>Scaleform</strong>は、GTA Vのゲーム内UI(ミッション目標の表示、レーダー、クレジット表記等)を描画するためのFlashベースの仕組みです。Tier3のNUI(自作のHTML)とは異なり、あらかじめGTA V本体に組み込まれているUI部品を、native関数経由で呼び出して使います。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>client.lua: ミッション目標風のテキストを表示する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local scaleform = nil
+
+local function loadInstructionalScaleform()
+    scaleform = RequestScaleformMovie('MIDSIZED_MESSAGE')
+
+    while not HasScaleformMovieLoaded(scaleform) do
+        Wait(0)
+    end
+end
+
+local function showMissionText(title)
+    if not scaleform then
+        loadInstructionalScaleform()
+    end
+
+    BeginScaleformMovieMethod(scaleform, 'SHOW_MIDSIZED_MESSAGE')
+    ScaleformMovieMethodAddParamPlayerNameString(title)
+    ScaleformMovieMethodAddParamInt(100)
+    EndScaleformMovieMethod()
+end
+
+RegisterCommand('missiontext', function()
+    showMissionText('配達完了')
+end, false)</code></pre>
+      </div>
+
+      <h3>client.lua: 毎フレーム描画し続ける(Scaleformは描画も自分で行う)</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">CreateThread(function()
+    while true do
+        Wait(0)
+        if scaleform then
+            DrawScaleformMovieFullscreen(scaleform, 255, 255, 255, 255, 0)
+        end
+    end
+end)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li>ScaleformもMarker(Tier2-03)やパーティクル(Tier2-11)と同様、<strong>毎フレーム描画し続けないと表示されません</strong>。<code>DrawScaleformMovieFullscreen</code>系の関数をループの中で呼び続ける必要があります。</li>
+        <li>Scaleformの種類ごとに、呼び出せるメソッド名・引数の型が異なります(<code>ScaleformMovieMethodAddParamInt</code>、<code>...AddParamFloat</code>、<code>...AddParamPlayerNameString</code>等)。ドキュメントやコミュニティの実例で正確な組み合わせを確認してください。</li>
+        <li>不要になったScaleformは<code>SetScaleformMovieAsNoLongerNeeded</code>で解放しないと、メモリに残り続けます。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>Scaleformは自由度が低い分、GTA本編と統一感のある見た目を簡単に出せるのが利点です。細かいデザインを自由に作りたい場合はTier3-01のNUIを、GTA標準の見た目で十分な場合はScaleformを、というように使い分けます。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>プレイヤーデータの自動保存設計 | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t3-15-autosave-pattern">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="3">🟠 中級</span>
+      <span class="badge category-badge">🗄️ DB連携</span>
+    </div>
+
+    <h1>プレイヤーデータの自動保存設計</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>切断時の保存だけに頼らず、一定間隔でのオートセーブを組み合わせて、サーバークラッシュ時のデータ損失を減らす</strong>設計ができるようになります。</p>
+      <p><strong>こんな時に使う:</strong> サーバーが不意に落ちても、プレイヤーの所持金やインベントリの変化がなるべく失われないようにしたいとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>Tier2-15で学んだ<code>playerDropped</code>での保存だけでは、<strong>サーバーが正常に切断処理を行えないまま落ちた場合</strong>(クラッシュ、強制終了)にデータが保存されません。これを補うため、全プレイヤーのデータを一定間隔で保存し続けるオートセーブループを用意するのが一般的です。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>server.lua: 定期オートセーブループ</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local function saveAllPlayers()
+    for _, playerId in ipairs(GetPlayers()) do
+        local identifier = GetPlayerIdentifiers(playerId)[1]
+        saveInventory(identifier, tonumber(playerId)) -- Tier3-04で作った保存関数
+    end
+    print('全プレイヤーのデータをオートセーブしました')
+end
+
+CreateThread(function()
+    while true do
+        Wait(5 * 60 * 1000) -- 5分ごと
+        saveAllPlayers()
+    end
+end)</code></pre>
+      </div>
+
+      <h3>切断時・resource停止時にも保存する(多重の保険)</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">AddEventHandler('playerDropped', function()
+    local playerId = source
+    local identifier = GetPlayerIdentifiers(playerId)[1]
+    saveInventory(identifier, playerId)
+end)
+
+AddEventHandler('onResourceStop', function(resourceName)
+    if resourceName ~= GetCurrentResourceName() then return end
+    saveAllPlayers() -- resourceの手動再起動・停止時にも保存する
+end)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li>プレイヤー数が多いサーバーで全員分を同時に保存すると、一瞬DBへの問い合わせが集中します。Tier5-02の非同期処理パターンを使い、サーバー全体を止めないようにしてください。</li>
+        <li>オートセーブの間隔を短くしすぎると、それだけDBへの負荷が増えます。「どれくらいのデータ損失なら許容できるか」を基準に間隔を決めましょう(5〜10分程度が一般的です)。</li>
+        <li><code>onResourceStop</code>のイベントハンドラでは、<code>resourceName</code>が「今まさに停止しようとしているresourceの名前」なのか「他のresourceが停止した通知」なのかを、<code>GetCurrentResourceName()</code>との比較で必ず確認してください。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>本格的な運用では、オートセーブの実行ログをDiscord Webhook(Tier3-22)で監視用チャンネルに送り、「保存が正常に行われているか」を運用者が確認できるようにすることもあります。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

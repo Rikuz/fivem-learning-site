@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>通知のキュー管理 | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t3-14-notification-queue">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="3">🟠 中級</span>
+      <span class="badge category-badge">🖥️ UI表示(NUI)</span>
+    </div>
+
+    <h1>通知のキュー管理</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>複数の通知がほぼ同時に送られてきても、画面上に重ならず順番に表示する</strong>キュー(待ち行列)の仕組みをJS側に実装できるようになります。</p>
+      <p><strong>こんな時に使う:</strong> 自作の通知UI(Tier3-01のNUI応用)で、短時間に何度も通知が来ると表示が重なってしまう問題を解決したいとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>okokNotify(Tier4-03)のような既製の通知スクリプトは、内部でこの「キュー」の仕組みを持っています。<strong>キュー</strong>(先に入れたものから順に取り出される待ち行列のデータ構造)に通知を積んでおき、1つ表示が終わったら次を取り出して表示する、という制御を行います。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>ui/script.js: 通知キューを実装する</h3>
+      <div class="code-block">
+        <pre><code class="language-javascript">const notificationQueue = [];
+let isShowingNotification = false;
+
+function enqueueNotification(notification) {
+  notificationQueue.push(notification);
+  processQueue();
+}
+
+function processQueue() {
+  if (isShowingNotification || notificationQueue.length === 0) {
+    return; // 既に表示中、またはキューが空なら何もしない
+  }
+
+  isShowingNotification = true;
+  const notification = notificationQueue.shift(); // 先頭(最も古い通知)を取り出す
+
+  showNotificationElement(notification);
+
+  setTimeout(() => {
+    hideNotificationElement();
+    isShowingNotification = false;
+    processQueue(); // 次の通知があれば続けて処理する
+  }, notification.duration || 3000);
+}
+
+window.addEventListener('message', (event) => {
+  if (event.data.action === 'notify') {
+    enqueueNotification(event.data);
+  }
+});</code></pre>
+      </div>
+
+      <h3>Lua側からの送信は変更不要</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">SendNUIMessage({
+    action = 'notify',
+    title = '入手',
+    description = 'アイテムを入手しました',
+    duration = 3000
+})
+
+-- 短時間に連続で送っても、JS側のキューが順番に処理してくれる
+SendNUIMessage({ action = 'notify', title = '通知1' })
+SendNUIMessage({ action = 'notify', title = '通知2' })</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li><code>isShowingNotification</code>のようなフラグの更新を忘れる(<code>setTimeout</code>のコールバック内で<code>false</code>に戻し忘れる等)と、以降の通知が永久に表示されなくなるバグになります。</li>
+        <li>通知が大量に送られ続けるケース(連打対策の抜け穴など)を想定し、キューの最大件数を制限する(古いものを間引く)ことも実運用では検討してください。</li>
+        <li>複数の通知を「重ねて複数個同時に表示する」UI(多くの通知系スクリプトが採用しているスタイル)にしたい場合は、この「1つずつ順番に」ではなく、表示中リストに追加して一定時間ごとに消す設計の方が適しています。用途に応じて選んでください。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>キュー(先入れ先出し、FIFO)は通知以外にも、Tier5-02の非同期DB処理や、連続するアニメーション再生の管理など、様々な場面で使える汎用的な考え方です。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>
