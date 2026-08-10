@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>天候・時間を同期する | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t2-08-weather-time-sync">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="2">🟡 初級</span>
+      <span class="badge category-badge">🌍 ワールド操作</span>
+      <span class="badge category-badge">📡 イベント/通信</span>
+    </div>
+
+    <h1>天候・時間を同期する</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>ゲーム内の時間・天候を変更し、全プレイヤーに同じ見え方を同期させる</strong>基本的な仕組みが作れるようになります。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>時間・天候を変更するnative関数(<code>NetworkOverrideClockTime</code>、<code>SetWeatherTypeNow</code>等)は<strong>client側のnative</strong>で、呼び出したプレイヤーの画面にしか反映されません。全員に同じ時間・天候を見せるには、「サーバー側が現在の時間・天候の状態を持ち、一定間隔でイベントを送って各clientに反映させる」という設計が必要です。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>server.lua: 状態を保持し、定期的に全clientへ送る</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local currentHour = 12
+local currentWeather = 'CLEAR'
+
+-- 1分ごとに1時間進める(24時間が24分でひと巡りする)
+CreateThread(function()
+    while true do
+        Wait(60 * 1000)
+        currentHour = (currentHour + 1) % 24
+        TriggerClientEvent('myscript:syncTime', -1, currentHour)
+    end
+end)
+
+-- 新しく接続したプレイヤーにも現在の状態を送る
+AddEventHandler('playerJoining', function()
+    local playerId = source
+    TriggerClientEvent('myscript:syncTime', playerId, currentHour)
+    TriggerClientEvent('myscript:syncWeather', playerId, currentWeather)
+end)</code></pre>
+      </div>
+
+      <h3>client.lua: 受け取って反映する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">RegisterNetEvent('myscript:syncTime')
+AddEventHandler('myscript:syncTime', function(hour)
+    NetworkOverrideClockTime(hour, 0, 0)
+end)
+
+RegisterNetEvent('myscript:syncWeather')
+AddEventHandler('myscript:syncWeather', function(weatherType)
+    SetWeatherTypeOvertimePersist(weatherType, 30.0) -- 30秒かけて滑らかに切り替える
+end)</code></pre>
+      </div>
+
+      <h3>天候を即座に切り替える場合</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">-- 滑らかな遷移が不要な場合
+SetWeatherTypeNow('RAIN')
+SetWeatherTypeNowPersist('RAIN') -- 天候システムによる自動変化も止めて固定する</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li>各clientが個別に<code>NetworkOverrideClockTime</code>を呼ぶだけでは、途中から参加したプレイヤーには反映されません。上記コード例の<code>playerJoining</code>のように、接続時に現在の状態を送る処理も必要です。</li>
+        <li>天候文字列(<code>'CLEAR'</code>, <code>'RAIN'</code>等)は決まったキーワードのみ有効です。存在しない文字列を渡すと天候が変化しません。</li>
+        <li>複数のresourceがそれぞれ独立して時間・天候を操作すると、お互いに競合して天候がチカチカ切り替わるなどの不具合が起きます。時間・天候の管理は1つのresourceに集約するのが基本です。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p class="version-note">実運用では、この仕組みを一から自作するのではなく、天候・時間の同期に特化したコミュニティ製のresource(vSync、cd_easytimeなど)を導入することが多いです。ただし、それらの内部で行われている「サーバーが状態を持ち、イベントで配る」という設計は本レッスンと同じ考え方です。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

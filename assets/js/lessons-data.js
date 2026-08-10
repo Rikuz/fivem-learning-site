@@ -59,6 +59,17 @@ const LESSONS = [
     summary: "F8コンソールの開き方、エラーメッセージの読み方(ファイル名・行番号)、print()による原因の切り分け方",
     keywords: ["エラーの原因を調べたい", "F8コンソールの使い方", "デバッグの仕方", "print()でログを出したい"],
   },
+  {
+    id: "t1-06-string-table-utils",
+    title: "文字列・テーブル操作の応用",
+    tier: 1,
+    categories: ["lua-basics"],
+    prerequisites: ["t1-02-lua-basics"],
+    path: "lessons/tier1-beginner/06-string-table-utils.html",
+    estimatedMinutes: 25,
+    summary: "string.format/upper/lower/find、table.insert/remove、pairsとipairsの違いを学ぶ",
+    keywords: ["文字列を整形したい", "文字列を検索・置換したい", "テーブルに要素を追加/削除したい", "pairsとipairsの違いを知りたい"],
+  },
 
   // ===== Tier 2: 初級 =====
   {
@@ -116,6 +127,39 @@ const LESSONS = [
     summary: "CreateThreadとWait()の使い方、Wait()を省略してはいけない理由(サーバー全体が重くなる)を理解する",
     keywords: ["ループ処理を書きたい", "Wait()の使い方", "サーバーを重くしない書き方", "CreateThreadの使い方"],
   },
+  {
+    id: "t2-06-spawn-vehicle",
+    title: "車両を生成・操作する",
+    tier: 2,
+    categories: ["vehicle"],
+    prerequisites: ["t2-02-spawn-npc"],
+    path: "lessons/tier2-novice/06-spawn-vehicle.html",
+    estimatedMinutes: 25,
+    summary: "CreateVehicleで車両を生成し、SetPedIntoVehicleでプレイヤーを乗せ、DeleteVehicleで削除する",
+    keywords: ["車を出したい", "車両を生成したい", "車に乗せたい", "CreateVehicleの使い方", "ナンバープレートを変えたい"],
+  },
+  {
+    id: "t2-07-play-animation",
+    title: "アニメーションを再生する",
+    tier: 2,
+    categories: ["animation"],
+    prerequisites: ["t2-02-spawn-npc"],
+    path: "lessons/tier2-novice/07-play-animation.html",
+    estimatedMinutes: 25,
+    summary: "RequestAnimDictでアニメ辞書を読み込み、TaskPlayAnimでプレイヤー/NPCにアニメーションを再生させる",
+    keywords: ["アニメーションを再生したい", "モーションをつけたい", "TaskPlayAnimの使い方", "座らせたい"],
+  },
+  {
+    id: "t2-08-weather-time-sync",
+    title: "天候・時間を同期する",
+    tier: 2,
+    categories: ["world", "events"],
+    prerequisites: ["t2-01-events-basics"],
+    path: "lessons/tier2-novice/08-weather-time-sync.html",
+    estimatedMinutes: 25,
+    summary: "NetworkOverrideClockTimeで時間を、SetWeatherTypeOvertimePersist等で天候を設定し、イベントで全clientに同期させる",
+    keywords: ["時間を変更したい", "天候を変えたい", "夜にしたい", "雨を降らせたい", "全員に同じ天候/時間を見せたい"],
+  },
 
   // ===== Tier 3: 中級 =====
   {
@@ -172,6 +216,39 @@ const LESSONS = [
     estimatedMinutes: 25,
     summary: "クライアントから送られた値を無条件に信用しない設計と、サーバー側での再チェックの実装例を学ぶ",
     keywords: ["不正な値を防ぎたい", "チート対策をしたい", "サーバー側でチェックしたい", "入力値を検証したい"],
+  },
+  {
+    id: "t3-06-exports-between-resources",
+    title: "exportsで関数を公開する",
+    tier: 3,
+    categories: ["events"],
+    prerequisites: ["t2-01-events-basics"],
+    path: "lessons/tier3-intermediate/06-exports-between-resources.html",
+    estimatedMinutes: 20,
+    summary: "exports('関数名', function)で他resourceから呼べる関数を公開し、exports['resource名']:関数名(...)で呼び出す",
+    keywords: ["他のresourceの関数を呼びたい", "exportsの使い方", "resource間で連携したい", "関数を公開したい"],
+  },
+  {
+    id: "t3-07-ox-target",
+    title: "ox_targetでインタラクションを作る",
+    tier: 3,
+    categories: ["targeting"],
+    prerequisites: ["t2-02-spawn-npc"],
+    path: "lessons/tier3-intermediate/07-ox-target.html",
+    estimatedMinutes: 30,
+    summary: "ox_targetのaddBoxZone/addModelを使い、近づいて調べる(third-eye)インタラクションを実装する",
+    keywords: ["ox_targetを使いたい", "調べるを実装したい", "サードアイを作りたい", "NPCに話しかける選択肢を出したい", "addBoxZoneの使い方"],
+  },
+  {
+    id: "t3-08-ox-lib-notify-progress",
+    title: "ox_libで通知・プログレスバーを出す",
+    tier: 3,
+    categories: ["ui-library"],
+    prerequisites: ["t3-01-nui-basics"],
+    path: "lessons/tier3-intermediate/08-ox-lib-notify-progress.html",
+    estimatedMinutes: 25,
+    summary: "ox_libのlib.notifyで通知を、lib.progressBarでプログレスバー付きアクションを実装する",
+    keywords: ["ox_libを使いたい", "通知を出したい", "プログレスバーを出したい", "lib.notifyの使い方", "lib.progressBarの使い方"],
   },
 
   // ===== Tier 4: 中上級(okok/lb-phone含む) =====
@@ -240,6 +317,17 @@ const LESSONS = [
     estimatedMinutes: 25,
     summary: "okokBankingV2のexport(GetAccount, AddMoney, RemoveMoney, AddTransaction, GetPlayerTransactions)を使い、口座残高の取得・入出金・取引履歴の記録を行う",
     keywords: ["銀行システムを連携したい", "口座残高を確認したい", "お金を入金/出金したい", "okokBankingを使いたい", "取引履歴を取得したい"],
+  },
+  {
+    id: "t4-07-ban-kick-system",
+    title: "BAN・キック機能を実装する",
+    tier: 4,
+    categories: ["security"],
+    prerequisites: ["t2-04-commands", "t3-05-server-validation"],
+    path: "lessons/tier4-upper-intermediate/07-ban-kick-system.html",
+    estimatedMinutes: 30,
+    summary: "DropPlayerでプレイヤーをキックし、playerConnectingイベントとdeferralsで接続時にBANチェックを行う",
+    keywords: ["プレイヤーをキックしたい", "BAN機能を作りたい", "接続を拒否したい", "DropPlayerの使い方", "playerConnectingの使い方"],
   },
 
   // ===== Tier 5: 上級 =====
@@ -326,6 +414,11 @@ const CATEGORY_INFO = {
   events: { label: "イベント/通信", emoji: "📡" },
   performance: { label: "パフォーマンス", emoji: "⚡" },
   security: { label: "セキュリティ", emoji: "🔒" },
+  vehicle: { label: "車両操作", emoji: "🚗" },
+  animation: { label: "アニメーション", emoji: "🎭" },
+  targeting: { label: "ターゲティング", emoji: "🎯" },
+  "ui-library": { label: "UIライブラリ", emoji: "🧰" },
+  world: { label: "ワールド操作", emoji: "🌍" },
 };
 window.CATEGORY_INFO = CATEGORY_INFO;
 
@@ -342,5 +435,10 @@ const CATEGORY_SUMMARY = {
   events: "client/server間の通信や、コマンド・スレッドの扱い方がわかるようになります。",
   performance: "サーバーの負荷を計測し、重くならないスクリプトを書けるようになります。",
   security: "改ざん・チート対策を踏まえた、安全なスクリプトの設計ができるようになります。",
+  vehicle: "車両を生成・削除したり、プレイヤーを乗せたりできるようになります。",
+  animation: "プレイヤーやNPCにモーション(アニメーション)を再生させられるようになります。",
+  targeting: "ox_targetのようなターゲティングライブラリで「調べる」インタラクションを作れるようになります。",
+  "ui-library": "ox_libのようなUIライブラリで通知・プログレスバーなどを簡単に実装できるようになります。",
+  world: "天候や時間など、ワールド全体の状態を操作・同期できるようになります。",
 };
 window.CATEGORY_SUMMARY = CATEGORY_SUMMARY;

@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ox_targetでインタラクションを作る | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t3-07-ox-target">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="3">🟠 中級</span>
+      <span class="badge category-badge">🎯 ターゲティング</span>
+    </div>
+
+    <h1>ox_targetでインタラクションを作る</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>ox_target(FiveMで広く使われるターゲティング・「third-eye」ライブラリ)でNPCやエリアに近づいたときのインタラクション選択肢を表示する</strong>ことができるようになります。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>Tier2-03で学んだBlip/Markerは「目印を見せる」ためのものでしたが、「近づいて対象を見ると選択肢が出て、選ぶと処理が実行される」というインタラクションは、Tier2-04のキー入力判定を自作するよりも<strong>ox_target</strong>のようなターゲティングライブラリを使う方が簡単で、見た目も統一されます。</p>
+      <p>ox_targetには、決まった範囲(ゾーン)を対象にする<code>addBoxZone</code>と、特定のモデル(ped/vehicle等)を対象にする<code>addModel</code>など複数の登録方法があります。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>ボックス型のゾーンにインタラクションを追加する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">exports.ox_target:addBoxZone({
+    coords = vec3(442.5363, -1017.666, 28.85637),
+    size = vec3(3, 3, 3),
+    rotation = 45,
+    debug = false,
+    options = {
+        {
+            name = 'open_shop_menu',
+            event = 'myscript:openShopMenu', -- 選択時にTriggerEventで発火するイベント名
+            icon = 'fa-solid fa-cart-shopping',
+            label = 'ショップを開く',
+        }
+    }
+})</code></pre>
+      </div>
+
+      <h3>選択されたイベントを受け取る</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">RegisterNetEvent('myscript:openShopMenu')
+AddEventHandler('myscript:openShopMenu', function()
+    print('ショップメニューを開く処理をここに書く')
+end)</code></pre>
+      </div>
+
+      <h3>特定モデルのNPC全てにインタラクションを追加する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">exports.ox_target:addModel('a_m_m_business_01', {
+    {
+        name = 'talk_to_npc',
+        icon = 'fa-solid fa-comment',
+        label = '話しかける',
+        onSelect = function(data)
+            -- data.entity: 対象になったエンティティのハンドル
+            print('選択されたNPC: ' .. tostring(data.entity))
+        end,
+    }
+})</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li><code>options</code>内の各項目は<code>event</code>(TriggerEventで発火するイベント名)または<code>onSelect</code>(直接呼ばれる関数)の<strong>どちらか一方</strong>を指定します。両方書いても両方は実行されない・意図しない挙動になるため、どちらか一方に統一してください。</li>
+        <li><code>addModel</code>はモデル単位で登録するため、<strong>そのモデルのエンティティ全て</strong>にインタラクションが付きます。特定の1体だけに付けたい場合は<code>addLocalEntity</code>(エンティティハンドル指定)や<code>addEntity</code>(ネットワークID指定)を使ってください。</li>
+        <li>ox_targetはox_lib(次のレッスンで扱います)に依存していることが多く、導入時は<code>ox_lib</code>・<code>ox_target</code>の両方を<code>ensure</code>し、自分のresourceの<code>fxmanifest.lua</code>にも<code>dependency 'ox_target'</code>を指定しておくと起動順序のトラブルを防げます。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p class="version-note">本レッスンのexport構文(<code>addBoxZone</code>、<code>addModel</code>の基本形)はOverextended公式ドキュメント(overextended.dev/docs/ox_target)で確認済みですが、ox_targetは活発に開発が続いているリソースで、オプションが追加される場合があります。<code>addEntity</code>・<code>addLocalEntity</code>・<code>removeZone</code>など他の関数も含め、導入しているバージョンの公式ドキュメントを確認してください。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

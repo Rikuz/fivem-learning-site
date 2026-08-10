@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ox_libで通知・プログレスバーを出す | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t3-08-ox-lib-notify-progress">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="3">🟠 中級</span>
+      <span class="badge category-badge">🧰 UIライブラリ</span>
+    </div>
+
+    <h1>ox_libで通知・プログレスバーを出す</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>ox_lib(FiveMで広く使われる共通UI/ユーティリティライブラリ)で通知を表示し、プログレスバー付きのアクション(例: 「調べています...」の待機演出)を実装する</strong>ことができるようになります。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>Tier4-03で学んだokokNotifyのような通知は特定のスクリプトシリーズ専用でしたが、<strong>ox_lib</strong>はより汎用的なUI部品(通知・プログレスバー・確認ダイアログ・コンテキストメニュー等)を提供するライブラリで、フレームワークを問わず多くのスクリプトの土台として使われています。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>通知を表示する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">lib.notify({
+    title = '入手',
+    description = 'アイテムを入手しました',
+    type = 'success' -- 'inform' / 'error' / 'success' / 'warning'
+})</code></pre>
+      </div>
+
+      <h3>プログレスバー付きのアクションを実装する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">RegisterCommand('search', function()
+    local success = lib.progressBar({
+        duration = 3000,
+        label = '調べています...',
+        useWhileDead = false,
+        canCancel = true,
+        disable = { move = true, car = true }, -- 実行中は移動・車両操作を無効化する
+    })
+
+    if success then
+        lib.notify({ description = '何かを見つけました', type = 'success' })
+    else
+        lib.notify({ description = 'キャンセルしました', type = 'error' })
+    end
+end, false)</code></pre>
+      </div>
+
+      <h3>アニメーション・持ち物付きのプログレスバー</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">lib.progressBar({
+    duration = 2000,
+    label = '水を飲んでいます',
+    canCancel = true,
+    anim = { dict = 'mp_player_intdrink', clip = 'loop_bottle' },
+    prop = {
+        model = `prop_ld_flow_bottle`,
+        pos = vec3(0.03, 0.03, 0.02),
+        rot = vec3(0.0, 0.0, -1.5)
+    },
+})</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li><code>lib.progressBar</code>は<strong>戻り値がtrue(完了)/false(キャンセル)</strong>です。この戻り値を確認せずに後続処理を実行すると、キャンセルしたのに処理が実行されてしまいます。上記コード例のように<code>if success then ... else ... end</code>で分岐してください。</li>
+        <li><code>disable</code>で移動や車両操作を無効化しないと、プログレスバー実行中でも自由に歩き回れてしまい、不自然な体験になります。用途に応じて<code>move</code>/<code>car</code>/<code>combat</code>等を適切に無効化しましょう。</li>
+        <li>ox_libを使うには、自分のresourceの<code>fxmanifest.lua</code>で<code>ox_lib</code>を読み込む設定(<code>dependency 'ox_lib'</code>や共有スクリプトとしての読み込み)が必要です。導入しているox_libのバージョンのセットアップ手順を確認してください。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p class="version-note">本レッスンの構文(<code>lib.notify</code>、<code>lib.progressBar</code>)はOverextended公式ドキュメント(overextended.dev/ox_lib)で確認済みです。ox_libには他にも<code>lib.alertDialog</code>(確認ダイアログ)や<code>lib.registerContext</code>/<code>lib.showContext</code>(コンテキストメニュー)などの機能があります。バージョンによって仕様が変わる場合があるため、公式ドキュメントも確認してください。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

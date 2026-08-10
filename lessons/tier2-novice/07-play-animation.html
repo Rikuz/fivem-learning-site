@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>アニメーションを再生する | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t2-07-play-animation">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="2">🟡 初級</span>
+      <span class="badge category-badge">🎭 アニメーション</span>
+    </div>
+
+    <h1>アニメーションを再生する</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>プレイヤーやNPCに座る・手を振るといったアニメーション(モーション)を再生させる</strong>ことができるようになります。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>GTA V/FiveMのアニメーションは、<strong>アニメ辞書</strong>(関連するアニメーションをまとめたデータの集まり)ごとに分類されています。再生する前に該当のアニメ辞書を読み込み(<code>RequestAnimDict</code>)、読み込みが終わってから<code>TaskPlayAnim</code>で実際に再生します。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>client.lua: アニメーションを再生する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local function playSitAnimation()
+    local dict = 'anim@amb@nightclub@mini@stand_dance@dance_solo@male@var_a@'
+    local anim = 'high_center'
+
+    RequestAnimDict(dict)
+    while not HasAnimDictLoaded(dict) do
+        Wait(0)
+    end
+
+    local ped = PlayerPedId()
+
+    -- TaskPlayAnim(ped, dict, anim, blendInSpeed, blendOutSpeed, duration, flag, playbackRate, lockX, lockY, lockZ)
+    TaskPlayAnim(ped, dict, anim, 8.0, 8.0, -1, 1, 0, false, false, false)
+    -- duration=-1: 明示的に止めるまでループ再生し続ける
+    -- flag=1: ループ再生を有効にする
+
+    RemoveAnimDict(dict) -- 読み込んだアニメ辞書をメモリから解放してよいと伝える(再生自体は続く)
+end
+
+RegisterCommand('dance', playSitAnimation, false)</code></pre>
+      </div>
+
+      <h3>client.lua: アニメーションを止める</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local function stopAnimation()
+    local ped = PlayerPedId()
+    ClearPedTasks(ped)
+end
+
+RegisterCommand('stopanim', stopAnimation, false)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li><code>RequestAnimDict</code>直後はまだ読み込みが終わっていません。<code>HasAnimDictLoaded</code>で確認する<code>while</code>ループを必ず挟んでください(モデルの読み込みと同じパターンです)。</li>
+        <li>アニメ辞書名・アニメーション名は<strong>1文字でも間違えると何も再生されません</strong>(エラーにもならず静かに失敗することが多いです)。コミュニティの「GTA5 Animations list」等で正確な名前を確認してから使ってください。</li>
+        <li><code>duration=-1</code>かつ<code>flag</code>にループを指定した場合、<strong>自分で止めない限りアニメーションが再生され続けます</strong>。プレイヤーが移動したりコマンドを実行したりしたタイミングで<code>ClearPedTasks</code>を呼ぶ設計にしてください。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>小物(プロップ)を同時に持たせたい場合(例: 座って本を読むアニメーションに本のモデルを持たせる)は、<code>CreateObject</code>で小物のオブジェクトを生成し、<code>AttachEntityToEntity</code>でペドの手のボーンに位置合わせして固定する、という組み合わせがよく使われます。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

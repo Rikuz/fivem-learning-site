@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>exportsで関数を公開する | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t3-06-exports-between-resources">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="3">🟠 中級</span>
+      <span class="badge category-badge">📡 イベント/通信</span>
+    </div>
+
+    <h1>exportsで関数を公開する</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>自分のresourceの関数を他のresourceから直接呼び出せるように公開する</strong>ことができるようになります。これまでのレッスンで使ってきた<code>exports['okokNotify']:Alert(...)</code>のような呼び出しを、今度は自分で作る側になります。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>これまでの<code>TriggerEvent</code>系(イベント)は「送りっぱなし」の通信でしたが、<strong>exports</strong>は「関数を呼んで、戻り値をその場で受け取れる」という点が異なります。値を計算して即座に結果が欲しい場合はexports、非同期に結果を待つ・複数の相手に通知したい場合はイベント、という使い分けが基本です。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>公開する側(resource名: my-utils)</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">-- server.lua
+local function GetPlayerLevel(source)
+    -- 本来はDBやフレームワークから取得する処理(ここでは簡略化のため固定値)
+    return 5
+end
+
+exports('GetPlayerLevel', GetPlayerLevel)</code></pre>
+      </div>
+
+      <h3>呼び出す側(別のresource)</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">-- server.lua
+RegisterNetEvent('myscript:checkLevel')
+AddEventHandler('myscript:checkLevel', function()
+    local playerId = source
+    local level = exports['my-utils']:GetPlayerLevel(playerId)
+    print(('プレイヤー%sのレベルは%sです'):format(playerId, level))
+end)</code></pre>
+      </div>
+
+      <h3>client側でも同じ考え方で使える</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">-- 公開する側(client.lua)
+local function IsNearShop()
+    local coords = GetEntityCoords(PlayerPedId())
+    return #(coords - vector3(100.0, 200.0, 30.0)) < 5.0
+end
+
+exports('IsNearShop', IsNearShop)
+
+-- 呼び出す側(別resourceのclient.lua)
+if exports['my-utils']:IsNearShop() then
+    print('ショップの近くにいます')
+end</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li><code>exports(...)</code>で公開していない関数は、他のresourceから呼び出せません。「グローバル関数として定義すれば他からも見える」わけではない点に注意してください(Luaのスコープはresourceごとに独立しています)。</li>
+        <li>公開する側のresourceが呼び出す側より<strong>先に起動している</strong>必要があります。<code>fxmanifest.lua</code>に<code>dependency 'my-utils'</code>を指定して起動順序を保証しましょう(Tier1-04参照)。</li>
+        <li>server側のexportとclient側のexportは別物です。server.luaで公開した関数はclient側からは呼べません(逆も同様)。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>okokNotify・okokTextUI・lb-phone・ox_inventoryなど、これまでのレッスンで登場した外部スクリプト連携は、すべてこの<code>exports</code>の仕組みを使っています。自分でresourceをまたぐ共通処理(ユーティリティ関数など)を整理したい場合にも活用できます。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

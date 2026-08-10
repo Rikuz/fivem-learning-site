@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BAN・キック機能を実装する | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t4-07-ban-kick-system">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="4">🔴 中上級</span>
+      <span class="badge category-badge">🔒 セキュリティ</span>
+    </div>
+
+    <h1>BAN・キック機能を実装する</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>プレイヤーを即座にキックする機能と、接続時にBANリストをチェックして参加自体を拒否する機能</strong>を実装できるようになります。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>「今すぐ切断させる」キックには<code>DropPlayer</code>を使います。一方「そもそもサーバーに参加させない」BANは、プレイヤーが接続してくる際に発生する<code>playerConnecting</code>イベントの中で、<strong>deferrals</strong>(接続処理を保留し、DB確認などの非同期処理を待ってから許可/拒否を決める仕組み)を使って判定します。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>即座にキックする</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">RegisterCommand('kick', function(source, args)
+    if not IsPlayerAceAllowed(source, 'command.kick') then return end
+
+    local targetId = tonumber(args[1])
+    local reason = table.concat(args, ' ', 2) or '理由未記載'
+
+    if targetId then
+        DropPlayer(targetId, ('管理者によってキックされました: %s'):format(reason))
+    end
+end, false)</code></pre>
+      </div>
+
+      <h3>接続時にBANリストをチェックする</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local bannedIdentifiers = {
+    ['license:1234567890abcdef1234567890abcdef12345678'] = '規約違反のため',
+}
+
+AddEventHandler('playerConnecting', function(playerName, setKickReason, deferrals)
+    deferrals.defer() -- 接続処理を保留し、非同期チェックの時間を確保する
+
+    -- 1フレーム待つのは公式に推奨されている作法(deferralsの初期化を待つため)
+    Wait(0)
+
+    local source = source
+    local identifiers = GetPlayerIdentifiers(source)
+
+    for _, identifier in ipairs(identifiers) do
+        if bannedIdentifiers[identifier] then
+            deferrals.done(('接続が拒否されました: %s'):format(bannedIdentifiers[identifier]))
+            return
+        end
+    end
+
+    deferrals.done() -- 引数なしで呼ぶと接続を許可する
+end)</code></pre>
+      </div>
+
+      <h3>DBを使ったBANチェック(oxmysql, Tier3-03参照)</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">AddEventHandler('playerConnecting', function(playerName, setKickReason, deferrals)
+    deferrals.defer()
+    Wait(0)
+
+    local source = source
+    local identifiers = GetPlayerIdentifiers(source)
+    local license = nil
+    for _, id in ipairs(identifiers) do
+        if id:find('license:') then license = id end
+    end
+
+    MySQL.Async.fetchAll('SELECT reason FROM bans WHERE identifier = @id', { ['@id'] = license }, function(result)
+        if result and result[1] then
+            deferrals.done(('接続が拒否されました: %s'):format(result[1].reason))
+        else
+            deferrals.done()
+        end
+    end)
+end)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li><code>deferrals.done()</code>を<strong>必ずどこかの分岐で呼んでください</strong>。呼ばずに関数を抜けると、そのプレイヤーはいつまでも接続処理中のまま止まってしまいます。</li>
+        <li><code>deferrals.defer()</code>を呼ばずに非同期処理(DBアクセス等)を待とうとすると正しく動作しません。非同期にBANチェックしたい場合は必ず先に<code>deferrals.defer()</code>を呼んでください。</li>
+        <li>識別子(identifier)には<code>license:</code>、<code>steam:</code>、<code>discord:</code>など複数の種類があります。どれか1種類だけでBAN判定すると、別の識別子で再接続されて回避されることがあります。運用ではIPアドレスやハードウェアID(利用可能な場合)も含め、複数の識別子で判定することが多いです。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>本格的な運用では、BAN理由・期間・執行者などを記録するテーブル設計や、管理者用のNUI画面と組み合わせることが多いです。ここで学んだ<code>playerConnecting</code> + <code>deferrals</code>の仕組みは、その土台になる部分です。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

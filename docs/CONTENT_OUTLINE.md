@@ -1,8 +1,8 @@
-# CONTENT_OUTLINE.md — カリキュラム設計(全25レッスン)
+# CONTENT_OUTLINE.md — カリキュラム設計
 
 このドキュメントが**コンテンツ制作の唯一の正とする仕様書**です。Claude Codeはレッスン本文を書く際、必ずこの一覧の説明・使用構文に従ってください。ここに書かれていない仕様を憶測で追加しないこと。
 
-5つのtier × 各5レッスン = 計25レッスンをMVP(Phase 1実装範囲)とする。将来的にレッスンを追加する場合も、同じtier構造・カテゴリキーを使うこと。
+5つのtier × 各5レッスン = 計25レッスンをMVP(Phase 1実装範囲)とした。以降、要望に応じてレッスンを追加しており(2026-08-10時点で34レッスン)、tierごとの件数は5件に固定されない。追加する場合も、同じtier構造・カテゴリキーの枠組みを使うこと。
 
 ---
 
@@ -15,6 +15,7 @@
 | `t1-03-first-script` | 最初のスクリプトを作る | `lua-basics`, `environment` | t1-02 | resourceフォルダ作成 → `fxmanifest.lua`作成 → `server.cfg`に`ensure`追加 → F8コンソールで動作確認(公式チュートリアル準拠の"Hello World") |
 | `t1-04-fxmanifest` | fxmanifest.luaを理解する | `environment` | t1-03 | `fx_version`, `game`, `client_script`, `server_script`, `shared_script`, `dependency`の意味と使い分け |
 | `t1-05-debug-basics` | デバッグの基本 | `lua-basics` | t1-03 | F8コンソールの開き方、エラーメッセージの読み方(ファイル名・行番号の見方)、`print()`を使った原因の切り分け方 |
+| `t1-06-string-table-utils` | 文字列・テーブル操作の応用 | `lua-basics` | t1-02 | `string.format`, `string.upper`/`lower`, `string.find`、`table.insert`/`remove`、`pairs`と`ipairs`の違い |
 
 ---
 
@@ -27,6 +28,9 @@
 | `t2-03-blip-marker` | Blip/Markerを表示する | `npc-entity` | t2-02 | `AddBlipForCoord`でミニマップにアイコン表示、`DrawMarker`で3D空間にマーカー表示 |
 | `t2-04-commands` | コマンドを登録する | `events` | t2-01 | `RegisterCommand`、権限チェックの基本(`IsPlayerAceAllowed`) |
 | `t2-05-threads-loops` | スレッドとループ | `lua-basics`, `performance` | t2-01 | `CreateThread`、`Wait()`を絶対に省略してはいけない理由(1フレームごとにCPUを専有し、サーバー全体を重くする) |
+| `t2-06-spawn-vehicle` | 車両を生成・操作する | `vehicle` | t2-02 | `CreateVehicle`で車両を生成、`SetPedIntoVehicle`でプレイヤーを乗せる、`SetVehicleNumberPlateText`、`DeleteVehicle`での削除 |
+| `t2-07-play-animation` | アニメーションを再生する | `animation` | t2-02 | `RequestAnimDict`でアニメ辞書を読み込み、`TaskPlayAnim`で再生、`RemoveAnimDict`で解放 |
+| `t2-08-weather-time-sync` | 天候・時間を同期する | `world`, `events` | t2-01 | `NetworkOverrideClockTime`での時間設定、`SetWeatherTypeOvertimePersist`等の天候native、イベントで全clientに同期させる設計 |
 
 ---
 
@@ -39,6 +43,82 @@
 | `t3-03-database-oxmysql` | DB連携の基礎(oxmysql) | `database` | t2-01 | `oxmysql`のインストール、`MySQL.Async.fetchAll` / `MySQL.Async.execute`によるSELECT/INSERTの基本、コールバックの受け方 |
 | `t3-04-items-inventory` | アイテム・インベントリの基本 | `database`, `framework` | t3-03 | シンプルなアイテム所持データの管理例(テーブル設計 + 増減処理)に加えて、下記「ox_inventory 正確な構文」を使用し実際のexportも紹介する |
 | `t3-05-server-validation` | サーバー側バリデーション | `security` | t3-03 | クライアントから送られた値を無条件に信用しない設計、サーバー側での再チェックの実装例 |
+| `t3-06-exports-between-resources` | exportsで関数を公開する | `events` | t2-01 | `exports('関数名', function)`でresource間から呼べる関数を公開する、`exports['resource名']:関数名(...)`で呼び出す |
+| `t3-07-ox-target` | ox_targetでインタラクションを作る | `targeting` | t2-02 | 下記「ox_target 正確な構文」を使用。`addBoxZone`/`addModel`でターゲット可能なゾーン・モデルを登録する |
+| `t3-08-ox-lib-notify-progress` | ox_libで通知・プログレスバーを出す | `ui-library` | t3-01 | 下記「ox_lib 正確な構文」を使用。`lib.notify`で通知、`lib.progressBar`で進捗バー付きアクションを実装する |
+
+### exports 正確な構文(FiveM公式ドキュメント準拠)
+
+```lua
+-- 公開する側(resource A)
+local function GetPlayerLevel(source)
+    return 5
+end
+
+exports('GetPlayerLevel', GetPlayerLevel)
+
+-- 呼び出す側(resource B)
+local level = exports['resource-a']:GetPlayerLevel(source)
+```
+
+### ox_target 正確な構文(要順守・憶測禁止。overextended.dev/docs/ox_target 及び ox_target/client/debug.lua で確認済み)
+
+```lua
+-- ボックス型のターゲットゾーンを作る
+exports.ox_target:addBoxZone({
+    coords = vec3(442.5363, -1017.666, 28.85637),
+    size = vec3(3, 3, 3),
+    rotation = 45,
+    debug = false,
+    options = {
+        {
+            name = 'my_zone_action',
+            event = 'myscript:onTargetSelect', -- TriggerEventが発火する(クライアント側のイベント名)
+            icon = 'fa-solid fa-cube',
+            label = 'これを調べる',
+        }
+    }
+})
+
+-- 特定モデルのエンティティ全てにターゲットオプションを追加する
+exports.ox_target:addModel('a_m_m_business_01', {
+    {
+        name = 'talk_to_npc',
+        icon = 'fa-solid fa-comment',
+        label = '話しかける',
+        onSelect = function(data)
+            print('選択されたエンティティ: ' .. tostring(data.entity))
+        end,
+    }
+})
+```
+> ※`addBoxZone`の`options`は`event`(TriggerEventで発火するイベント名)または`onSelect`(直接呼ばれる関数)のどちらかを指定できる。`addEntity`(ネットワークID指定)・`addLocalEntity`(エンティティハンドル指定)・`removeZone`等の関数もある。ox_targetはOverextended(CommunityOx)がメンテナンスしており、バージョンによってオプションが追加される場合があるため、導入しているバージョンの公式ドキュメント(overextended.dev/docs/ox_target)も確認すること。
+
+### ox_lib 正確な構文(要順守・憶測禁止。overextended.dev/ox_lib/Modules/Interface/Client 各ページで確認済み)
+
+```lua
+-- 通知を表示する
+lib.notify({
+    title = '入手',
+    description = 'アイテムを入手しました',
+    type = 'success' -- 'inform' / 'error' / 'success' / 'warning'
+})
+
+-- プログレスバー付きのアクションを実装する(完了時true、キャンセル時false)
+if lib.progressBar({
+    duration = 2000,
+    label = '調べています...',
+    useWhileDead = false,
+    canCancel = true,
+    disable = { move = true, car = true },
+    anim = { dict = 'mp_player_intdrink', clip = 'loop_bottle' },
+}) then
+    print('完了')
+else
+    print('キャンセルされた')
+end
+```
+> ※ox_libはclient側の`ox_lib/init.lua`を`shared_script`として読み込む(または`lib.locale()`等と合わせてfxmanifestに`ox_lib`への`dependency`を指定する)構成が必要。詳細な導入手順は導入しているox_libのバージョンのドキュメント(overextended.dev/ox_lib またはcoxdocs.dev)を確認すること。
 
 ### ox_inventory 正確な構文(要順守・憶測禁止)
 
@@ -66,6 +146,7 @@ local count = exports.ox_inventory:GetItemCount(source, 'water')
 | `t4-04-lb-phone-custom-app` | lb-phoneにカスタムアプリを追加する | `lb-phone` | t3-01 | 下記「lb-phone 正確な構文」を使用。`Config.CustomApps`へのアプリ登録、`AddCustomApp`/`RemoveCustomApp`エクスポート |
 | `t4-05-lb-phone-nui-bridge` | lb-phoneアプリのUIとLua間通信 | `lb-phone`, `nui` | t4-04 | 通常のNUIとの違い(`SendNUIMessage`ではなく`SendCustomAppMessage`を使う点)、`onOpen`のタイミングとデータ送信の注意点 |
 | `t4-06-okok-banking-integration` | okokBankingV2と連携する | `okok`, `framework` | t4-03 | 下記「okokBankingV2 正確な構文」を使用。口座残高の取得・入出金・取引履歴取得を自作スクリプトから呼び出す |
+| `t4-07-ban-kick-system` | BAN・キック機能を実装する | `security` | t2-04, t3-05 | `DropPlayer`でキックする、`playerConnecting`イベントとdeferralsを使った接続時のBANチェック |
 
 ### okokBankingV2 正確な構文(要順守・憶測禁止。docs.okokscripts.io/scripts/okokbankingv2/exports で確認済み)
 
@@ -203,9 +284,9 @@ window.addEventListener('message', (event) => {
 
 ## カテゴリキー一覧(`docs/ARCHITECTURE.md`と同期させること)
 
-`environment`, `lua-basics`, `npc-entity`, `nui`, `database`, `framework`, `okok`, `lb-phone`, `events`, `performance`, `security`
+`environment`, `lua-basics`, `npc-entity`, `nui`, `database`, `framework`, `okok`, `lb-phone`, `events`, `performance`, `security`, `vehicle`, `animation`, `targeting`, `ui-library`, `world`
 
 ## 今後レッスンを追加する場合のルール
 
-- 既存の11カテゴリキーのいずれかに必ず分類する。新しいカテゴリが本当に必要な場合は、`docs/ARCHITECTURE.md`の一覧表とこのファイルの両方を同時に更新する。
-- 新しい外部スクリプトとの連携レッスンを追加する場合、okok/lb-phoneのセクションと同様に「正確な構文」ブロックを設け、実際のドキュメント/READMEで確認した構文のみを記載する。
+- 既存のカテゴリキーのいずれかに必ず分類する。新しいカテゴリが本当に必要な場合は、`docs/ARCHITECTURE.md`・`docs/DESIGN_SYSTEM.md`(バッジ絵文字)・このファイルの一覧表を同時に更新する。
+- 新しい外部スクリプトとの連携レッスンを追加する場合、okok/lb-phone/ox_target/ox_libのセクションと同様に「正確な構文」ブロックを設け、実際のドキュメント/READMEで確認した構文のみを記載する。裏取りが不十分な場合は、Qbox/ox_coreの節のように確度の限界を明記した上で掲載するか、確認できるまで実装を止めてユーザーに確認する。

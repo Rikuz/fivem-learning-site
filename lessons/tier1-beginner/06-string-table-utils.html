@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>文字列・テーブル操作の応用 | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t1-06-string-table-utils">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="1">🟢 入門</span>
+      <span class="badge category-badge">📘 Lua基礎</span>
+    </div>
+
+    <h1>文字列・テーブル操作の応用</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>文字列を整形・検索したり、テーブルに要素を追加/削除したりする、実務でよく使う操作</strong>ができるようになります。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>Tier1-02で学んだテーブル・文字列の基本操作に加え、実際のスクリプトでは「プレイヤー名を整形して表示する」「配列に要素を追加/削除する」といった操作が頻繁に登場します。Luaの標準ライブラリ<code>string</code>・<code>table</code>にまとまっている関数を使います。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>string.format: 変数を埋め込んだ文字列を作る</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local name = "Alice"
+local money = 1500
+
+local message = string.format('%sさんの所持金は$%dです', name, money)
+print(message)
+-- 出力: Aliceさんの所持金は$1500です
+
+-- ("..."):format(...) という書き方も同じ意味でよく使われる
+local message2 = ('%sさんの所持金は$%dです'):format(name, money)</code></pre>
+      </div>
+
+      <h3>string.upper / string.lower / string.find</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">print(string.upper('hello'))  -- HELLO
+print(string.lower('HELLO'))  -- hello
+
+local found = string.find('my-first-script', 'script')
+print(found) -- 見つかった開始位置(数値)。見つからない場合はnil
+
+if string.find('my-first-script', 'admin') then
+    print('adminという文字列を含む')
+else
+    print('adminという文字列を含まない')
+end</code></pre>
+      </div>
+
+      <h3>table.insert / table.remove</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local items = { 'apple', 'banana' }
+
+table.insert(items, 'orange')       -- 末尾に追加 → { 'apple', 'banana', 'orange' }
+table.insert(items, 1, 'grape')     -- 先頭(1番目)に追加 → { 'grape', 'apple', 'banana', 'orange' }
+
+table.remove(items, 1)              -- 1番目を削除 → { 'apple', 'banana', 'orange' }
+local last = table.remove(items)    -- 引数省略で末尾を削除し、削除した値を返す</code></pre>
+      </div>
+
+      <h3>pairsとipairsの違い</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local mixedTable = { 'apple', 'banana', name = 'Alice', level = 12 }
+
+-- ipairs: 1から始まる連番のキー(配列部分)だけを順番通りに回す
+for i, value in ipairs(mixedTable) do
+    print(i, value)
+end
+-- 出力: 1 apple / 2 banana (name, levelは無視される)
+
+-- pairs: 配列部分・連想配列部分の両方を(順序不定で)全て回す
+for key, value in pairs(mixedTable) do
+    print(key, value)
+end
+-- 出力: 1 apple / 2 banana / name Alice / level 12 (順序は保証されない)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li><code>ipairs</code>は連番のキー(配列部分)が<strong>途中で途切れると、そこで止まります</strong>。例えば<code>{[1]='a', [3]='c'}</code>のように2番目が抜けていると、<code>ipairs</code>は1番目しか回りません。</li>
+        <li><code>pairs</code>で回す順序は保証されません。「必ず1番目から順番に処理したい」場合は<code>ipairs</code>を使うか、キーの一覧を別途ソートしてから処理してください。</li>
+        <li><code>table.remove(items, 1)</code>のように途中の要素を削除すると、後ろの要素の添字が1つずつ詰められます。ループ中に<code>table.remove</code>で削除すると、ループの添字とずれてバグになりやすいので注意してください。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>これらの関数はLuaの標準ライブラリなので、FiveM特有の機能ではなく、どのLua環境でも同じように使えます。<code>string.format</code>はチャットメッセージや通知テキストの組み立てで特によく使うので、書き方に慣れておくと以降のレッスンがスムーズになります。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

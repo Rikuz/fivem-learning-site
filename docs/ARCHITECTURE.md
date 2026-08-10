@@ -108,6 +108,11 @@ window.LESSONS = LESSONS;
 | `events` | イベント/通信 |
 | `performance` | パフォーマンス・デバッグ |
 | `security` | セキュリティ |
+| `vehicle` | 車両操作 |
+| `animation` | アニメーション |
+| `targeting` | ターゲティング(ox_target等) |
+| `ui-library` | UIライブラリ(ox_lib等) |
+| `world` | ワールド操作(天候・時間) |
 
 ---
 
