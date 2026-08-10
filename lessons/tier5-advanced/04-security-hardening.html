@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>セキュリティ強化(チート対策) | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t5-04-security-hardening">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="5">⚫ 上級</span>
+      <span class="badge category-badge">🔒 セキュリティ</span>
+    </div>
+
+    <h1>セキュリティ強化(チート対策)</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>サーバー権威設計を徹底し、よくある改ざん手口(お金の連打送信・イベントのなりすまし等)を防ぐ実装パターン</strong>が書けるようになります。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>Tier3「サーバー側バリデーション」で学んだ「clientを信用しない」という原則を、より具体的な攻撃パターンに対して適用します。よくある攻撃は大きく分けて「①clientが送る値を書き換える」「②イベントを本来ありえない頻度・タイミングで連打する」「③本来呼べないはずのイベントを外部ツールから直接発火する」の3パターンです。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>① 値の改ざん対策(再掲・強化)</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">-- 価格や個数はサーバー側の定義だけを信用する(Tier3-05と同じ考え方)
+local shopItems = { potion = { price = 50 } }
+
+RegisterNetEvent('shop:buyItem')
+AddEventHandler('shop:buyItem', function(itemName)
+    local item = shopItems[itemName]
+    if not item then return end
+    -- 以下略(Tier3-05参照)
+end)</code></pre>
+      </div>
+
+      <h3>② イベント連打(レート制限)対策</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local lastRequestAt = {}
+
+RegisterNetEvent('shop:buyItem')
+AddEventHandler('shop:buyItem', function(itemName)
+    local playerId = source
+    local now = GetGameTimer()
+
+    -- 前回のリクエストから500ミリ秒未満なら無視する(連打対策)
+    if lastRequestAt[playerId] and (now - lastRequestAt[playerId]) < 500 then
+        print(('プレイヤー%sが異常な頻度でリクエストを送信しました'):format(playerId))
+        return
+    end
+    lastRequestAt[playerId] = now
+
+    -- 通常の購入処理
+end)</code></pre>
+      </div>
+
+      <h3>③ 座標・距離のなりすまし対策</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">RegisterNetEvent('shop:buyItem')
+AddEventHandler('shop:buyItem', function(itemName)
+    local playerId = source
+    local playerPed = GetPlayerPed(playerId)
+    local playerCoords = GetEntityCoords(playerPed) -- server側でも座標を取得できる
+    local shopCoords = vector3(100.0, 200.0, 30.0)
+
+    if #(playerCoords - shopCoords) > 5.0 then
+        print(('プレイヤー%sが店から離れた場所から購入しようとしました'):format(playerId))
+        return
+    end
+
+    -- 通常の購入処理
+end)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li>レート制限の秒数を極端に短くしすぎると、正当な操作(素早い連続購入など)まで弾いてしまいます。実際のゲームプレイで想定される最短間隔を基準に調整してください。</li>
+        <li>「clientから送られてきた座標」をそのまま信用するのではなく、可能な限り<code>GetEntityCoords(GetPlayerPed(source))</code>のようにserver側からも取得できる情報を優先して使いましょう。</li>
+        <li>チート対策は「1つ実装すれば終わり」ではありません。新しい改ざん手口は次々に現れるため、疑わしいログ(上記コード例のprint部分)を記録し、異常なパターンがないか継続的に確認する運用が重要です。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>本格的な運用では、FiveMの<strong>Cfx Anti-Cheat</strong>(公式に提供されている不正検知の仕組み)やコミュニティ製のAnti-Cheatリソースの併用も検討されます。ただし、それらを導入しても「自作スクリプト側のサーバー権威設計」が疎かだと意味がありません。本レッスンで扱った考え方が基礎になります。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

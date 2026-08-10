@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>StateBagsによる同期 | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t5-03-statebags">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="5">⚫ 上級</span>
+      <span class="badge category-badge">📡 イベント/通信</span>
+      <span class="badge category-badge">⚡ パフォーマンス</span>
+    </div>
+
+    <h1>StateBagsによる同期</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>StateBags(エンティティやプレイヤーに紐づく、自動的に同期されるデータ領域)を使い、頻繁なイベント発火をせずにデータを共有する</strong>ことができるようになります。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>これまでのレッスンでは、データをclient/server間で共有するために<code>TriggerClientEvent</code>/<code>TriggerServerEvent</code>を使ってきました。しかし「プレイヤーが今どのJobか」のように、多くのclientが継続的に参照したいデータをイベントで送り合うと、通信回数が増えて非効率です。</p>
+      <p><strong>StateBag</strong>はエンティティ(Ped/Vehicleなど)やプレイヤーに紐づく特別なデータ領域で、一度値を設定すると、関係するclientに自動的に同期されます。値が変わったことをイベントハンドラで検知することもできます。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>Entity StateBag: エンティティにデータを持たせる</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">-- server.lua: NPCにカスタムデータを持たせて同期する
+local ped = CreatePed(4, `a_m_m_business_01`, 100.0, 200.0, 30.0, 90.0, true, false)
+
+Entity(ped).state:set('shopType', 'grocery', true)
+-- 第3引数 true = 全clientに同期する(replicated)</code></pre>
+      </div>
+
+      <h3>Entity StateBag: client側で値を読む</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">-- client.lua
+local shopType = Entity(ped).state.shopType
+print('このNPCの店の種類: ' .. tostring(shopType))</code></pre>
+      </div>
+
+      <h3>Player StateBag: プレイヤーにデータを持たせる</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">-- server.lua
+RegisterNetEvent('myscript:updateJob')
+AddEventHandler('myscript:updateJob', function(jobName)
+    local playerId = source
+    Player(playerId).state:set('job', jobName, true)
+end)</code></pre>
+      </div>
+
+      <h3>値が変化したときに反応する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">-- client.lua: 誰かのjob状態が変化するたびに呼ばれる
+AddStateBagChangeHandler('job', '', function(bagName, key, value, reserved, replicated)
+    print(('%sのjobが%sに変わりました'):format(bagName, tostring(value)))
+end)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li>StateBagの値は基本的に<strong>誰でも読める</strong>(同期対象の全clientに配布される)ため、他人に見られたくない機密情報(パスワード相当のデータなど)を入れてはいけません。</li>
+        <li><code>Entity(ped).state:set(...)</code>の第3引数(replicated)を<code>false</code>のままにすると、そのサーバー側でしか値が見えず、client側には同期されません。他clientでも参照したい場合は必ず<code>true</code>を指定してください。</li>
+        <li>StateBagは「多くのclientが継続的に参照する比較的静的なデータ」に向いています。1フレームごとに変わるような値(座標の詳細な動きなど)には、既存のネイティブな同期機構(エンティティの位置同期など)を使う方が適しています。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>StateBagsを使うと、「Jobが変わるたびに全clientへイベントを送って回る」ような処理を「値をsetするだけ」に置き換えられ、通信量とコードの複雑さの両方を減らせます。特に人数が多いサーバーほど効果が大きくなります。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

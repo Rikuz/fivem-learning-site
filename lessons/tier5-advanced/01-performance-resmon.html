@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>パフォーマンス計測と最適化 | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t5-01-performance-resmon">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="5">⚫ 上級</span>
+      <span class="badge category-badge">⚡ パフォーマンス</span>
+    </div>
+
+    <h1>パフォーマンス計測と最適化</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>resmonで自分のスクリプトの負荷を数値で確認し、Wait()の値を調整して負荷を下げる</strong>という、実運用で欠かせない最適化の基本ができるようになります。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>「なんとなく重い気がする」ではなく、<strong>どのresourceが・どれくらいCPUを使っているか</strong>を数値で確認することが最適化の第一歩です。F8コンソールの<code>resmon</code>コマンドがこれを表示してくれます。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>resmonの使い方</h3>
+      <div class="code-block">
+        <pre><code class="language-bash">resmon 1</code></pre>
+      </div>
+      <p>F8コンソールで上記を実行すると、画面に各resourceのCPU使用率(ミリ秒/フレーム)の一覧が表示され続けます。数値が大きいresourceほど負荷が高いことを意味します。もう一度<code>resmon 0</code>を実行すると非表示にできます。</p>
+
+      <h3>Wait()の値を見直す例</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">-- ⚠️ 見直し前: 常に毎フレーム(Wait(0))で座標を取得している
+CreateThread(function()
+    while true do
+        local coords = GetEntityCoords(PlayerPedId())
+        -- 何らかの判定処理
+        Wait(0)
+    end
+end)</code></pre>
+      </div>
+      <div class="code-block">
+        <pre><code class="language-lua">-- ✅ 見直し後: 用途的に毎フレームである必要がなければ、間隔を空ける
+CreateThread(function()
+    while true do
+        local coords = GetEntityCoords(PlayerPedId())
+        -- 何らかの判定処理
+        Wait(500) -- 0.5秒ごとで十分なら、負荷はおよそ1/30程度になる
+    end
+end)</code></pre>
+      </div>
+
+      <h3>距離に応じてWait()を切り替える(頻出パターン)</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">CreateThread(function()
+    while true do
+        local playerCoords = GetEntityCoords(PlayerPedId())
+        local distance = #(playerCoords - vector3(100.0, 200.0, 30.0))
+        local waitTime = 1000
+
+        if distance < 50.0 then
+            waitTime = 200
+        end
+        if distance < 5.0 then
+            waitTime = 0 -- 近くにいるときだけ毎フレームの精度で処理する
+        end
+
+        Wait(waitTime)
+    end
+end)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li>resmonの数値はサーバーの状態(接続人数・他resourceの負荷)によって変動します。1回だけでなく、何度か時間を置いて確認しましょう。</li>
+        <li>「とにかく全部の<code>Wait()</code>を大きくすればいい」わけではありません。UI表示の追従性やマーカー表示の精度が必要な処理まで間隔を空けすぎると、プレイヤー体験が悪化します。用途に応じたバランスが重要です。</li>
+        <li>負荷の原因がループの<code>Wait()</code>ではなく、ループの中で毎回重い処理(大量データのループ処理や頻繁なDBアクセスなど)をしていることもあります。resmonで「重い」と分かったresourceは、中身のコードも確認しましょう。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>Tier2「スレッドとループ」で学んだ<code>Wait()</code>省略厳禁のルールと、このレッスンの「間隔を適切に空ける」は矛盾しません。「省略は絶対ダメ」「その上で、値をどれくらいにするかは用途に応じて調整する」という2段階で理解してください。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

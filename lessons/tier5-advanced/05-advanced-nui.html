@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>高度なNUI(React等の活用) | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t5-05-advanced-nui">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="5">⚫ 上級</span>
+      <span class="badge category-badge">🖥️ UI表示(NUI)</span>
+    </div>
+
+    <h1>高度なNUI(React等の活用)</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>Vite等のビルドツールを使ったReactベースのNUI構築の考え方と、このサイトのようなビルドレス構成との違い・使い分け</strong>を理解できるようになります。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>Tier3〜4で作ったNUIは、素のHTML/CSS/JSファイルをそのまま<code>ui_page</code>に指定するシンプルな構成でした。画面が小さく、状態管理も単純なうちはこれで十分です。</p>
+      <p>しかし、インベントリ画面やダッシュボードのように<strong>状態(表示するデータ)が複雑で、頻繁に更新される画面</strong>を作る場合、React/Vue等のUIライブラリと、Vite等のビルドツールを組み合わせて開発する方が生産性が高くなります。この場合、開発時は<code>npm run dev</code>等でホットリロードしながら作り、最終的に<code>npm run build</code>でHTML/CSS/JSの静的ファイル一式に変換してから<code>ui_page</code>に指定します。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>ビルドツールを使う場合のディレクトリ構成イメージ</h3>
+      <div class="code-block">
+        <pre><code class="language-bash">my-resource/
+├── fxmanifest.lua
+├── client.lua
+├── server.lua
+├── ui/                  # Reactプロジェクトのソース
+│   ├── src/
+│   │   ├── App.jsx
+│   │   └── main.jsx
+│   ├── package.json
+│   └── vite.config.js
+└── ui-build/            # `npm run build` で生成される静的ファイル(これをui_pageに指定)
+    ├── index.html
+    └── assets/
+        ├── index.js
+        └── index.css</code></pre>
+      </div>
+
+      <h3>fxmanifest.lua: ビルド後の成果物を指定する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">ui_page 'ui-build/index.html'
+
+files {
+    'ui-build/index.html',
+    'ui-build/assets/*.js',
+    'ui-build/assets/*.css'
+}</code></pre>
+      </div>
+
+      <h3>React側でLuaからのメッセージを受け取る例</h3>
+      <div class="code-block">
+        <pre><code class="language-javascript">import { useEffect, useState } from 'react';
+
+function App() {
+  const [balance, setBalance] = useState(0);
+
+  useEffect(() => {
+    function handleMessage(event) {
+      if (event.data.action === 'updateBalance') {
+        setBalance(event.data.balance);
+      }
+    }
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
+
+  return <div className="app">残高: {balance}円</div>;
+}
+
+export default App;</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li><code>ui_page</code>には<strong>ビルド後の静的ファイル</strong>(<code>ui-build/index.html</code>等)を指定します。ソースの<code>ui/src/App.jsx</code>を直接指定しても、ブラウザ(CEF)はJSXをそのまま実行できないため動きません。</li>
+        <li><code>npm run build</code>を実行し忘れたまま古い<code>ui-build</code>のファイルをコミット・配布してしまうと、変更が反映されません。デプロイ前に必ずビルドし直す運用(CI等での自動化も検討)が必要です。</li>
+        <li>Lua⇔JS間のメッセージのやり取り自体(<code>SendNUIMessage</code>/<code>window.addEventListener('message', ...)</code>/<code>fetch</code>による<code>RegisterNUICallback</code>呼び出し)は、ビルドツールを使っても使わなくても<strong>同じ仕組み</strong>です。フロントエンドの実装方法が変わるだけで、通信の考え方はTier3で学んだものと変わりません。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>このFiveMスクリプト学習サイト自体は、あえてビルドツールなしの素のHTML/CSS/JSで作られています(<code>CLAUDE.md</code>参照)。理由は「Claude Codeが1ファイルずつ確実に生成・検証できる」「ユーザーが<code>npm install</code>不要でそのままブラウザ・GitHub Pagesで確認できる」ためです。画面数が少なく状態もシンプルなプロジェクトではビルドレス構成が有利ですが、NUIのように状態管理が複雑になりがちな画面では、ビルドツールを使う設計が有利になる場合が多い、というのがこのレッスンの結論です。プロジェクトの規模・複雑さに応じて、両方の選択肢を検討できるようになりましょう。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>
