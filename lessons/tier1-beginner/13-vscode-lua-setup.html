@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>VS CodeでFiveM開発環境を整える | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t1-13-vscode-lua-setup">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="1">🟢 入門</span>
+      <span class="badge category-badge">⚙️ 環境構築</span>
+    </div>
+
+    <h1>VS CodeでFiveM開発環境を整える</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>VS Codeで変数の補完・関数の引数ヒント・タイプミスの警告が効くように、Lua用の拡張機能とFiveMのnative定義を設定する</strong>ことができるようになります。Tier1-01で軽く触れた内容を、実際に手を動かして設定します。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>標準のVS CodeはLuaの構文を理解しません。<strong>言語サーバー</strong>(コードを解析して補完・エラー検出などの支援を行う裏側のプログラム)を提供する拡張機能を入れることで、変数の型を推測した補完や、存在しない関数を呼んだ際の警告が得られるようになります。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <p>ここではコードではなく、設定手順を示します。</p>
+
+      <h3>1. Lua言語サーバー拡張機能を入れる</h3>
+      <p>VS Codeの拡張機能タブで「Lua」と検索し、<strong>sumneko.lua</strong>(<code>Lua Language Server</code>という名前で表示されることもあります)をインストールします。</p>
+
+      <h3>2. workspace設定でグローバル関数の警告を抑える</h3>
+      <p>プロジェクト直下に<code>.vscode/settings.json</code>を作成します。</p>
+      <div class="code-block">
+        <pre><code class="language-lua">{
+  "Lua.diagnostics.globals": [
+    "RegisterCommand", "RegisterNetEvent", "AddEventHandler",
+    "TriggerEvent", "TriggerServerEvent", "TriggerClientEvent",
+    "Citizen", "exports", "source"
+  ],
+  "Lua.runtime.version": "Lua 5.4"
+}</code></pre>
+      </div>
+      <p>これにより、FiveM独自のグローバル関数・変数(<code>source</code>等)を「未定義」として警告されるのを防げます。</p>
+
+      <h3>3. FiveM native関数の型定義を追加する(補完を効かせる)</h3>
+      <p>コミュニティが公開しているFiveM native定義ファイル(<code>.lua</code>形式の型定義集。VS Code拡張機能として配布されているものもあります)を導入すると、<code>CreatePed</code>や<code>GetEntityCoords</code>のような数百種類のnative関数について、引数のヒントと補完が効くようになります。拡張機能タブで「FiveM」「Cfx」等のキーワードで検索し、更新が活発なものを選んでください。</p>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li>拡張機能を入れた直後は解析に時間がかかることがあります。少し待ってから補完を確認してください。</li>
+        <li><code>.vscode/settings.json</code>はプロジェクトごとの設定です。別のプロジェクトフォルダを開いた際は反映されないので、必要なら都度作成してください。</li>
+        <li>補完が効かない・警告が消えない場合、VS Codeのコマンドパレットから「Lua: Reload」のような再起動系コマンドを試すと解決することがあります(拡張機能により名称は異なります)。</li>
+        <li>native定義ファイルはコミュニティ製のため、最新のFiveMアップデートに追従していない場合があります。存在するはずの関数が補完に出てこないときは、公式ドキュメント(Tier1-10参照)で実在を確認してください。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>補完・警告はあくまで開発を助けるツールであり、実際に動くかどうかは最終的にF8コンソール(Tier1-05)で確認する必要があります。「エディタでエラーが出ていないから大丈夫」と過信しないようにしましょう。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ox_libでコールバックを使う(lib.callback) | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t3-33-ox-lib-callback">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="3">🟠 中級</span>
+      <span class="badge category-badge">🧰 UIライブラリ</span>
+      <span class="badge category-badge">📡 イベント/通信</span>
+    </div>
+
+    <h1>ox_libでコールバックを使う(lib.callback)</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>「serverに問い合わせて、その結果を受け取るまで待つ」という処理を、往復用の2つのイベントを自分で用意せずに1行で書ける</strong>ようになります。Tier2-01で学んだ<code>TriggerServerEvent</code>+<code>TriggerClientEvent</code>の往復パターンを、ox_libの<code>lib.callback</code>が簡略化してくれます。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>これまでのレッスンで「clientからserverに何かを依頼し、結果を受け取る」処理を書くたびに、依頼用のイベントと結果返却用のイベントの<strong>2つ</strong>を用意してきました(例: Tier2-01の<code>pickupItem</code>と<code>pickupResult</code>)。<code>lib.callback</code>を使うと、1つの名前で「呼ぶ側」と「答える側」を対応付けられ、コードが半分程度に減ります。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>server.lua: コールバックを登録する(答える側)</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">lib.callback.register('myscript:getPlayerCash', function(source)
+    local cash = getPlayerMoney(source) -- Tier4-01のフレームワーク連携で取得する想定
+    return cash
+end)</code></pre>
+      </div>
+
+      <h3>client.lua: 呼び出す(コールバック関数スタイル)</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">RegisterCommand('mycash', function()
+    lib.callback('myscript:getPlayerCash', false, function(cash)
+        print('所持金: ' .. cash)
+    end)
+end, false)</code></pre>
+      </div>
+
+      <h3>client.lua: 呼び出す(await/Promiseスタイル)</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">RegisterCommand('mycash2', function()
+    local cash = lib.callback.await('myscript:getPlayerCash', false)
+    print('所持金: ' .. cash)
+end, false)</code></pre>
+      </div>
+
+      <h3>引数を渡す例</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">-- server.lua
+lib.callback.register('myscript:canAfford', function(source, price)
+    return getPlayerMoney(source) >= price
+end)
+
+-- client.lua
+local canAfford = lib.callback.await('myscript:canAfford', false, 500)
+if canAfford then
+    print('購入可能です')
+end</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li>第2引数(上記コード例の<code>false</code>)はタイムアウト時間(ミリ秒)です。<code>false</code>を渡すとタイムアウトせず、応答が来るまでいつまでも待ちます。ネットワーク遅延が心配な処理では数値(例: 5000)を指定し、タイムアウト時の挙動も考慮してください。</li>
+        <li><code>lib.callback.register</code>で登録した名前と、呼び出し側の名前(<code>lib.callback</code>/<code>lib.callback.await</code>の第1引数)が完全に一致している必要があります。</li>
+        <li>コールバックの中身(serverの<code>lib.callback.register</code>で登録した処理)は、あくまで「値を返すだけ」の処理にしてください。お金の増減など副作用のある処理は、Tier3-05のサーバー側バリデーションを踏まえた別のイベントで行う方が設計として分かりやすくなります。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p class="version-note">本レッスンの構文は公式ドキュメント(overextended.dev/ox_lib/Modules/Callback)で確認済みです。<code>lib.callback.register</code>はclient側からserverへ、あるいはserverからclientへの両方向で使える汎用的な仕組みです。既存のTier3-13(自作コンテキストメニュー)やTier3-20(管理者メニュー)のようなNUI通信も、この<code>lib.callback</code>で置き換えるとコードを短縮できます。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

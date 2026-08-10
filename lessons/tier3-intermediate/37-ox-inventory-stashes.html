@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ox_inventory組み込みのスタッシュ登録 | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t3-37-ox-inventory-stashes">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="3">🟠 中級</span>
+      <span class="badge category-badge">🗄️ DB連携</span>
+    </div>
+
+    <h1>ox_inventory組み込みのスタッシュ登録</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>ox_inventoryの<code>RegisterStash</code>で、DBへの永続化まで含めた倉庫(スタッシュ)をわずか数行で作る</strong>ことができるようになります。演習ex-04で自作したスタッシュ(独自のDBテーブル設計から実装)と同じ機能を、ox_inventory側の仕組みだけで実現します。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>ex-04では、スタッシュのDB設計・預け入れ/引き出しのバリデーションを全て自分で実装しました。ox_inventoryを導入している場合、<code>RegisterStash</code>でスタッシュを登録しておくだけで、中身の永続化・預け入れ/引き出しのUIまでox_inventory側が処理してくれます。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>server.lua: スタッシュを登録する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">-- RegisterStash(id, label, slots, weight, owner)
+exports.ox_inventory:RegisterStash('shared_warehouse', '共有倉庫', 50, 100000)
+-- ownerを省略すると、誰でもアクセスできる共有スタッシュになる(ex-04と同じ挙動)
+
+exports.ox_inventory:RegisterStash('locker_' .. identifier, '個人ロッカー', 20, 30000, identifier)
+-- ownerにcitizenid等を指定すると、そのプレイヤー専用のスタッシュになる</code></pre>
+      </div>
+
+      <h3>resource起動時にまとめて登録する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">CreateThread(function()
+    exports.ox_inventory:RegisterStash('shared_warehouse', '共有倉庫', 50, 100000)
+    exports.ox_inventory:RegisterStash('police_evidence', '警察の証拠品保管庫', 100, 500000, false, { police = 0 })
+end)</code></pre>
+      </div>
+
+      <h3>client.lua: 登録したスタッシュを開く(ox_targetと組み合わせる例)</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">exports.ox_target:addBoxZone({
+    coords = vec3(100.0, 200.0, 30.0),
+    size = vec3(2.0, 2.0, 2.0),
+    options = {
+        {
+            name = 'open_warehouse',
+            icon = 'fa-solid fa-warehouse',
+            label = '倉庫を開く',
+            onSelect = function()
+                exports.ox_inventory:openInventory('stash', { id = 'shared_warehouse' })
+            end,
+        }
+    }
+})</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li><code>RegisterStash</code>は<strong>プレイヤーがそのスタッシュを開こうとする前に、必ず1度実行されている必要があります</strong>。resource起動時のスレッドでまとめて登録しておくのが確実です。</li>
+        <li><code>id</code>はDB上でスタッシュを識別する一意な文字列です。同じ<code>id</code>を別の場所で使い回すと、中身が共有されてしまいます(個人ロッカーを作る際に<code>identifier</code>を含めるのはこのためです)。</li>
+        <li><code>owner</code>を指定し忘れると、誰でもアクセスできる共有スタッシュになります。個人専用にしたい場合は必ず<code>owner</code>を指定してください。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p class="version-note">本レッスンの構文は公式ドキュメント(overextended.dev/docs/ox_inventory/Guides/stashes)で確認済みです。<code>groups</code>引数(上記のpolice例)でJobごとのアクセス制限も可能です。演習ex-04で自作した設計と比較すると、「中身の永続化・UIをox_inventoryに任せ、自分は登録とアクセス制御だけ書く」という役割分担の違いが実感できるはずです。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

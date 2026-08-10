@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NUIをEscキーで閉じる標準パターン | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t3-38-nui-escape-key">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="3">🟠 中級</span>
+      <span class="badge category-badge">🖥️ UI表示(NUI)</span>
+    </div>
+
+    <h1>NUIをEscキーで閉じる標準パターン</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>これまで作ってきたNUI(ショップ、コンテキストメニュー等)を、閉じるボタンだけでなくEscキーでも閉じられるようにする</strong>ことができるようになります。多くの市販・OSSのNUIが採用している定番パターンです。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>Tier3-01で学んだ通り、<code>SetNuiFocus(true, true)</code>を呼ぶとマウス・キーボードの操作がNUI(ゲーム内ブラウザ)側に渡ります。この状態でのキー入力は<strong>Lua側のnative(<code>IsControlJustPressed</code>等)では検知できません</strong>。NUIのHTML/JS側でキーイベントを監視し、Escapeが押されたらLua側に「閉じてほしい」と伝える、という設計になります。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>ui/script.js: Escキーを監視する</h3>
+      <div class="code-block">
+        <pre><code class="language-javascript">window.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') {
+    closeMenu();
+  }
+});
+
+function closeMenu() {
+  document.getElementById('app').style.display = 'none';
+
+  fetch(`https://${GetParentResourceName()}/closeMenu`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json; charset=UTF-8' },
+    body: JSON.stringify({})
+  });
+}
+
+// 既存の閉じるボタンからも同じ関数を呼ぶ
+document.getElementById('close-btn').addEventListener('click', closeMenu);</code></pre>
+      </div>
+
+      <h3>client.lua: 通知を受け取ってフォーカスを戻す</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">RegisterNUICallback('closeMenu', function(data, cb)
+    SetNuiFocus(false, false)
+    cb('ok')
+end)</code></pre>
+      </div>
+
+      <h3>共通化して既存のNUI(Tier3-13等)に組み込む例</h3>
+      <div class="code-block">
+        <pre><code class="language-javascript">// どの画面でも使い回せる共通関数として用意しておく
+function setupEscapeToClose(closeCallbackName) {
+  window.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape') return;
+
+    document.getElementById('app').style.display = 'none';
+    fetch(`https://${GetParentResourceName()}/${closeCallbackName}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json; charset=UTF-8' },
+      body: JSON.stringify({})
+    });
+  });
+}
+
+setupEscapeToClose('closeMenu');</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li>Lua側のnative(<code>IsControlJustPressed</code>等)でEscapeキーを検知しようとしても、<strong><code>SetNuiFocus(true, true)</code>で入力がNUI側に奪われている間は反応しません</strong>。必ずNUI(JS)側でキーイベントを監視してください。</li>
+        <li><code>keydown</code>イベントは、フォーム内のテキスト入力欄にフォーカスがある状態でも発火します。入力中に意図せずEscapeで閉じてしまうのが困る場合は、入力欄にフォーカスがあるかを確認する処理を追加してください。</li>
+        <li>閉じるボタンとEscキーの両方から同じ<code>closeMenu</code>関数を呼ぶようにし、処理を1箇所にまとめておくと、後で修正が必要になったときに漏れがなくなります。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>この仕組み自体はFiveM特有のAPIではなく、通常のWebブラウザのキーボードイベント(<code>keydown</code>)をそのまま使っています。NUIはFiveMの組み込みブラウザ(CEF)で描画されているため(Tier3-01参照)、一般的なWeb開発の知識がそのまま活かせる好例です。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

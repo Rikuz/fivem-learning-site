@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ox_libの組み込みコンテキストメニュー | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t3-35-ox-lib-context-menu">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="3">🟠 中級</span>
+      <span class="badge category-badge">🧰 UIライブラリ</span>
+      <span class="badge category-badge">🖥️ UI表示(NUI)</span>
+    </div>
+
+    <h1>ox_libの組み込みコンテキストメニュー</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>ox_libの<code>lib.registerContext</code>/<code>lib.showContext</code>で、選択肢一覧のメニュー(コンテキストメニュー)とサブメニューを数行で作る</strong>ことができるようになります。Tier3-13で自作したコンテキストメニューと同じ役割のものを、NUIファイルを1行も書かずに実現できます。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p><code>lib.registerContext</code>にメニューの構造(id・タイトル・選択肢のリスト)を渡して登録し、<code>lib.showContext(id)</code>で表示します。選択肢は<code>event</code>(clientイベント)、<code>serverEvent</code>(serverイベント)、<code>onSelect</code>(直接呼ばれる関数)のいずれかで動作を指定でき、<code>menu</code>を指定すると別のメニューへ遷移する「サブメニュー」も作れます。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>基本のメニュー登録・表示</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">lib.registerContext({
+    id = 'garage_menu',
+    title = 'Personal Garage',
+    options = {
+        {
+            title = 'Retrieve Vehicle',
+            description = 'Spawn your last saved car.',
+            event = 'garage:retrieveVehicle',
+        },
+        {
+            title = 'Store Vehicle',
+            description = 'Save the vehicle you are currently in.',
+            event = 'garage:storeVehicle',
+        },
+    },
+})
+
+RegisterCommand('garage', function()
+    lib.showContext('garage_menu')
+end, false)</code></pre>
+      </div>
+
+      <h3>onSelectで直接処理する例</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">lib.registerContext({
+    id = 'shop_menu',
+    title = 'ショップ',
+    options = {
+        {
+            title = '水を買う ($20)',
+            icon = 'bottle-water',
+            onSelect = function()
+                TriggerServerEvent('shop:buyItem', 'water')
+            end,
+        },
+    },
+})</code></pre>
+      </div>
+
+      <h3>サブメニューを作る</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">lib.registerContext({
+    id = 'main_menu',
+    title = 'メインメニュー',
+    options = {
+        { title = 'ショップを開く', menu = 'shop_menu' }, -- 別メニューのidを指定するとサブメニューになる
+    },
+})
+
+RegisterCommand('menu', function()
+    lib.showContext('main_menu')
+end, false)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li><code>options</code>は<strong>連番キー(配列)で書いてください</strong>。<code>{ ['a'] = {...}, ['b'] = {...} }</code>のように文字列キーにすると、ox_libがアルファベット順に並び替えてしまい、意図した表示順になりません。</li>
+        <li><code>event</code>/<code>serverEvent</code>/<code>onSelect</code>は複数同時に指定しても1つしか有効に機能しません。用途に応じてどれか1つを選んでください。</li>
+        <li>お金の増減などサーバー権威が必要な処理を<code>onSelect</code>(client側で直接実行される関数)に書くと、Tier3-05のバリデーションが抜けてしまいます。<code>serverEvent</code>を使うか、<code>onSelect</code>内から<code>TriggerServerEvent</code>を呼ぶ形にしてください。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p class="version-note">本レッスンの構文は公式ドキュメント(overextended.dev/docs/ox_lib/Interface/Client/context)で確認済みです。Tier3-13の自作コンテキストメニューと比べて、アイコン表示・サブメニュー・並び替えといった機能が最初から揃っているのが利点です。シンプルな用途なら自作、機能が欲しいならox_libの利用を検討してください。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>server.cfgの全体構造 | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t1-12-server-cfg-structure">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="1">🟢 入門</span>
+      <span class="badge category-badge">⚙️ 環境構築</span>
+    </div>
+
+    <h1>server.cfgの全体構造</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>server.cfgに書く各命令(set/setr/sets/ensure等)の意味と読み込み順序を理解し、設定ファイルを見て何が起きるか読み解ける</strong>ようになります。これまでのレッスンで断片的に触れてきた<code>ensure</code>や<code>set</code>を、ここで体系的に整理します。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>server.cfgはFiveMサーバー起動時に上から順番に実行される、設定コマンドの羅列です。行の順番そのものに意味があり(後の行が前の行の設定を上書きする、resourceは書かれた順に起動する等)、闇雲にコピペすると意図しない挙動になることがあります。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>典型的なserver.cfgの構成</h3>
+      <div class="code-block">
+        <pre><code class="language-bash"># 1. ネットワーク設定(最初に書くのが一般的)
+endpoint_add_tcp "0.0.0.0:30120"
+endpoint_add_udp "0.0.0.0:30120"
+
+# 2. サーバー基本情報
+set sv_hostname "My Local Dev Server"
+set sv_maxclients 32
+sv_licenseKey "自分のライセンスキー"
+
+# 3. リソースの起動(書いた順に実行される)
+ensure mapmanager
+ensure chat
+ensure spawnmanager
+ensure oxmysql
+ensure ox_lib
+ensure my-first-script    # 依存先(oxmysql等)より後ろに書く
+
+# 4. カスタム設定(自作resourceが参照する値)
+set my_script:welcome_message "ようこそ!"
+
+# 5. 別ファイルを読み込む(分割管理)
+exec permissions.cfg</code></pre>
+      </div>
+
+      <h3>set / setr / sets の違い</h3>
+      <div class="code-block">
+        <pre><code class="language-bash">set my_convar "値"    # サーバー内部でのみ参照できる(clientからは見えない)
+setr my_convar "値"   # 読み取り専用として、clientにもレプリケート(複製)される
+sets my_convar "値"   # clientからも変更可能な状態でレプリケートされる(通常はほぼ使わない)</code></pre>
+      </div>
+
+      <h3>スクリプト側でconvarを読み取る</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local message = GetConvar('my_script:welcome_message', 'デフォルトのメッセージ')
+print(message)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li><code>ensure</code>は<strong>書かれた順に実行され、依存先を先に起動する必要があります</strong>。<code>ensure my-first-script</code>を<code>ensure oxmysql</code>より前に書くと、my-first-scriptがoxmysqlのexportを見つけられずエラーになることがあります(Tier1-04の<code>dependency</code>と合わせて対策できますが、server.cfgの順序自体も意識してください)。</li>
+        <li>同じconvarを複数回<code>set</code>すると、<strong>後に書いた方が有効</strong>になります。<code>exec</code>で別ファイルを読み込む場合、読み込みタイミングにも注意してください。</li>
+        <li><code>sv_licenseKey</code>のような秘密情報を含むserver.cfgを、Tier1-08で学んだGitでそのまま公開リポジトリにコミットしないよう注意してください。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p><code>exec 別ファイル.cfg</code>を使うと、権限設定(ACE)やリソース一覧などを目的別に分割し、見通しを良くできます(Tier2-04で扱った<code>add_ace</code>もserver.cfgまたはexecされたファイルに書きます)。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

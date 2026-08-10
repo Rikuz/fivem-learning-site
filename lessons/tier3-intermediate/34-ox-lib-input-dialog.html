@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ox_libで入力ダイアログを出す(lib.inputDialog) | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t3-34-ox-lib-input-dialog">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="3">🟠 中級</span>
+      <span class="badge category-badge">🧰 UIライブラリ</span>
+    </div>
+
+    <h1>ox_libで入力ダイアログを出す(lib.inputDialog)</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>プレイヤーに文字や数値を入力してもらうフォームを、NUIを自作せずに数行で表示する</strong>ことができるようになります。「車両のナンバープレートを決める」「通報理由を入力してもらう」といった場面で、Tier3-01のNUIを1から作らずに済みます。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p><code>lib.inputDialog(見出し, 行の配列)</code>を呼ぶと、指定した入力欄を持つフォームが表示されます。プレイヤーが入力して確定すると、各欄の値が配列として返ってきます。非同期関数なので、結果を受け取るには<code>await</code>可能な文脈(コルーチン、Tier5-07参照)で呼び出す必要があります。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>シンプルなテキスト入力</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">RegisterCommand('setplatename', function()
+    local input = lib.inputDialog('ナンバープレートの変更', { '新しいプレート番号(8文字以内)' })
+    if not input then return end -- キャンセルされた場合はnilが返る
+
+    local newPlate = input[1]
+    print('新しいプレート: ' .. newPlate)
+end, false)</code></pre>
+      </div>
+
+      <h3>複数の種類の入力欄を組み合わせる</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">RegisterCommand('reportplayer', function()
+    local input = lib.inputDialog('プレイヤーを通報', {
+        { type = 'input', label = '対象プレイヤーID', required = true },
+        { type = 'select', label = '理由', options = {
+            { value = 'cheating', label = 'チート行為' },
+            { value = 'harassment', label = '嫌がらせ' },
+            { value = 'other', label = 'その他' },
+        }},
+        { type = 'textarea', label = '詳細' },
+    })
+    if not input then return end
+
+    local targetId, reason, details = input[1], input[2], input[3]
+    TriggerServerEvent('report:submit', targetId, reason, details) -- Tier3-21参照
+end, false)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li>戻り値は<strong>入力欄の順番に対応した配列</strong>です。1つ目の入力欄の値は<code>input[1]</code>、2つ目は<code>input[2]</code>のように取得します。プロパティ名でアクセスしようとすると失敗します。</li>
+        <li>キャンセルされた場合は<code>nil</code>が返ります。<code>if not input then return end</code>のチェックを必ず入れてください。</li>
+        <li>各行の<code>type</code>には<code>'input'</code>(テキスト)、<code>'number'</code>、<code>'checkbox'</code>、<code>'select'</code>、<code>'slider'</code>、<code>'color'</code>、<code>'multi-select'</code>、<code>'date'</code>、<code>'date-range'</code>、<code>'time'</code>、<code>'textarea'</code>が指定できます。用途に合わないtypeを指定すると期待したUIになりません。</li>
+        <li>入力されたテキストは、送信前と同様にTier3-05のサーバー側バリデーションの対象です。フォームで受け付けたからといって安全とは限らないため、server側でも文字数チェック等を行ってください。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p class="version-note">本レッスンの構文は公式ドキュメント(overextended.dev/docs/ox_lib/Interface/Client/input)で確認済みです。第3引数に<code>options</code>テーブルを渡すと、ダイアログの見た目や挙動をさらに細かく調整できます。バージョンによって指定できるtypeが増減する場合があるため、公式ドキュメントも確認してください。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

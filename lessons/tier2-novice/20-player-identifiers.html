@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>プレイヤー識別子(GetPlayerIdentifiers)の使い分け | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t2-20-player-identifiers">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="2">🟡 初級</span>
+      <span class="badge category-badge">📡 イベント/通信</span>
+      <span class="badge category-badge">🔒 セキュリティ</span>
+    </div>
+
+    <h1>プレイヤー識別子(GetPlayerIdentifiers)の使い分け</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>プレイヤーを一意に識別するための複数の識別子(license/steam/discord等)の違いを理解し、DBの主キーにどれを使うべきか判断できる</strong>ようになります。これまでのレッスン(Tier3のDB連携やTier4のBAN機能など)で何度も<code>GetPlayerIdentifiers</code>を使ってきましたが、その中身をきちんと扱うのはこのレッスンが初めてです。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>1人のプレイヤーは、Steam・Discord・Rockstar Online Servicesなど複数のサービスに紐づいた<strong>複数の識別子</strong>を同時に持っています。<code>GetPlayerIdentifiers(source)</code>は、それら全てを配列として返します。どの識別子をDBの主キー(プレイヤーを一意に表す値)として使うかは、サーバー設計上の重要な判断になります。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>全識別子を確認する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">RegisterCommand('myidentifiers', function(source)
+    local identifiers = GetPlayerIdentifiers(source)
+    for _, id in ipairs(identifiers) do
+        print(id)
+    end
+    -- 出力例:
+    -- license:1234567890abcdef1234567890abcdef12345678
+    -- license2:abcdef1234567890abcdef1234567890abcdef12
+    -- steam:110000112345678
+    -- discord:123456789012345678
+    -- fivem:1234567
+    -- ip:192.0.2.1
+end, false)</code></pre>
+      </div>
+
+      <h3>特定の種類の識別子だけを取り出す</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local function getIdentifierByPrefix(source, prefix)
+    for _, id in ipairs(GetPlayerIdentifiers(source)) do
+        if id:find(prefix .. ':') then
+            return id
+        end
+    end
+    return nil
+end
+
+local license = getIdentifierByPrefix(source, 'license')
+local discordId = getIdentifierByPrefix(source, 'discord')</code></pre>
+      </div>
+
+      <h3>1つだけ取得したい場合の専用native</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">-- GetPlayerIdentifierByType(source, identifierType)
+local steamId = GetPlayerIdentifierByType(source, 'steam')</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li>主な識別子: <code>license</code>(Rockstar Online Servicesのハッシュ)、<code>license2</code>(Steam経由利用時のROSライセンス。<code>license</code>と同じ値になる場合がある)、<code>steam</code>、<code>discord</code>、<code>fivem</code>(Cfx.re User Id)、<code>ip</code>。全てのプレイヤーが全種類の識別子を持っているとは限りません(Steamを使わずEpic Games経由で接続している場合、<code>steam</code>は存在しない等)。</li>
+        <li>コミュニティの多くのスクリプト(ESX/QBCore含む)は歴史的経緯で<code>license</code>を主キーとして使うことが多いですが、公式(Cfx)は<strong>セキュリティ上、<code>fivem</code>識別子を最も推奨し、次点で<code>discord</code>を推奨</strong>しています。新規に設計するなら、この点を踏まえて選択してください。</li>
+        <li>導入しているフレームワーク(ESX/QBCore)が既に特定の識別子を主キーとして使っている場合、自作スクリプトだけ別の識別子を使うとデータが紐付かなくなります。フレームワークの慣例に合わせるのが安全です。</li>
+        <li><code>ip</code>識別子は環境によって変動する(再接続で変わる)ことがあるため、永続的なプレイヤー識別には向きません。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>Tier4-07のBAN機能や、多くのDB連携レッスンで<code>identifiers[1]</code>のように先頭の識別子をそのまま使ってきましたが、実際には配列内の順序は保証されていません。本番運用では、このレッスンの<code>getIdentifierByPrefix</code>のように、目的の種類を明示的に探す実装にすることを推奨します。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

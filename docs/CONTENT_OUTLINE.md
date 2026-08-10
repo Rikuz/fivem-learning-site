@@ -2,7 +2,7 @@
 
 このドキュメントが**コンテンツ制作の唯一の正とする仕様書**です。Claude Codeはレッスン本文を書く際、必ずこの一覧の説明・使用構文に従ってください。ここに書かれていない仕様を憶測で追加しないこと。
 
-5つのtier × 各5レッスン = 計25レッスンをMVP(Phase 1実装範囲)とした。以降、要望に応じてレッスンを追加しており(2026-08-10時点で90レッスン)、tierごとの件数は5件に固定されない。追加する場合も、同じtier構造・カテゴリキーの枠組みを使うこと。
+5つのtier × 各5レッスン = 計25レッスンをMVP(Phase 1実装範囲)とした。以降、要望に応じてレッスンを追加しており(2026-08-10時点で101レッスン)、tierごとの件数は5件に固定されない。追加する場合も、同じtier構造・カテゴリキーの枠組みを使うこと。
 
 ---
 
@@ -21,6 +21,8 @@
 | `t1-09-config-pattern` | Config.luaの設計パターン | `environment` | t1-04 | 設定値を`Config.lua`にまとめ`shared_script`として参照する設計パターン |
 | `t1-10-native-reference` | ネイティブ関数リファレンスの読み方 | `lua-basics` | t1-01 | docs.fivem.netの読み方、引数・戻り値の見方、client/server対応の見分け方 |
 | `t1-11-hash-strings` | GetHashKeyとハッシュ文字列 | `lua-basics` | t1-02 | `GetHashKey`の役割、`` `モデル名` ``バッククォート記法がハッシュ変換の糖衣構文であること |
+| `t1-12-server-cfg-structure` | server.cfgの全体構造 | `environment` | t1-01 | `set`/`setr`/`sets`と`ensure`の違い、読み込み順序、よく使うconvar一覧、`exec`での分割管理 |
+| `t1-13-vscode-lua-setup` | VS CodeでFiveM開発環境を整える | `environment` | t1-01 | sumneko.lua拡張機能とFiveM native定義ファイルによる補完・型チェックのセットアップ |
 
 ---
 
@@ -47,6 +49,7 @@
 | `t2-17-raycast-target` | 照準先のエンティティを取得する | `targeting` | t2-02 | `GetEntityPlayerIsFreeAimingAt`、`StartShapeTestRay`で照準先を取得 |
 | `t2-18-custom-zones` | エリア判定を自作する | `world` | t2-01 | 座標・半径・多角形での範囲判定を自作するゾーンシステム |
 | `t2-19-shared-modules` | shared_scriptを使ったモジュール分割 | `environment` | t1-04 | `shared_script`でclient/server共通コードを整理するファイル分割設計 |
+| `t2-20-player-identifiers` | プレイヤー識別子(GetPlayerIdentifiers)の使い分け | `events`, `security` | t2-01 | `steam`/`discord`/`license`/`license2`/`fivem`/`ip`の各識別子の意味、DBの主キーにどれを使うべきかの指針 |
 
 ---
 
@@ -85,6 +88,13 @@
 | `t3-27-voice-proximity-concept` | 音声近接チャットの考え方 | `voice` | t2-01 | pma-voice等の近接ボイスがルーティングバケット等と組み合わさる仕組みの考え方 |
 | `t3-28-radio-channel-system` | 無線チャンネルシステムの基礎 | `voice` | t3-27 | チャンネルIDでのプレイヤーグループ管理、同一チャンネル内通信の設計 |
 | `t3-29-qb-target` | qb-targetでインタラクションを作る | `targeting` | t3-07 | 下記「qb-target 正確な構文」を使用。`AddBoxZone`等でox_targetの代替として使う |
+| `t3-32-oxmysql-modern-api` | oxmysqlのモダンな書き方(MySQL.insert/update/scalar) | `database` | t3-03 | 下記「oxmysql モダンAPI 正確な構文」を使用。`?`プレースホルダと`.await`によるPromiseスタイルの書き方 |
+| `t3-33-ox-lib-callback` | ox_libでコールバックを使う(lib.callback) | `ui-library`, `events` | t3-08 | 下記「ox_lib callback 正確な構文」を使用。`lib.callback.register`/`lib.callback.await`によるclient↔server往復の簡略化 |
+| `t3-34-ox-lib-input-dialog` | ox_libで入力ダイアログを出す(lib.inputDialog) | `ui-library` | t3-08 | 下記「ox_lib inputDialog 正確な構文」を使用。フォーム入力をNUIを自作せず表示する |
+| `t3-35-ox-lib-context-menu` | ox_libの組み込みコンテキストメニュー | `ui-library` | t3-08 | 下記「ox_lib context 正確な構文」を使用。`lib.registerContext`/`lib.showContext`で選択肢メニューを作る(Tier3-13の自作版との比較) |
+| `t3-36-ox-inventory-shops` | ox_inventory組み込みのショップ登録 | `database` | t3-04 | 下記「ox_inventory RegisterShop 正確な構文」を使用。`RegisterShop`で商品リスト・座標・グループ制限を一括登録する(Tier3-26の自作版との比較) |
+| `t3-37-ox-inventory-stashes` | ox_inventory組み込みのスタッシュ登録 | `database` | t3-04 | 下記「ox_inventory RegisterStash 正確な構文」を使用。`RegisterStash`とclient側`openInventory`で永続化された倉庫を作る(演習ex-04の自作版との比較) |
+| `t3-38-nui-escape-key` | NUIをEscキーで閉じる標準パターン | `nui` | t3-02 | JS側の`keydown`イベントでEscapeを検知し、`RegisterNUICallback`経由でLua側に通知して`SetNuiFocus(false, false)`する定番実装 |
 
 ### exports 正確な構文(FiveM公式ドキュメント準拠)
 
@@ -157,6 +167,28 @@ exports['qb-target']:AddBoxZone("MissionRowDutyClipboard", vector3(441.7989, -98
 ```
 > ※第1引数はゾーンの一意な名前、第2引数は中心座標、第3・4引数は長さ・幅(float)。`AddTargetModel`(モデル指定)・`AddTargetEntity`(エンティティ指定)・`RemoveZone`等の関数もある。qb-targetはox_targetと並んでよく使われる代替ライブラリで、どちらか一方を導入して使う(併用は非推奨)。バージョンによってオプションが変わる場合があるため、導入しているバージョンのドキュメント(docs.qbcore.org)も確認すること。
 
+### qb-inventory 正確な構文(要順守・憶測禁止。docs.qbcore.org 及び github.com/qbcore-framework/qb-inventory で確認済み)
+
+```lua
+-- アイテムを追加する(info: metadata相当のテーブル、reason: ログ用の理由文字列。どちらも省略可)
+exports['qb-inventory']:AddItem(source, 'phone', 1)
+exports['qb-inventory']:AddItem(source, 'weapon_pistol', 1, false, { durability = 100, ammo = 12, serial = 'ABC123XYZ' })
+
+-- アイテムを減らす(slotを指定すると特定のスロットからピンポイントで減らせる)
+exports['qb-inventory']:RemoveItem(source, 'phone', 1)
+exports['qb-inventory']:RemoveItem(source, 'phone', 1, 5)
+```
+```lua
+-- 使用可能アイテムを登録する(QBCore本体の機能。ox_inventoryのclient.exportに相当する)
+QBCore.Functions.CreateUseableItem('lockpick', function(source, item)
+    local Player = QBCore.Functions.GetPlayer(source)
+    if Player.Functions.GetItemByName('lockpick') then
+        TriggerClientEvent('lockpick:client:use', source)
+    end
+end)
+```
+> ※qb-inventoryはox_inventory(Tier3-04, Tier3-30, Tier3-31)とは別系統のインベントリで、QBCore環境で標準的に使われる。<code>AddItem</code>/<code>RemoveItem</code>の引数順序・名前がox_inventoryと異なる点に注意(混同すると動かない)。使用可能アイテムの登録も、ox_inventoryが<code>items.lua</code>の<code>client.export</code>フィールド経由なのに対し、qb-inventoryは<code>QBCore.Functions.CreateUseableItem</code>をどこか(通常はserver側)で1回呼ぶ方式という違いがある。バージョンによって仕様が変わる場合があるため、公式ドキュメントも確認すること。
+
 ### ox_lib 正確な構文(要順守・憶測禁止。overextended.dev/ox_lib/Modules/Interface/Client 各ページで確認済み)
 
 ```lua
@@ -182,6 +214,61 @@ else
 end
 ```
 > ※ox_libはclient側の`ox_lib/init.lua`を`shared_script`として読み込む(または`lib.locale()`等と合わせてfxmanifestに`ox_lib`への`dependency`を指定する)構成が必要。詳細な導入手順は導入しているox_libのバージョンのドキュメント(overextended.dev/ox_lib またはcoxdocs.dev)を確認すること。
+
+### ox_lib callback 正確な構文(要順守・憶測禁止。overextended.dev/ox_lib/Modules/Callback 各ページで確認済み)
+
+```lua
+-- server.lua: コールバックを登録する
+lib.callback.register('myscript:getPlayerCash', function(source)
+    local cash = getPlayerMoney(source) -- Tier4-01のフレームワーク連携で取得する想定
+    return cash
+end)
+```
+```lua
+-- client.lua: 呼び出す(コールバック関数スタイル。別コルーチンで結果を受け取る)
+lib.callback('myscript:getPlayerCash', false, function(cash)
+    print('所持金: ' .. cash)
+end)
+
+-- client.lua: 呼び出す(await/Promiseスタイル。結果が返るまで処理を止めて待つ)
+local cash = lib.callback.await('myscript:getPlayerCash', false)
+print('所持金: ' .. cash)
+```
+> ※`lib.callback`の第2引数は待機時間(ミリ秒)の指定で、`false`を渡すとタイムアウトしない。client側は`lib.callback.register`でserver→clientのコールバックを受けることもできる(方向を問わず同じ関数群で扱える)。
+
+### ox_lib inputDialog 正確な構文(要順守・憶測禁止。overextended.dev/docs/ox_lib/Interface/Client/input で確認済み)
+
+```lua
+local input = lib.inputDialog('基本ダイアログ', { '1行目', '2行目' })
+if not input then return end -- キャンセルされた場合はnilが返る
+
+print(json.encode(input), input[1], input[2])
+```
+> ※戻り値はテーブル(配列)で、`rows`に渡した順番のインデックスに対応する値が入る(1行目の入力は`input[1]`)。`rows`の各要素は文字列(単純なテキスト入力欄)だけでなく、`type = 'number' / 'checkbox' / 'select' / 'slider' / 'color' / 'multi-select' / 'date' / 'date-range' / 'time' / 'textarea'`等を指定したテーブルにもできる。非同期関数のため、呼び出し元の関数もコルーチン(Tier5-07参照)またはasync的な文脈で呼ぶ必要がある。
+
+### ox_lib context 正確な構文(要順守・憶測禁止。overextended.dev/docs/ox_lib/Interface/Client/context で確認済み)
+
+```lua
+lib.registerContext({
+    id = 'garage_menu',
+    title = 'Personal Garage',
+    options = {
+        {
+            title = 'Retrieve Vehicle',
+            description = 'Spawn your last saved car.',
+            event = 'garage:retrieveVehicle',
+        },
+        {
+            title = 'Store Vehicle',
+            description = 'Save the vehicle you are currently in.',
+            event = 'garage:storeVehicle',
+        },
+    },
+})
+
+lib.showContext('garage_menu')
+```
+> ※`options`は連番キー(配列)で書くこと。文字列キーにするとアルファベット順に並び替えられてしまい、意図した順序で表示されない。各項目は`event`(client側イベント)/`serverEvent`(server側イベント)/`onSelect`(直接呼ばれる関数)のいずれかで動作を指定でき、`menu`にIDを指定すると別のコンテキストメニューへのサブメニュー遷移になる。
 
 ### ox_inventory 正確な構文(要順守・憶測禁止)
 
@@ -250,6 +337,68 @@ end)
 ```
 > ※`item.client?.export`(または`client.event`)フィールドの有無で、ox_inventoryが使用時にexport/eventを呼ぶかどうかを判定している(ox_inventory本体のソースコードで確認済み)。`exports.ox_inventory:useItem(data, callback)`を挟むことで、実際にアイテムが消費されたかをサーバー側に確認してから効果を適用する設計になっている。バージョンによって仕様が変わる場合があるため、公式ドキュメントも確認すること。
 
+### ox_inventory RegisterShop 正確な構文(要順守・憶測禁止。overextended.dev/docs/ox_inventory/Guides/shops で確認済み)
+
+```lua
+exports.ox_inventory:RegisterShop('TestShop', {
+    name = 'Test shop',
+    inventory = {
+        { name = 'burger', price = 10 },
+        { name = 'water', price = 10 },
+        { name = 'cola', price = 10 },
+    },
+    locations = {
+        vec3(223.832962, -792.619751, 30.695190),
+    },
+    groups = { police = 0 }, -- このグループ(job)のプレイヤーだけが利用できる(省略すると誰でも利用可)
+})
+```
+> ※`RegisterShop`はserver側から呼び出す。ox_targetのような「近づいて選ぶ」インタラクションはox_inventory側が自動生成してくれるため、Tier3-07のox_targetを自分で組み合わせる必要はない(ただし公式ドキュメントには「Blip・Marker・ゾーンは作られない。`locations`であって`targets`ではない」という制約が明記されている)。複数の座標を`locations`に並べると、同じ品揃えの店舗を複数箇所に一括設置できる。
+
+### ox_inventory RegisterStash 正確な構文(要順守・憶測禁止。overextended.dev/docs/ox_inventory/Guides/stashes で確認済み)
+
+```lua
+-- server.lua
+exports.ox_inventory:RegisterStash(stashId, label, slots, weight, owner)
+-- stashId: DB上でスタッシュを識別する一意な文字列
+-- label: プレイヤーに表示される名前
+-- slots: スロット数
+-- weight: 最大重量
+-- owner: 特定プレイヤー専用にする場合はcitizenid等を指定(省略すると共有スタッシュになる)
+```
+```lua
+-- client.lua: 登録したスタッシュを開く
+exports.ox_inventory:openInventory('stash', { id = stashId, owner = false })
+```
+> ※`RegisterStash`はプレイヤーがスタッシュを開く前に必ず一度呼ばれている必要がある(resource起動時にまとめて登録しておくのが一般的)。`owner`を指定すると個人専用ロッカーに、省略すると演習ex-04のような共有倉庫になる。`groups`引数でJobごとのアクセス制限も可能。
+
+### oxmysql モダンAPI 正確な構文(要順守・憶測禁止。overextended.dev/docs/oxmysql/Functions 各ページで確認済み)
+
+```lua
+-- INSERT(挿入したレコードのIDが返る)
+local id = MySQL.insert.await('INSERT INTO `users` (identifier, firstname, lastname) VALUES (?, ?, ?)', {
+    identifier, firstName, lastName
+})
+
+-- UPDATE(影響を受けた行数が返る)
+local affectedRows = MySQL.update.await('UPDATE users SET firstname = ? WHERE identifier = ?', { newName, identifier })
+
+-- SELECT(1行の1列だけ取得)
+local firstName = MySQL.scalar.await('SELECT `firstname` FROM `users` WHERE `identifier` = ? LIMIT 1', { identifier })
+
+-- SELECT(1行をまとめて取得)
+local row = MySQL.single.await('SELECT `firstname`, `lastname` FROM `users` WHERE `identifier` = ? LIMIT 1', { identifier })
+```
+```lua
+-- .awaitを付けない場合は、Tier3-03のMySQL.Async.*と同様にコールバック関数で受け取れる
+MySQL.insert('INSERT INTO `users` (identifier, firstname, lastname) VALUES (?, ?, ?)', {
+    identifier, firstName, lastName
+}, function(id)
+    print(id)
+end)
+```
+> ※Tier3-03で扱った`MySQL.Async.fetchAll`は<code>@name</code>形式のプレースホルダでしたが、こちらのモダンAPI(`MySQL.insert`/`update`/`scalar`/`single`/`query`)は<strong><code>?</code>形式の位置プレースホルダ</strong>で、パラメータは配列(<code>{ }</code>)で順番に渡します。混同しないよう注意すること。`.await`を付けるとコルーチン(Tier5-07参照)を使って結果を待つPromiseスタイルになり、付けなければ従来通りコールバック関数で受け取れる。
+
 ---
 
 ## Tier 4: 中上級(🔴 upper-intermediate)— 実際のRPサーバーの部品を組み込む
@@ -275,6 +424,7 @@ end)
 | `t4-17-illenium-appearance` | illenium-appearanceでキャラクリエイトする | `appearance` | t2-13 | 下記「illenium-appearance 正確な構文」を使用。`startPlayerCustomization`でキャラクリエイト画面を開く |
 | `t4-18-qb-clothing` | qb-clothingで服屋システムを使う | `appearance`, `framework` | t4-17 | 下記「qb-clothing 正確な構文」を使用。服屋メニュー・ワードローブを開く |
 | `t4-19-renewed-banking` | Renewed-Bankingと連携する | `framework`, `database` | t4-06 | 下記「Renewed-Banking 正確な構文」を使用。okokBanking以外の銀行スクリプト連携 |
+| `t4-20-qb-inventory-basics` | qb-inventoryの基本 | `database`, `framework` | t3-04, t4-01 | 下記「qb-inventory 正確な構文」を使用。`AddItem`/`RemoveItem`とQBCore.Functions.CreateUseableItemによる使用可能アイテム登録(ox_inventoryとの対比) |
 
 ### okokBankingV2 正確な構文(要順守・憶測禁止。docs.okokscripts.io/scripts/okokbankingv2/exports で確認済み)
 

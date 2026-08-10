@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>qb-inventoryの基本 | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t4-20-qb-inventory-basics">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="4">🔴 中上級</span>
+      <span class="badge category-badge">🗄️ DB連携</span>
+      <span class="badge category-badge">🧩 フレームワーク連携</span>
+    </div>
+
+    <h1>qb-inventoryの基本</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>QBCore環境で標準的に使われるqb-inventoryのアイテム操作・使用可能アイテム登録</strong>ができるようになります。これまでのTier3-04・Tier3-30・Tier3-31で学んだox_inventoryとは別系統のインベントリで、導入しているサーバーに応じて使い分けます。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>ox_inventoryとqb-inventoryは、どちらも「アイテムを増減させる」という役割は同じですが、exportの名前・引数の並び、アイテムを使用可能にする仕組みが異なります。QBCoreサーバーの多くはqb-inventoryを標準採用しているため、Tier4-01でQBCoreを検知した場合はこちらを使うことになります。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>アイテムを追加・削除する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">-- AddItem(source, itemName, amount, info, reason)
+exports['qb-inventory']:AddItem(source, 'phone', 1)
+
+-- metadata(耐久値・弾数・シリアル番号等)付きで追加する
+exports['qb-inventory']:AddItem(source, 'weapon_pistol', 1, false, {
+    durability = 100,
+    ammo = 12,
+    serial = 'ABC123XYZ'
+})
+
+-- RemoveItem(source, itemName, amount, slot, reason)
+exports['qb-inventory']:RemoveItem(source, 'phone', 1)
+
+-- 特定のスロットからピンポイントで削除する
+exports['qb-inventory']:RemoveItem(source, 'phone', 1, 5)</code></pre>
+      </div>
+
+      <h3>使用可能アイテムを登録する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">-- QBCore本体の機能。ox_inventoryのitems.lua(client.export)とは異なる方式
+QBCore.Functions.CreateUseableItem('lockpick', function(source, item)
+    local Player = QBCore.Functions.GetPlayer(source)
+
+    if Player.Functions.GetItemByName('lockpick') then
+        TriggerClientEvent('lockpick:client:use', source)
+    end
+end)</code></pre>
+      </div>
+
+      <h3>フレームワークを検知して切り替える例(Tier4-01の応用)</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local function addItemToPlayer(source, itemName, amount)
+    if GetResourceState('ox_inventory') == 'started' then
+        exports.ox_inventory:AddItem(source, itemName, amount)
+    elseif GetResourceState('qb-inventory') == 'started' then
+        exports['qb-inventory']:AddItem(source, itemName, amount)
+    end
+end</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li>ox_inventoryの<code>AddItem(source, item, count, metadata, slot)</code>とqb-inventoryの<code>AddItem(source, itemName, amount, info, reason)</code>は<strong>引数の役割が似ていても順序・意味が異なります</strong>。片方の書き方をもう片方にそのまま流用しないでください。</li>
+        <li>使用可能アイテムの仕組みも異なります。ox_inventoryは<code>items.lua</code>の<code>client.export</code>フィールドでどのexportを呼ぶか事前に紐付けるのに対し、qb-inventoryは<code>QBCore.Functions.CreateUseableItem</code>を(通常はresourceの初期化時に)呼んで登録します。</li>
+        <li>ox_inventoryとqb-inventoryを同時に導入するのは避けてください。プレイヤーの所持アイテムが2つのシステムに分散し、整合性が取れなくなります。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p class="version-note">本レッスンの構文は公式ドキュメント(docs.qbcore.org)およびGitHub公式リポジトリ(github.com/qbcore-framework/qb-inventory, qb-core)で確認済みです。導入しているサーバーがQBCore+qb-inventoryなのか、QBCore+ox_inventoryなのか(近年はQBCoreサーバーでもox_inventoryを併用するケースが増えています)は、実際にインストールされているresourceを確認してから実装してください。バージョンによって仕様が変わる場合があるため、公式ドキュメントも確認してください。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>
