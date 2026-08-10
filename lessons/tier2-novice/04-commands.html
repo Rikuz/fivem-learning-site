@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>コマンドを登録する | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t2-04-commands">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="2">🟡 初級</span>
+      <span class="badge category-badge">📡 イベント/通信</span>
+    </div>
+
+    <h1>コマンドを登録する</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>チャット欄から<code>/コマンド名</code>で実行できる独自コマンドを作り、管理者などの限られた人だけ使える権限チェックを付ける</strong>ことができるようになります。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p><code>RegisterCommand</code>はclient側でもserver側でも使え、チャット欄(または該当側のコンソール)から<code>/コマンド名 引数</code>の形で実行されたときに呼び出されます。</p>
+      <p>誰でも使えると困るコマンド(例: 全員にお金を配る等)は、<strong>ACE権限</strong>(FiveMのアクセス制御の仕組み。<code>server.cfg</code>で<code>add_ace</code>を使ってプレイヤーやグループに権限を付与する)と<code>IsPlayerAceAllowed</code>を組み合わせてチェックします。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>server.lua: 誰でも使えるコマンド</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">-- source: 実行したプレイヤーのID, args: スペース区切りの引数の配列, rawCommand: 入力全体の文字列
+RegisterCommand('hello', function(source, args, rawCommand)
+    local playerName = GetPlayerName(source)
+    TriggerClientEvent('chat:addMessage', source, {
+        args = { ('%sさん、こんにちは!'):format(playerName) }
+    })
+end, false) -- 第3引数false: 誰でも実行できる(権限制限なし)</code></pre>
+      </div>
+
+      <h3>server.lua: 権限が必要なコマンド</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">RegisterCommand('heal', function(source, args, rawCommand)
+    if not IsPlayerAceAllowed(source, 'command.heal') then
+        TriggerClientEvent('chat:addMessage', source, {
+            args = { '権限がありません' }
+        })
+        return
+    end
+
+    local targetId = tonumber(args[1])
+    if not targetId then
+        TriggerClientEvent('chat:addMessage', source, {
+            args = { '使い方: /heal [プレイヤーID]' }
+        })
+        return
+    end
+
+    TriggerClientEvent('myscript:healPlayer', targetId)
+end, false)</code></pre>
+      </div>
+
+      <h3>server.cfg: 権限をプレイヤーに付与する</h3>
+      <div class="code-block">
+        <pre><code class="language-bash"># identifierはプレイヤーのSteam/license識別子に置き換える
+add_ace identifier.steam:110000112345678 command.heal allow
+# もしくはグループ単位で付与する
+add_principal identifier.steam:110000112345678 group.admin
+add_ace group.admin command.heal allow</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li><code>RegisterCommand</code>の第3引数を<code>false</code>にすると「誰でも実行可能」になります。権限が必要なコマンドのつもりでこの引数を書き忘れると、誰でも実行できてしまいます。</li>
+        <li>権限チェックは<strong>必ずserver側</strong>で行ってください。client側だけでチェックしても、チートツールで直接イベントを発火されると回避されてしまいます。</li>
+        <li>ACE権限名(<code>command.heal</code>など)は自分で決める文字列です。スクリプトごとに名前が重複しないよう、resource名を含めた命名(例: <code>myscript.heal</code>)にすると安全です。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>上記の<code>chat:addMessage</code>はFiveM標準の<code>chat</code>リソースが提供するイベントです。導入しているチャットシステムによって使い方が異なる場合があるため、実際の環境のチャットリソースのドキュメントも確認してください。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

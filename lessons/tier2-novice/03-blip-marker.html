@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Blip/Markerを表示する | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t2-03-blip-marker">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="2">🟡 初級</span>
+      <span class="badge category-badge">🧍 NPC・エンティティ操作</span>
+    </div>
+
+    <h1>Blip/Markerを表示する</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>ミニマップにアイコン(Blip)を表示し、3D空間に光る目印(Marker)を表示する</strong>ことができるようになります。ショップの場所やイベントの目印表示によく使われます。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p><strong>Blip</strong>はミニマップ・マップ画面上に表示されるアイコンです。<strong>Marker</strong>は3Dワールド空間に描画される図形(円柱や矢印など)で、近づかないと見えません。用途に応じて使い分けます。</p>
+      <p>Markerは「毎フレーム描画し続ける」必要があるnative関数のため、<code>CreateThread</code>のループの中で呼び出し続ける点が特徴です(詳しくは次のレッスン「スレッドとループ」で扱います)。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>Blipを表示する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local shopLocation = vector3(100.0, 200.0, 30.0)
+
+local function createShopBlip()
+    local blip = AddBlipForCoord(shopLocation.x, shopLocation.y, shopLocation.z)
+
+    SetBlipSprite(blip, 52)       -- アイコンの種類(52 = ショップアイコン)
+    SetBlipColour(blip, 2)        -- アイコンの色(2 = 緑)
+    SetBlipScale(blip, 0.8)       -- アイコンの大きさ
+    SetBlipAsShortRange(blip, true) -- 近づいたときだけミニマップに表示する
+
+    BeginTextCommandSetBlipName('STRING')
+    AddTextComponentString('雑貨屋')
+    EndTextCommandSetBlipName(blip)
+
+    return blip
+end
+
+CreateThread(createShopBlip)</code></pre>
+      </div>
+
+      <h3>Markerを表示する(近くにいるときだけ)</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">CreateThread(function()
+    while true do
+        local playerCoords = GetEntityCoords(PlayerPedId())
+        local distance = #(playerCoords - shopLocation)
+
+        if distance < 15.0 then
+            -- DrawMarker(type, x, y, z, dirX, dirY, dirZ, rotX, rotY, rotZ,
+            --            scaleX, scaleY, scaleZ, r, g, b, a, bobUpAndDown, faceCamera)
+            DrawMarker(
+                1,                                  -- マーカーの種類(1 = 円柱)
+                shopLocation.x, shopLocation.y, shopLocation.z - 1.0,
+                0.0, 0.0, 0.0,
+                0.0, 0.0, 0.0,
+                1.5, 1.5, 1.0,
+                255, 165, 0, 150,                    -- 色(R, G, B, 透明度)
+                false, false, 2, false, nil, nil, false
+            )
+            Wait(0) -- 近くにいる間は毎フレーム描画するので待ち時間を短くする
+        else
+            Wait(500) -- 遠くにいる間は判定の頻度を落として負荷を減らす
+        end
+    end
+end)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li>Markerは「毎フレーム呼び出し続けないと消えてしまう」性質があります。ループの外で1回だけ呼んでも表示されません。</li>
+        <li>プレイヤーがいつも近くにいるとは限らないのに毎フレーム<code>Wait(0)</code>で回し続けると無駄に負荷がかかります。上記コード例のように、距離に応じて待ち時間を切り替える(遠いときはチェック頻度を落とす)のがよくあるパフォーマンス対策です。</li>
+        <li><code>SetBlipAsShortRange(blip, true)</code>を忘れると、マップ全体を表示したときにも常時アイコンが見え続け、ミニマップが情報過多になります。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>Blipのスプライト番号(アイコン種類)やカラー番号の一覧は、コミュニティの「FiveM Blip IDs / Blip Colors」一覧などで確認できます。数値だけでは分かりにくいので、実際に配置して見た目を確認しながら調整するのがおすすめです。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>スレッドとループ | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t2-05-threads-loops">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="2">🟡 初級</span>
+      <span class="badge category-badge">📘 Lua基礎</span>
+      <span class="badge category-badge">⚡ パフォーマンス</span>
+    </div>
+
+    <h1>スレッドとループ</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong><code>CreateThread</code>で繰り返し処理を作り、<code>Wait()</code>を絶対に省略してはいけない理由</strong>を理解し、安全なループが書けるようになります。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p><code>CreateThread(function() ... end)</code>は、渡した関数を新しい処理の流れ(スレッド)として実行します。ループ処理(ミニマップ表示の更新、近くのプレイヤー確認など)は、この中に<code>while true do ... end</code>を書いて実現するのが基本パターンです。</p>
+      <p>FiveMのLuaスレッドは<strong>協調的スケジューリング</strong>(1つの処理が自分から「一旦ここで他の処理に順番を譲ります」と言わない限り、他の処理が実行されない仕組み)で動いています。その「順番を譲る」合図が<code>Wait(ミリ秒)</code>です。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>基本的なループ</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">CreateThread(function()
+    while true do
+        Wait(1000) -- 1秒待つ。この行がループの中に必須
+
+        local playerCount = #GetActivePlayers()
+        print('現在の接続人数: ' .. playerCount)
+    end
+end)</code></pre>
+      </div>
+
+      <h3>絶対にやってはいけない書き方</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">-- ⚠️ これは書いてはいけない例です(解説のために掲載しています)
+CreateThread(function()
+    while true do
+        -- Wait()がない!
+        local playerCount = #GetActivePlayers()
+    end
+end)</code></pre>
+      </div>
+      <p>この<code>Wait()</code>抜きのループは、他の処理に一切順番を譲らないまま無限に回り続けます。FiveMは1フレームの中でこのスレッドの処理が終わるのを待ち続けてしまうため、そのリソースだけでなく<strong>サーバー全体がフリーズ・激重化する</strong>危険があります。</p>
+
+      <h3>負荷を抑えた書き方の例</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">CreateThread(function()
+    while true do
+        local playerCoords = GetEntityCoords(PlayerPedId())
+        local nearShop = #(playerCoords - vector3(100.0, 200.0, 30.0)) < 20.0
+
+        if nearShop then
+            -- 近くにいる間だけ細かく処理する(Marker描画など)
+            Wait(0)
+        else
+            -- 遠くにいる間はチェック頻度を大きく下げる
+            Wait(1000)
+        end
+    end
+end)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li><code>Wait(0)</code>は「待ち時間0ミリ秒」という意味ですが、これは「待たない」のではなく「次のフレームまで待つ」という意味です。<code>Wait()</code>自体を省略するのとは全く違います。</li>
+        <li><code>if</code>文の中だけに<code>Wait()</code>を置き、条件を満たさない場合に<code>Wait()</code>を通らない書き方をすると、条件によっては無限ループになってしまいます。全ての分岐で必ず<code>Wait()</code>を通るように書いてください。</li>
+        <li>常に<code>Wait(0)</code>(毎フレーム)で細かい処理を回し続けると、それだけでクライアントの負荷が上がります。本当に毎フレーム必要な処理か、上記コード例のように距離などで頻度を切り替えられないか検討しましょう(詳しくはTier5「パフォーマンス計測と最適化」)。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>1つのresource内には複数の<code>CreateThread</code>を作ることができ、それぞれ独立したループとして並行に動きます(用途ごとにスレッドを分けるのが一般的です)。次のTier3では、これらの基礎知識を使って画面UI(NUI)を表示する方法を学びます。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

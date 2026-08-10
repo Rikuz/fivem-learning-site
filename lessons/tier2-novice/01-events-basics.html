@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>イベントの基礎(client↔server通信) | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t2-01-events-basics">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="2">🟡 初級</span>
+      <span class="badge category-badge">📡 イベント/通信</span>
+    </div>
+
+    <h1>イベントの基礎(client↔server通信)</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>クライアント(プレイヤーの画面)とサーバーの間でデータをやり取りする</strong>基本パターンが書けるようになります。これはFiveMスクリプトの最も基本的な仕組みです。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>FiveMのスクリプトはclient(各プレイヤーのPC上で動く部分)とserver(サーバー上で動く部分)に分かれています。お金の増減やデータベースの保存など「不正な改ざんを防ぎたい処理」は必ずserver側で行い、画面表示やキー入力の検知などは client側で行います。</p>
+      <p>この2つの間で情報をやり取りするのが<strong>イベント</strong>です。イベントには名前(文字列)を付け、<code>TriggerServerEvent</code>/<code>TriggerClientEvent</code>で「発火」し、あらかじめ<code>RegisterNetEvent</code>で登録しておいた側がそれを受け取ります。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>client.lua: サーバーにイベントを送る</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">-- Eキーを押したら、サーバーに「アイテムを拾いたい」と伝える
+RegisterCommand('pickup', function()
+    TriggerServerEvent('myscript:pickupItem', 'apple')
+end, false)
+
+RegisterKeyMapping('pickup', 'アイテムを拾う', 'keyboard', 'E')</code></pre>
+      </div>
+
+      <h3>server.lua: イベントを受け取り、結果を返す</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">RegisterNetEvent('myscript:pickupItem')
+AddEventHandler('myscript:pickupItem', function(itemName)
+    -- sourceはイベントを送ってきたプレイヤーのIDを表すグローバル変数(server側のみ)
+    local playerId = source
+
+    print(('プレイヤー%sが%sを拾おうとしました'):format(playerId, itemName))
+
+    -- ここでDBに保存する等の処理を行う(Tier3で扱う)
+
+    -- 結果をそのプレイヤーのclientに送り返す
+    TriggerClientEvent('myscript:pickupResult', playerId, true, itemName)
+end)</code></pre>
+      </div>
+
+      <h3>client.lua: サーバーからの結果を受け取る</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">RegisterNetEvent('myscript:pickupResult')
+AddEventHandler('myscript:pickupResult', function(success, itemName)
+    if success then
+        print(itemName .. ' を拾いました!')
+    end
+end)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li><code>RegisterNetEvent</code>を呼ばずに<code>AddEventHandler</code>だけ書くと、他のresourceから送られてきたネットワークイベントを受け取れません(ローカル内で完結するイベントとしてしか動きません)。ネットワーク越しに送受信する場合は必ず両方セットで書きます。</li>
+        <li>server側の<code>source</code>は「そのイベントを直前にトリガーしたプレイヤーのID」を指す特別な変数です。非同期処理の中で使い回すと値がずれることがあるため、受け取った直後に別の変数へ代入しておくと安全です(上記コード例の<code>local playerId = source</code>)。</li>
+        <li>client→serverの通信は<strong>信用できません</strong>。「アイテムを拾えたことにする」処理を全てclient側だけで完結させると、チートで無限に増やされてしまいます。判定や保存は必ずserver側で行ってください(詳しくはTier3「サーバー側バリデーション」)。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p><code>TriggerClientEvent</code>の第2引数にプレイヤーIDの代わりに<code>-1</code>を渡すと、接続している全プレイヤーに送信できます(全体通知などに利用)。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NPCを配置する | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t2-02-spawn-npc">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="2">🟡 初級</span>
+      <span class="badge category-badge">🧍 NPC・エンティティ操作</span>
+    </div>
+
+    <h1>NPCを配置する</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>指定した座標にNPC(ノンプレイヤーキャラクター)を出現させ、その場に固定し、不要になったら削除する</strong>ことができるようになります。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>NPCの配置はclient側で行います(NPCは各プレイヤーの画面上に描画されるものであり、client側のnative関数で生成します)。生成には<strong>ペッドモデル</strong>(キャラクターの見た目データ)を先に読み込んでおく必要があります。</p>
+      <p>座標(x, y, z)はゲーム内のワールド座標です。座標を調べるには、ゲーム内でF8コンソールを開き<code>GetEntityCoords(PlayerPedId())</code>を実行して自分の現在地を確認するのが手軽です。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>client.lua: NPCを生成して固定する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local spawnedPed = nil
+
+local function spawnShopkeeper()
+    -- `a_m_m_business_01` はFiveMのハッシュ文字列リテラル(バッククォート)。
+    -- ペッドモデル名からハッシュ値に変換してくれる記法
+    local model = `a_m_m_business_01`
+
+    RequestModel(model)
+    while not HasModelLoaded(model) do
+        Wait(0) -- モデルの読み込みが終わるまで毎フレーム待つ
+    end
+
+    local x, y, z = 100.0, 200.0, 30.0
+    local heading = 90.0
+
+    -- CreatePed(pedType, model, x, y, z, heading, isNetwork, bScriptHostPed)
+    spawnedPed = CreatePed(4, model, x, y, z, heading, false, false)
+
+    FreezeEntityPosition(spawnedPed, true)   -- その場から動かなくする
+    SetEntityInvincible(spawnedPed, true)    -- 攻撃されても死なないようにする
+    SetBlockingOfNonTemporaryEvents(spawnedPed, true) -- 周囲の出来事に反応して勝手に動くのを防ぐ
+
+    SetModelAsNoLongerNeeded(model) -- 読み込んだモデルデータをメモリから解放してよいと伝える
+end
+
+RegisterCommand('spawnnpc', spawnShopkeeper, false)</code></pre>
+      </div>
+
+      <h3>client.lua: NPCを削除する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local function removeShopkeeper()
+    if spawnedPed and DoesEntityExist(spawnedPed) then
+        SetEntityAsMissionEntity(spawnedPed, true, true)
+        DeletePed(spawnedPed)
+        spawnedPed = nil
+    end
+end
+
+RegisterCommand('removenpc', removeShopkeeper, false)</code></pre>
+      </div>
+
+      <h3>座標を取得する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">RegisterCommand('mycoords', function()
+    local coords = GetEntityCoords(PlayerPedId())
+    print(('x=%.2f, y=%.2f, z=%.2f'):format(coords.x, coords.y, coords.z))
+end, false)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li><code>RequestModel</code>直後にモデルの読み込みが終わっているとは限りません。<code>HasModelLoaded</code>で確認する<code>while</code>ループを必ず挟んでください。</li>
+        <li>resource停止時にNPCを消し忘れると、画面上にNPCが残り続けたり、次に同じコマンドを実行した際にNPCが重複して生成されたりします。<code>AddEventHandler('onResourceStop', ...)</code>で自分のresourceが止まるタイミングを検知し、削除処理を呼ぶようにしましょう。</li>
+        <li>NPCの数が増えすぎるとクライアントの負荷が上がります。不要になったNPCはこまめに<code>DeletePed</code>してください。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>ペッドモデルの一覧はFiveM/GTA Vのモデル名データベース(コミュニティのped model listなど)で確認できます。次のレッスンでは、このNPCの位置にBlip(ミニマップアイコン)を表示する方法を学びます。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>
