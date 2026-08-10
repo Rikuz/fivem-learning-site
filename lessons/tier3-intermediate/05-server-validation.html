@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>サーバー側バリデーション | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t3-05-server-validation">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="3">🟠 中級</span>
+      <span class="badge category-badge">🔒 セキュリティ</span>
+    </div>
+
+    <h1>サーバー側バリデーション</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>クライアントから送られてきた値を無条件に信用せず、サーバー側で必ず再チェックする</strong>という、FiveMスクリプトで最も重要なセキュリティの考え方を実践できるようになります。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>FiveMのclient側は、改造ツール(チートクライアント)によって自由に書き換えられる可能性があります。「client側で入力チェックしているから安全」という設計は成り立ちません。<strong>お金・アイテム・権限に関わる判定は、必ずserver側でもう一度行う</strong>必要があります。これを「サーバー権威(サーバーが最終的な正しさの基準を持つ)」という考え方と呼びます。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>❌ 危険な例(clientの言い値をそのまま信用している)</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">-- ⚠️ 悪い例: clientが送ってきた金額をそのままDBに反映してしまっている
+RegisterNetEvent('shop:buyItem')
+AddEventHandler('shop:buyItem', function(itemName, price)
+    local playerId = source
+    -- price はclient側から送られてきた値 → 改ざんされていれば0円で買えてしまう
+    removePlayerMoney(playerId, price)
+    addItem(playerId, itemName, 1)
+end)</code></pre>
+      </div>
+
+      <h3>✅ 安全な例(価格はサーバー側の定義を使う)</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">-- 商品の価格はサーバー側だけが知っているテーブルで管理する
+local shopItems = {
+    potion = { price = 50 },
+    bread  = { price = 20 },
+}
+
+RegisterNetEvent('shop:buyItem')
+AddEventHandler('shop:buyItem', function(itemName)
+    local playerId = source
+    local item = shopItems[itemName]
+
+    -- 1. そもそも存在する商品名かチェックする
+    if not item then
+        print(('プレイヤー%sが不正な商品名を送信: %s'):format(playerId, tostring(itemName)))
+        return
+    end
+
+    -- 2. 所持金が足りているかサーバー側のデータで確認する
+    local currentMoney = getPlayerMoney(playerId)
+    if currentMoney < item.price then
+        TriggerClientEvent('myscript:notify', playerId, '所持金が足りません')
+        return
+    end
+
+    -- 3. サーバー側で保持している価格だけを使って処理する(clientからの価格は一切使わない)
+    removePlayerMoney(playerId, item.price)
+    addItem(playerId, itemName, 1)
+end)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li>「金額」「個数」「対象プレイヤーID」など、悪用されると被害が大きい値は<strong>clientから送らせず、server側の定義・DBの値だけを使う</strong>のが基本方針です。clientからは「商品名」のような”どれを選んだか”の情報だけを送ってもらいます。</li>
+        <li>入力値の型チェックも忘れずに行いましょう。<code>tonumber()</code>で数値変換できない値が来た場合の処理(<code>nil</code>チェック)を書かないと、エラーで処理が止まってしまうことがあります。</li>
+        <li>距離や座標に関するチェック(「その場所の近くにいるか」など)も、client側の自己申告ではなく<code>GetEntityCoords</code>をserver側から取得するか、client側から送られた座標をteleportハック対策として上限距離でチェックするなど、サーバー側での検証を組み合わせてください。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>この考え方はTier5「セキュリティ強化(チート対策)」でさらに発展させます。「clientは常に嘘をつく可能性がある」という前提で設計する癖をつけておくと、後々のトラブルを大きく減らせます。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>アイテム・インベントリの基本 | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t3-04-items-inventory">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="3">🟠 中級</span>
+      <span class="badge category-badge">🗄️ DB連携</span>
+      <span class="badge category-badge">🧩 フレームワーク連携</span>
+    </div>
+
+    <h1>アイテム・インベントリの基本</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>プレイヤーごとのアイテム所持数をテーブルで管理し、増減させる</strong>という、インベントリシステムの土台となる考え方が理解できるようになります。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>実際のRPサーバーでは、既存のインベントリフレームワーク(ox_inventory, qb-inventoryなど)を使うことが多いですが、その内部で行われている「テーブルでアイテムと個数を管理し、DBに保存する」という基本の考え方は共通しています。ここではシンプルな自作の仕組みを作りながら理解します。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>server.lua: プレイヤーごとのインベントリをメモリ上で管理する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">-- playerId(数値) -> { [アイテム名] = 個数 } の対応表
+local inventories = {}
+
+local function getInventory(playerId)
+    if not inventories[playerId] then
+        inventories[playerId] = {}
+    end
+    return inventories[playerId]
+end
+
+local function addItem(playerId, itemName, amount)
+    local inventory = getInventory(playerId)
+    inventory[itemName] = (inventory[itemName] or 0) + amount
+end
+
+local function removeItem(playerId, itemName, amount)
+    local inventory = getInventory(playerId)
+    local current = inventory[itemName] or 0
+
+    if current < amount then
+        return false -- 所持数が足りない
+    end
+
+    inventory[itemName] = current - amount
+    return true
+end</code></pre>
+      </div>
+
+      <h3>server.lua: DBへの保存(oxmysql, Tier3-03参照)</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local function saveInventory(identifier, playerId)
+    local inventory = getInventory(playerId)
+    local json = json.encode(inventory) -- FiveMのLuaにはjson.encode/decodeが標準搭載されている
+
+    MySQL.Async.execute('UPDATE users SET inventory = @inventory WHERE identifier = @identifier', {
+        ['@inventory'] = json,
+        ['@identifier'] = identifier
+    })
+end
+
+local function loadInventory(identifier, playerId)
+    MySQL.Async.fetchAll('SELECT inventory FROM users WHERE identifier = @identifier', {
+        ['@identifier'] = identifier
+    }, function(result)
+        if result and result[1] and result[1].inventory then
+            inventories[playerId] = json.decode(result[1].inventory)
+        end
+    end)
+end</code></pre>
+      </div>
+
+      <h3>使用例</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">RegisterNetEvent('myscript:givePotion')
+AddEventHandler('myscript:givePotion', function()
+    local playerId = source
+    addItem(playerId, 'potion', 1)
+    TriggerClientEvent('myscript:notify', playerId, 'ポーションを1個入手しました')
+end)</code></pre>
+      </div>
+
+      <h3>ox_inventoryを使う場合(実際のexport構文)</h3>
+      <p>実運用では、上記のような自作インベントリではなく<strong>ox_inventory</strong>(FiveMで広く使われているインベントリリソース)を導入することが多いです。その場合はexport経由でアイテムを操作します。</p>
+      <div class="code-block">
+        <pre><code class="language-lua">-- アイテムを追加する(成功時true)
+local success = exports.ox_inventory:AddItem(source, 'water', 1)
+
+-- アイテムを減らす(成功時true。所持数が足りない場合はfalse)
+local removed = exports.ox_inventory:RemoveItem(source, 'water', 1)
+
+-- 所持数を確認する
+local count = exports.ox_inventory:GetItemCount(source, 'water')
+
+if count >= 1 then
+    exports.ox_inventory:RemoveItem(source, 'water', 1)
+    TriggerClientEvent('myscript:notify', source, '水を1本消費しました')
+end</code></pre>
+      </div>
+      <p class="version-note">※<code>source</code>はプレイヤーID(数値)。第4引数にmetadata(耐久値・刻印などアイテムごとの付加データ)、第5引数にslot番号を指定できる場合があります。ox_inventoryはバージョンによって引数が増減することがあるため、導入しているox_inventoryのREADME・公式ドキュメントも必ず確認してください。</p>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li>アイテムの増減は必ずserver側の関数(<code>addItem</code>/<code>removeItem</code>)を通してください。clientから直接インベントリのテーブルを書き換える構造にすると、改ざんの余地が生まれます。</li>
+        <li><code>removeItem</code>で所持数チェックをせずに引き算だけすると、マイナスの個数になってしまう(=存在しないはずのアイテムを消費できてしまう)バグにつながります。上記コード例のように必ず所持数を確認してから減算してください。</li>
+        <li>プレイヤーが切断したときに<code>inventories[playerId]</code>を消し忘れると、メモリ上にデータが残り続けます(メモリリーク)。<code>AddEventHandler('playerDropped', ...)</code>で保存とクリーンアップを行いましょう。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>実運用では、この自作の仕組みをそのまま使うより、コミュニティで広く使われているインベントリフレームワーク(ox_inventoryなど)を導入し、そのエクスポート関数を呼ぶ形にすることが多いです。ただし、内部でどんな処理が行われているかを理解しておくと、トラブルシューティングや独自機能の追加がしやすくなります。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

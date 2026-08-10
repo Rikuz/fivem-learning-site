@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DB連携の基礎(oxmysql) | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t3-03-database-oxmysql">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="3">🟠 中級</span>
+      <span class="badge category-badge">🗄️ DB連携</span>
+    </div>
+
+    <h1>DB連携の基礎(oxmysql)</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>oxmysql(FiveMで広く使われるMySQL連携リソース)を導入し、データの取得(SELECT)と保存(INSERT)ができる</strong>ようになります。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>FiveMのサーバーからMySQLデータベースを扱うには、<strong>oxmysql</strong>というリソースを別途導入します。導入後は<code>MySQL.Async.fetchAll</code>(SELECTで複数行取得)や<code>MySQL.Async.execute</code>(INSERT/UPDATE/DELETEの実行)といった関数が使えるようになります。</p>
+      <p>これらは名前の通り<strong>非同期</strong>(処理の完了を待たずに次の行に進み、完了したらコールバック関数が呼ばれる)で動きます。DBへの問い合わせには数十ミリ秒〜数百ミリ秒かかることがあり、その間サーバーの他の処理を止めないための仕組みです。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>導入(server.cfg)</h3>
+      <div class="code-block">
+        <pre><code class="language-bash">ensure oxmysql</code></pre>
+      </div>
+      <div class="code-block">
+        <pre><code class="language-bash"># server.cfgにMySQL接続情報を設定する
+set mysql_connection_string "mysql://ユーザー名:パスワード@localhost/データベース名?charset=utf8mb4"</code></pre>
+      </div>
+
+      <h3>fxmanifest.luaでの依存指定</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">dependency 'oxmysql'</code></pre>
+      </div>
+
+      <h3>SELECT(複数行取得)</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local function getPlayerData(identifier)
+    MySQL.Async.fetchAll('SELECT * FROM users WHERE identifier = @identifier', {
+        ['@identifier'] = identifier
+    }, function(result)
+        if result and result[1] then
+            print('見つかったユーザー名: ' .. result[1].name)
+        else
+            print('該当するユーザーが見つかりませんでした')
+        end
+    end)
+end</code></pre>
+      </div>
+
+      <h3>INSERT(保存)</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local function createPlayerRecord(identifier, name)
+    MySQL.Async.execute('INSERT INTO users (identifier, name, money) VALUES (@identifier, @name, @money)', {
+        ['@identifier'] = identifier,
+        ['@name'] = name,
+        ['@money'] = 500
+    }, function(rowsChanged)
+        print(('%s件のレコードを追加しました'):format(rowsChanged))
+    end)
+end</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li>クエリに値を埋め込むとき、文字列連結(<code>..</code>)で直接組み立てるのは絶対にやめてください。<strong>SQLインジェクション</strong>(悪意のある文字列を混入させ、意図しないSQL文を実行させる攻撃)の危険があります。必ず上記のようにプレースホルダ(<code>@identifier</code>など)とパラメータテーブルを使ってください。</li>
+        <li>非同期処理なので、<code>MySQL.Async.fetchAll</code>を呼んだ直後の行では、まだ結果が返ってきていません。結果を使う処理は必ずコールバック関数の中に書いてください。</li>
+        <li><code>oxmysql</code>より先に自分のresourceが起動してしまうと接続前にクエリを投げてしまう可能性があります。<code>fxmanifest.lua</code>に<code>dependency 'oxmysql'</code>を書いて起動順序を保証してください。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>oxmysqlにはPromiseベースの<code>exports.oxmysql:execute(...)</code>のような新しい書き方もあります。本レッスンでは、他のmysql系リソースからの移行がしやすい<code>MySQL.Async.*</code>形式(互換レイヤー)を採用しています。</p>
+      <p class="version-note">※oxmysqlはバージョンによって書き方の選択肢が増えることがあります。実際に導入しているoxmysqlのREADME・公式ドキュメントも必ず確認してください。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

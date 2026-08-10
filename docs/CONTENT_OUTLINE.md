@@ -37,8 +37,22 @@
 | `t3-01-nui-basics` | NUIの基礎(画面UIを表示する) | `nui` | t2-05 | `fxmanifest.lua`に`ui_page`を指定、`SendNUIMessage`でLua→JS方向にデータを送る、`SetNuiFocus`でマウス操作を有効化 |
 | `t3-02-nui-callback` | NUIコールバック(双方向通信) | `nui` | t3-01 | `RegisterNUICallback`でJS→Lua方向を受け取る、JS側の`fetch()`による送信パターン |
 | `t3-03-database-oxmysql` | DB連携の基礎(oxmysql) | `database` | t2-01 | `oxmysql`のインストール、`MySQL.Async.fetchAll` / `MySQL.Async.execute`によるSELECT/INSERTの基本、コールバックの受け方 |
-| `t3-04-items-inventory` | アイテム・インベントリの基本 | `database`, `framework` | t3-03 | シンプルなアイテム所持データの管理例(テーブル設計 + 増減処理) |
+| `t3-04-items-inventory` | アイテム・インベントリの基本 | `database`, `framework` | t3-03 | シンプルなアイテム所持データの管理例(テーブル設計 + 増減処理)に加えて、下記「ox_inventory 正確な構文」を使用し実際のexportも紹介する |
 | `t3-05-server-validation` | サーバー側バリデーション | `security` | t3-03 | クライアントから送られた値を無条件に信用しない設計、サーバー側での再チェックの実装例 |
+
+### ox_inventory 正確な構文(要順守・憶測禁止)
+
+```lua
+-- アイテムを追加する(成功時true)
+local success = exports.ox_inventory:AddItem(source, 'water', 1)
+
+-- アイテムを減らす(成功時true。所持数が足りない場合はfalse)
+local success = exports.ox_inventory:RemoveItem(source, 'water', 1)
+
+-- 所持数を確認する
+local count = exports.ox_inventory:GetItemCount(source, 'water')
+```
+> ※`source`はプレイヤーID(数値)。第4引数にmetadata(耐久値や刻印などアイテムごとの付加データ)、第5引数にslot番号を指定できる場合がある。ox_inventoryはバージョンによって引数が増減することがあるため、導入しているox_inventoryのREADME・公式ドキュメントも必ず確認すること。
 
 ---
 
@@ -46,11 +60,38 @@
 
 | ID | タイトル | カテゴリ | 前提 | 内容の要点 |
 |---|---|---|---|---|
-| `t4-01-framework-basics` | ESX/QBCoreの基本 | `framework` | t3-04 | フレームワークの検知方法、プレイヤーデータの取得(お金・職業など)、ESXとQBCoreでのAPIの違い |
-| `t4-02-framework-jobs` | フレームワークで職業(Job)システムを使う | `framework` | t4-01 | Job確認、Job専用のNPC/エリア制御、給料処理の実装例 |
+| `t4-01-framework-basics` | ESX/QBCore/Qbox/oxの基本 | `framework` | t3-04 | フレームワークの検知方法、プレイヤーデータの取得(お金・職業など)、ESX/QBCore/Qbox(qbx_core)/ox_coreでのAPIの違い。QboxはQBCore互換API(`exports['qb-core']:GetCoreObject()`)を提供する点に触れる |
+| `t4-02-framework-jobs` | フレームワークで職業(Job)システムを使う | `framework` | t4-01 | ESX/QBCore/QboxのJob確認、ox_coreのgroup確認、Job/group専用のNPC/エリア制御、給料処理の実装例 |
 | `t4-03-okok-integration` | okokシリーズと連携する | `okok`, `nui` | t3-02 | 下記「okokシリーズ 正確な構文」を使用。通知(okokNotify)とテキストUI(okokTextUI)を自作スクリプトから呼び出す |
 | `t4-04-lb-phone-custom-app` | lb-phoneにカスタムアプリを追加する | `lb-phone` | t3-01 | 下記「lb-phone 正確な構文」を使用。`Config.CustomApps`へのアプリ登録、`AddCustomApp`/`RemoveCustomApp`エクスポート |
 | `t4-05-lb-phone-nui-bridge` | lb-phoneアプリのUIとLua間通信 | `lb-phone`, `nui` | t4-04 | 通常のNUIとの違い(`SendNUIMessage`ではなく`SendCustomAppMessage`を使う点)、`onOpen`のタイミングとデータ送信の注意点 |
+
+### ESX/QBCore/Qbox/ox_core 検知・取得の構文
+
+```lua
+-- ESX(es_extended)
+local ESX = exports['es_extended']:getSharedObject()
+local xPlayer = ESX.GetPlayerFromId(source)
+local money = xPlayer.getMoney()
+local jobName = xPlayer.job.name
+
+-- QBCore(qb-core)
+local QBCore = exports['qb-core']:GetCoreObject()
+local Player = QBCore.Functions.GetPlayer(source)
+local cash = Player.PlayerData.money['cash']
+local jobName2 = Player.PlayerData.job.name
+
+-- Qbox(qbx_core)。QBCoreからの移行を前提に設計されており、
+-- 上記と同じ 'qb-core' 互換exportがそのまま使える
+local QBCore = exports['qb-core']:GetCoreObject()
+-- Qbox独自のexportを直接使う場合は 'qbx_core' を指定する
+-- local QBX = exports.qbx_core:GetCoreObject()
+
+-- ox_core。ESX/QBCoreとは異なる設計(クラスベースのプレイヤーオブジェクト)
+local player = exports.ox_core:GetPlayer(source)
+-- player.get('money') のようなアクセサでデータを取得する想定
+```
+> ⚠️ **Qbox(qbx_core)・ox_coreの構文は、ESX/QBCoreほど本セッションで裏取りできていません。** QboxがQBCore互換の`'qb-core'`exportを提供する点は公式の設計方針として確度が高いですが、`qbx_core`独自export・`ox_core`のメソッド名(`get`/`getGroup`等)は必ず導入しているバージョンの公式ドキュメント(Qbox: docs.qbox.re、ox_core: Overextended/CommunityOxのドキュメント)で確認してから使うこと。okok/lb-phoneのように実ドキュメントで一字一句確認済みの構文ではない。
 
 ### okokシリーズ 正確な構文(要順守・憶測禁止)
 

@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NUIの基礎(画面UIを表示する) | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t3-01-nui-basics">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="3">🟠 中級</span>
+      <span class="badge category-badge">🖥️ UI表示(NUI)</span>
+    </div>
+
+    <h1>NUIの基礎(画面UIを表示する)</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>HTML/CSS/JSで作った画面をプレイヤーの画面上に表示し、Lua側からそのUIにデータを送る</strong>ことができるようになります。これを<strong>NUI</strong>(FiveMの組み込みブラウザ機能。ゲーム画面の上に独自のHTML画面を重ねて表示できる)と呼びます。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>NUIの実体は、resource内に置いたHTML/CSS/JSファイル一式です。<code>fxmanifest.lua</code>で<code>ui_page</code>にエントリーポイントのHTMLを指定し、<code>files</code>に関連ファイルを列挙します。</p>
+      <p>Lua側から<code>SendNUIMessage(データ)</code>を呼ぶと、JS側で<code>window.addEventListener('message', ...)</code>がそのデータを受け取れます。またマウス操作をUIに向けたい場合は<code>SetNuiFocus(true, true)</code>でフォーカスを移します(これを呼ばないと、UIが表示されていてもプレイヤーの操作はゲーム側に渡ったままになります)。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>fxmanifest.lua</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">fx_version 'cerulean'
+game 'gta5'
+
+client_script 'client.lua'
+
+ui_page 'ui/index.html'
+
+files {
+    'ui/index.html',
+    'ui/style.css',
+    'ui/script.js'
+}</code></pre>
+      </div>
+
+      <h3>client.lua</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">RegisterCommand('opennui', function()
+    SetNuiFocus(true, true) -- マウス操作をUI側に渡す
+
+    SendNUIMessage({
+        action = 'open',
+        message = 'ようこそ!'
+    })
+end, false)</code></pre>
+      </div>
+
+      <h3>ui/index.html</h3>
+      <div class="code-block">
+        <pre><code class="language-markup">&lt;!doctype html&gt;
+&lt;html&gt;
+&lt;head&gt;
+  &lt;meta charset="utf-8"&gt;
+  &lt;link rel="stylesheet" href="style.css"&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;div id="app" class="app"&gt;
+    &lt;p id="message"&gt;まだメッセージを受信していません&lt;/p&gt;
+  &lt;/div&gt;
+  &lt;script src="script.js"&gt;&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;</code></pre>
+      </div>
+
+      <h3>ui/script.js</h3>
+      <div class="code-block">
+        <pre><code class="language-javascript">window.addEventListener('message', (event) => {
+    const data = event.data;
+
+    if (data.action === 'open') {
+        document.getElementById('app').style.display = 'block';
+        document.getElementById('message').textContent = data.message;
+    }
+});</code></pre>
+      </div>
+
+      <p>実際に動かして確認できるサンプル一式を <a href="samples/nui-basics/index.html">samples/nui-basics/index.html</a> に用意しています。ブラウザで開き、画面左下の「デモ」ボタンを押すと、<code>SendNUIMessage</code>を受信した想定の動きを確認できます(FiveM実機では、このデモボタンの代わりに実際のLua側からのメッセージで表示されます)。</p>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li><code>files</code>に列挙し忘れたファイル(CSS/JS/画像など)は、実際のFiveM環境では404になり読み込まれません。<code>ui_page</code>のHTMLだけでなく、そこから読み込む全てのファイルを<code>files</code>に含める必要があります。</li>
+        <li><code>SetNuiFocus(true, true)</code>を呼ばないと、UIは表示されてもクリックやキー入力がゲーム側に渡ったままになり、ボタンが押せません。UIを閉じるときは<code>SetNuiFocus(false, false)</code>を忘れずに呼び戻してください。</li>
+        <li>NUIのHTMLはFiveMの組み込みブラウザ(CEF)で描画されます。通常のWebブラウザとほぼ同じですが、一部の最新Web APIが使えない場合があります。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>NUIの背景を透過させたい場合(HUDのように画面の一部だけに表示したい場合)は、CSSの<code>body { background: transparent; }</code>を指定します(サンプルにも反映済みです)。次のレッスンでは、逆にJS側からLua側へデータを送る「NUIコールバック」を学びます。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

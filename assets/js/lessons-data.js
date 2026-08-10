@@ -145,7 +145,7 @@ const LESSONS = [
     prerequisites: ["t3-03-database-oxmysql"],
     path: "lessons/tier3-intermediate/04-items-inventory.html",
     estimatedMinutes: 30,
-    summary: "シンプルなアイテム所持データの管理例(テーブル設計+増減処理)を実装する",
+    summary: "シンプルなアイテム所持データの管理例(テーブル設計+増減処理)と、ox_inventoryの実際のexport構文を学ぶ",
   },
   {
     id: "t3-05-server-validation",
@@ -161,13 +161,13 @@ const LESSONS = [
   // ===== Tier 4: 中上級(okok/lb-phone含む) =====
   {
     id: "t4-01-framework-basics",
-    title: "ESX/QBCoreの基本",
+    title: "ESX/QBCore/Qbox/oxの基本",
     tier: 4,
     categories: ["framework"],
     prerequisites: ["t3-04-items-inventory"],
     path: "lessons/tier4-upper-intermediate/01-framework-basics.html",
     estimatedMinutes: 30,
-    summary: "フレームワークの検知方法、プレイヤーデータ(お金・職業など)の取得、ESXとQBCoreのAPIの違いを学ぶ",
+    summary: "フレームワークの検知方法、プレイヤーデータ(お金・職業など)の取得、ESX/QBCore/Qbox/ox_coreのAPIの違いを学ぶ",
   },
   {
     id: "t4-02-framework-jobs",
@@ -177,7 +177,7 @@ const LESSONS = [
     prerequisites: ["t4-01-framework-basics"],
     path: "lessons/tier4-upper-intermediate/02-framework-jobs.html",
     estimatedMinutes: 30,
-    summary: "Jobの確認、Job専用のNPC/エリア制御、給料処理の実装例を学ぶ",
+    summary: "ESX/QBCore/QboxのJob確認、ox_coreのgroup確認、Job専用のNPC/エリア制御、給料処理の実装例を学ぶ",
   },
   {
     id: "t4-03-okok-integration",
