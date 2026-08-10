@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>オブジェクト(プロップ)を生成・設置する | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t2-09-create-object">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="2">🟡 初級</span>
+      <span class="badge category-badge">🧍 NPC・エンティティ操作</span>
+    </div>
+
+    <h1>オブジェクト(プロップ)を生成・設置する</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>看板・コーン・ダンボール箱のような小物(プロップ)をワールドに設置し、不要になったら削除する</strong>ことができるようになります。</p>
+      <p><strong>こんな時に使う:</strong> イベント会場に装飾を置きたい、露店の商品台を設置したい、道路工事のコーンを配置したいとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>NPC(Ped)・車両(Vehicle)と並ぶ3つ目のエンティティ種別が<strong>オブジェクト(Object)</strong>です。動かない小物や装飾品はほとんどがこのオブジェクトとして生成されます。生成手順はNPC・車両と同じく「モデルを読み込む→生成する→不要な設定を無効化する」という流れです。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>client.lua: プロップを設置する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local spawnedObject = nil
+
+local function placeSignboard()
+    local model = `prop_sign_advert_01a`
+
+    RequestModel(model)
+    while not HasModelLoaded(model) do
+        Wait(0)
+    end
+
+    local coords = GetEntityCoords(PlayerPedId())
+
+    -- CreateObject(model, x, y, z, isNetwork, netMissionEntity, doorFlag)
+    spawnedObject = CreateObject(model, coords.x + 2.0, coords.y, coords.z, true, true, false)
+
+    PlaceObjectOnGroundProperly(spawnedObject) -- 地面に自然に接地させる
+    FreezeEntityPosition(spawnedObject, true)  -- その場に固定する
+
+    SetModelAsNoLongerNeeded(model)
+end
+
+RegisterCommand('placesign', placeSignboard, false)</code></pre>
+      </div>
+
+      <h3>client.lua: プロップを削除する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local function removeSignboard()
+    if spawnedObject and DoesEntityExist(spawnedObject) then
+        SetEntityAsMissionEntity(spawnedObject, true, true)
+        DeleteObject(spawnedObject)
+        spawnedObject = nil
+    end
+end
+
+RegisterCommand('removesign', removeSignboard, false)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li><code>PlaceObjectOnGroundProperly</code>を呼ばないと、地面に半分めり込んだ状態や浮いた状態で設置されることがあります。地面に置きたい小物では必ず呼びましょう。</li>
+        <li>NPC・車両と同様、<code>isNetwork</code>を<code>true</code>にしないと他プレイヤーから見えません。複数人で共有したい装飾には必須です。</li>
+        <li>プロップを大量に設置するとクライアントの負荷が上がります。イベント終了後は必ず削除する運用にしましょう(resource停止時の自動削除もTier2-02と同様に検討してください)。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>プロップのモデル名は非常に数が多く、コミュニティの「GTA5 Props list」等のサイトで用途別に検索できます。Tier2-07で学んだアニメーションと組み合わせて、プレイヤーに小物を持たせる(<code>AttachEntityToEntity</code>でボーンに固定する)演出もよく使われます。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

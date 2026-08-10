@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>キーバインド設定 | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t2-16-keybind-mapping">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="2">🟡 初級</span>
+      <span class="badge category-badge">📡 イベント/通信</span>
+    </div>
+
+    <h1>キーバインド設定</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>プレイヤーが自由に変更できるキー操作(キーバインド)を登録する</strong>ことができるようになります。ゲーム内の設定画面から、プレイヤー自身がキーを変更できるようになります。</p>
+      <p><strong>こんな時に使う:</strong> インベントリを開くキー、緊急ボタン、しゃがみ・伏せなどのアクションキーをプレイヤーがカスタマイズできるようにしたいとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>Tier2-04で学んだ<code>RegisterCommand</code>とセットで<code>RegisterKeyMapping</code>を使うと、そのコマンドに対応するキーをFiveMの設定画面(ポーズメニュー→設定→キーバインド)からプレイヤーが変更できるようになります。ハードコードした<code>IsControlJustPressed</code>による判定と違い、キー競合をプレイヤー自身で解決できる点が利点です。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>client.lua: キーバインド可能なコマンドを登録する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">RegisterCommand('togglemenu', function()
+    print('メニューの開閉処理をここに書く')
+end, false)
+
+-- RegisterKeyMapping(commandName, description, mappingType, defaultKey)
+RegisterKeyMapping('togglemenu', 'メニューを開く/閉じる', 'keyboard', 'F2')</code></pre>
+      </div>
+
+      <h3>引数付きコマンドと組み合わせる例</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">RegisterCommand('emergency', function()
+    TriggerServerEvent('myscript:sendEmergencyAlert')
+end, false)
+
+RegisterKeyMapping('emergency', '緊急通報を送る', 'keyboard', 'F6')</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li><code>defaultKey</code>で指定したキーが、他のresourceや既存のバインドと重複していると、片方しか反応しなかったり、プレイヤーが混乱したりします。既存のキー配置と重ならない初期値を選びましょう(最終的にはプレイヤーが変更できるため、絶対に避けなければいけないわけではありません)。</li>
+        <li><code>RegisterKeyMapping</code>で登録したコマンドは、あくまで「そのキーが押されたときに<code>RegisterCommand</code>で登録した処理を呼ぶ」だけです。権限チェックが必要な処理には、Tier2-04で学んだ<code>IsPlayerAceAllowed</code>を忘れずに組み合わせてください。</li>
+        <li>resourceを再起動しても、プレイヤーが変更したキー設定は保持されます(FiveMクライアント側の設定として保存されるため)。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p><code>mappingType</code>には<code>'keyboard'</code>の他に<code>'mouse_button'</code>等も指定できます。ゲームパッド対応が必要な場合は、FiveMの入力周りのドキュメントも合わせて確認してください。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

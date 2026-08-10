@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>サウンドを再生する | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t2-12-play-sound">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="2">🟡 初級</span>
+      <span class="badge category-badge">🎆 エフェクト</span>
+    </div>
+
+    <h1>サウンドを再生する</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>UIの操作音のような画面全体で鳴る効果音と、特定の座標から聞こえる位置付きのサウンドの両方を再生する</strong>ことができるようになります。</p>
+      <p><strong>こんな時に使う:</strong> ボタンを押したときにクリック音を鳴らしたい、ATMの近くで操作音を鳴らしたい、通知音でプレイヤーに気づかせたいとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>GTA Vには元から多数のサウンドセット(効果音の集まり)が組み込まれており、<code>PlaySoundFrontend</code>(画面全体・方向に依存しない音)と<code>PlaySoundFromCoord</code>(特定の座標から聞こえる、距離減衰のある音)の2種類のnative関数で再生できます。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>UI操作音を鳴らす(PlaySoundFrontend)</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local function playClickSound()
+    -- PlaySoundFrontend(soundId, soundName, soundSet, isBlocking)
+    -- soundIdは-1でよい(古いAPIとの互換用の引数)
+    PlaySoundFrontend(-1, 'SELECT', 'HUD_FRONTEND_DEFAULT_SOUNDSET', true)
+end
+
+RegisterCommand('clicksound', playClickSound, false)</code></pre>
+      </div>
+
+      <h3>座標付きのサウンドを鳴らす(PlaySoundFromCoord)</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local function playAtmBeep(coords)
+    -- PlaySoundFromCoord(soundId, soundName, x, y, z, soundSet, isBlocking, range, unknown)
+    PlaySoundFromCoord(-1, 'Menu_Accept', coords.x, coords.y, coords.z, 'HUD_FRONTEND_DEFAULT_SOUNDSET', false, 0, false)
+end
+
+RegisterCommand('atmbeep', function()
+    playAtmBeep(GetEntityCoords(PlayerPedId()))
+end, false)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li><code>soundName</code>と<code>soundSet</code>の組み合わせは決まったものしか鳴りません。存在しない組み合わせを指定しても、エラーは出ずに単に無音になります。コミュニティの「GTA5 sound list」等で確認してください。</li>
+        <li><code>PlaySoundFrontend</code>を通知のたびに何度も呼ぶと耳障りになりがちです。連続して鳴らさないよう、クールダウン(Tier5-04で学んだレート制限と同じ考え方)を入れることを検討してください。</li>
+        <li>座標付きサウンドはプレイヤーとの距離が離れるほど小さくなります。近づいたときだけ意味のある演出(ATM操作音など)に向いています。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>okokNotify(Tier4-03)のような通知スクリプトは、内部でこのようなサウンド再生を組み合わせて「効果音付きの通知」を実現しています。独自のNUIに効果音を追加したい場合は、この仕組みをclient.lua側から呼び出す形で連携できます。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

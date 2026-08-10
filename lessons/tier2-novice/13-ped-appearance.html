@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ペドの服装・見た目を変更する | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t2-13-ped-appearance">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="2">🟡 初級</span>
+      <span class="badge category-badge">👤 外見・キャラクリエイト</span>
+    </div>
+
+    <h1>ペドの服装・見た目を変更する</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>プレイヤーやNPCの服装パーツ・帽子などの装飾品を切り替える</strong>ことができるようになります。</p>
+      <p><strong>こんな時に使う:</strong> 制服を着せたい(警察官・救急隊員など)、変装システムを作りたい、NPCの見た目にバリエーションを持たせたいとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>ペドの見た目は、体の部位ごとに分かれた<strong>コンポーネント</strong>(髪型・上半身・下半身・靴など、部位ごとの着せ替えパーツ)と、帽子・アクセサリなどの<strong>プロップ</strong>で構成されています。それぞれ番号(drawableId)とバリエーション番号(textureId)の組み合わせで指定します。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>服装パーツを変更する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local function equipPoliceUniform()
+    local ped = PlayerPedId()
+
+    -- SetPedComponentVariation(ped, componentId, drawableId, textureId, paletteId)
+    SetPedComponentVariation(ped, 11, 55, 0, 0) -- 11 = 上半身(トップス)
+    SetPedComponentVariation(ped, 4, 35, 0, 0)  -- 4  = 下半身(パンツ)
+    SetPedComponentVariation(ped, 6, 25, 0, 0)  -- 6  = 靴
+end
+
+RegisterCommand('equippolice', equipPoliceUniform, false)</code></pre>
+      </div>
+
+      <h3>帽子(プロップ)を装着する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local function equipHat()
+    local ped = PlayerPedId()
+
+    -- SetPedPropIndex(ped, componentId, drawableId, textureId, attach)
+    SetPedPropIndex(ped, 0, 5, 0, true) -- 0 = 帽子
+
+    -- 外すときは ClearPedProp(ped, 0)
+end</code></pre>
+      </div>
+
+      <h3>元の見た目に戻す</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local function resetAppearance()
+    local ped = PlayerPedId()
+    local model = GetEntityModel(ped)
+
+    SetPedDefaultComponentVariation(ped) -- モデル本来の初期状態に戻す
+end</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li>componentId(部位番号)は0〜11の固定値で、モデルによって使えるdrawableId/textureIdの範囲が異なります。存在しない番号を指定すると、その部位が非表示になったり、見た目が崩れたりします。</li>
+        <li>フレームワーク(ESX/QBCore)の服装システムを既に導入している場合、この関数を直接呼ぶとフレームワーク側の管理と競合することがあります。実運用では、Tier4-18で扱うqb-clothingのような専用スクリプトの仕組みに従って変更するのが安全です。</li>
+        <li>変更はそのプレイヤーの画面にしか反映されません(client側のnativeのため)。他プレイヤーにも見せたい場合は、変更内容をイベントやStateBags(Tier5-03)で共有する必要があります。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>コンポーネント番号・プロップ番号の一覧は、コミュニティの「GTA5 Ped Component IDs」等のサイトで確認できます。本格的なキャラクリエイト機能を作りたい場合は、Tier4-17「illenium-appearanceでキャラクリエイトする」で扱う専用スクリプトの利用も検討してください。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

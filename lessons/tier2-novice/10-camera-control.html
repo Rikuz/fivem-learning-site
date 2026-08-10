@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>カメラを演出する | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t2-10-camera-control">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="2">🟡 初級</span>
+      <span class="badge category-badge">🎥 カメラ演出</span>
+    </div>
+
+    <h1>カメラを演出する</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>通常のプレイヤー視点とは別に独自のカメラを作成し、簡易的な演出(カットシーン風の視点切り替え)を実装する</strong>ことができるようになります。</p>
+      <p><strong>こんな時に使う:</strong> キャラクター作成画面で顔を回転して見せたい、施設のオープニング演出をしたい、防犯カメラのような固定視点を作りたいとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>FiveM/GTA Vでは、<strong>スクリプトカメラ</strong>(nativeで生成・操作できる仮想カメラ)を作成し、<code>RenderScriptCams</code>で「今どのカメラを描画するか」を通常視点からスクリプトカメラに切り替えられます。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>client.lua: カメラを作成して切り替える</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local cam = nil
+
+local function startCameraView()
+    local coords = GetEntityCoords(PlayerPedId())
+
+    -- CreateCamWithParams(camType, x, y, z, rotX, rotY, rotZ, fov, ...)
+    cam = CreateCamWithParams('DEFAULT_SCRIPTED_CAMERA',
+        coords.x, coords.y, coords.z + 2.0,
+        0.0, 0.0, 0.0,
+        50.0, -- 画角(FOV)
+        false, 0)
+
+    PointCamAtCoord(cam, coords.x + 5.0, coords.y, coords.z) -- 見る方向を指定する
+
+    RenderScriptCams(true, true, 1000, true, false) -- 1000msかけて滑らかに切り替える
+end
+
+RegisterCommand('camview', startCameraView, false)</code></pre>
+      </div>
+
+      <h3>client.lua: カメラを元に戻す</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local function stopCameraView()
+    if cam then
+        RenderScriptCams(false, true, 1000, true, false) -- 通常視点に戻す
+        DestroyCam(cam, false)
+        cam = nil
+    end
+end
+
+RegisterCommand('camstop', stopCameraView, false)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li><code>RenderScriptCams(true, ...)</code>で切り替えたカメラは、<strong>自分で<code>RenderScriptCams(false, ...)</code>を呼んで戻さない限り視点が固定されたままになります</strong>。UIを閉じるタイミングなどで必ず戻す処理を書いてください。</li>
+        <li><code>DestroyCam</code>を呼ばずにカメラを作り続けると、使われていないカメラがメモリに残り続けます。使い終わったカメラは必ず破棄しましょう。</li>
+        <li>カメラ演出中はプレイヤーが自由に動けてしまうと不自然な見た目になります。必要に応じて<code>FreezeEntityPosition</code>(Tier2-02参照)でプレイヤーの動きを止めることも検討してください。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>複数のカメラを用意して<code>SetCamActiveWithInterp</code>で滑らかに切り替えると、より映画的な演出ができます。キャラクリエイト画面(Tier4-17「illenium-appearanceでキャラクリエイトする」)の裏側でも、この仕組みが使われています。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>shared_scriptを使ったモジュール分割 | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t2-19-shared-modules">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="2">🟡 初級</span>
+      <span class="badge category-badge">⚙️ 環境構築</span>
+    </div>
+
+    <h1>shared_scriptを使ったモジュール分割</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>大きくなってきたresourceを、用途ごとの複数ファイルに分割して見通し良く管理する</strong>ことができるようになります。</p>
+      <p><strong>こんな時に使う:</strong> 1つのclient.lua/server.luaが数百行を超えて読みにくくなってきたとき、複数人で同じresourceを分担して編集したいとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>Tier1-09で学んだ<code>Config.lua</code>の考え方をさらに発展させ、「共通の定数・ヘルパー関数」「client専用処理」「server専用処理」のようにファイルを分割します。<code>shared_script</code>で読み込んだファイルは、client側実行時はclient環境で、server側実行時はserver環境で、<strong>それぞれ独立して実行される</strong>点がポイントです(Tier1-04でも触れた内容の応用です)。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>ディレクトリ構成の例</h3>
+      <div class="code-block">
+        <pre><code class="language-bash">my-resource/
+├── fxmanifest.lua
+├── config.lua              -- 設定値(shared)
+├── shared/
+│   └── utils.lua            -- client/server共通のヘルパー関数(shared)
+├── client/
+│   ├── main.lua
+│   └── ui.lua
+└── server/
+    ├── main.lua
+    └── database.lua</code></pre>
+      </div>
+
+      <h3>fxmanifest.lua</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">shared_scripts {
+    'config.lua',
+    'shared/utils.lua'
+}
+
+client_scripts {
+    'client/main.lua',
+    'client/ui.lua'
+}
+
+server_scripts {
+    'server/main.lua',
+    'server/database.lua'
+}</code></pre>
+      </div>
+
+      <h3>shared/utils.lua: 共通のヘルパー関数</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">-- client/serverどちらからも呼び出せる純粋な計算関数
+function FormatMoney(amount)
+    return '$' .. tostring(amount):reverse():gsub('(%d%d%d)', '%1,'):reverse():gsub('^,', '')
+end</code></pre>
+      </div>
+
+      <h3>client/main.lua: 共通関数を使う</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">RegisterCommand('showmoney', function()
+    print(FormatMoney(15000)) -- $15,000
+end, false)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li><code>shared_scripts</code>内のファイルは「1回だけ実行されてclient/serverで共有される」わけではありません。<strong>client側とserver側でそれぞれ個別に読み込まれ、個別に実行されます</strong>(Tier1-04でも扱った注意点です)。グローバル変数の値をclient→serverのように直接渡すことはできません。</li>
+        <li>ファイル分割をやりすぎると、逆に「どの処理がどのファイルにあるか」が分かりにくくなります。まずは「client/server」「共通/固有」で分け、必要になったらさらに細分化する、という段階的な分割がおすすめです。</li>
+        <li><code>client_scripts</code>/<code>server_scripts</code>内のファイルは<strong>書かれた順番に実行されます</strong>。後のファイルが前のファイルで定義した関数・変数に依存する場合は、順番を意識してください。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>この設計は、Tier3-06で学んだ<code>exports</code>(resourceをまたぐ連携)と組み合わせることで、さらに大きなプロジェクト全体の構成(Tier3-09「複数resourceにまたがるプロジェクト構成のコツ」)にもつながっていきます。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

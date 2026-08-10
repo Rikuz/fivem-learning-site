@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>エリア判定を自作する | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t2-18-custom-zones">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="2">🟡 初級</span>
+      <span class="badge category-badge">🌍 ワールド操作</span>
+    </div>
+
+    <h1>エリア判定を自作する</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>プレイヤーが特定のエリア(円形・四角形の範囲)に入った/出たことを検知する</strong>自作のゾーンシステムを作れるようになります。</p>
+      <p><strong>こんな時に使う:</strong> 「病院エリアに入ったら回復する」「工場エリアの外ではNPCを表示しない」のような、範囲に応じた処理を作りたいとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>最もシンプルなエリア判定は「2点間の距離」で行う円形ゾーンです。より複雑な形(建物の輪郭に沿った多角形など)にしたい場合は、点が多角形の内側にあるかどうかを判定するアルゴリズムを使います。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>円形ゾーン: 距離での判定</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local hospitalZone = { coords = vector3(300.0, -600.0, 40.0), radius = 30.0 }
+local wasInside = false
+
+CreateThread(function()
+    while true do
+        local playerCoords = GetEntityCoords(PlayerPedId())
+        local distance = #(playerCoords - hospitalZone.coords)
+        local isInside = distance <= hospitalZone.radius
+
+        if isInside and not wasInside then
+            print('病院エリアに入りました')
+        elseif not isInside and wasInside then
+            print('病院エリアから出ました')
+        end
+
+        wasInside = isInside
+        Wait(500)
+    end
+end)</code></pre>
+      </div>
+
+      <h3>多角形ゾーン: Point-in-Polygon判定</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">-- 多角形の頂点座標を反時計回り or 時計回りで並べたもの
+local factoryPolygon = {
+    vector2(100.0, 100.0),
+    vector2(150.0, 100.0),
+    vector2(150.0, 150.0),
+    vector2(100.0, 150.0),
+}
+
+-- レイキャスティング法による判定(点が多角形の内側にあるか)
+local function isPointInPolygon(point, polygon)
+    local inside = false
+    local j = #polygon
+
+    for i = 1, #polygon do
+        local pi, pj = polygon[i], polygon[j]
+        if ((pi.y > point.y) ~= (pj.y > point.y)) and
+           (point.x < (pj.x - pi.x) * (point.y - pi.y) / (pj.y - pi.y) + pi.x) then
+            inside = not inside
+        end
+        j = i
+    end
+
+    return inside
+end
+
+CreateThread(function()
+    while true do
+        local coords = GetEntityCoords(PlayerPedId())
+        local point = vector2(coords.x, coords.y)
+
+        if isPointInPolygon(point, factoryPolygon) then
+            print('工場エリア内にいます')
+        end
+
+        Wait(1000)
+    end
+end)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li>円形ゾームの判定はxy平面だけでなくz座標(高さ)も含めた3次元距離になっている点に注意してください。ビルの2階と1階を区別したい場合は、別途z座標の範囲チェックを追加する必要があります。</li>
+        <li>「入った/出た」を毎回<code>print</code>し続けないよう、上記コード例のように<code>wasInside</code>のような状態フラグで「変化があったときだけ」処理するのが基本パターンです(Tier2-03のBlip表示制御と同じ考え方)。</li>
+        <li>多角形判定は円形判定より計算コストが高いため、Tier5-01の考え方に基づき判定頻度(<code>Wait</code>の値)を調整してください。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>本格的なゾーン管理が必要な場合は、コミュニティ製のPolyZoneライブラリ(CircleZone/BoxZone/PolyZone等をまとめて扱えるもの)を導入することも多いです。ox_target(Tier3-07)の<code>addBoxZone</code>も、内部的にはこれと似た考え方で範囲を判定しています。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

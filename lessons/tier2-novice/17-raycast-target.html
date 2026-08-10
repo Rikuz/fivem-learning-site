@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>照準先のエンティティを取得する | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t2-17-raycast-target">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="2">🟡 初級</span>
+      <span class="badge category-badge">🎯 ターゲティング</span>
+    </div>
+
+    <h1>照準先のエンティティを取得する</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>プレイヤーが画面の中心(カメラの正面)で見ている先に何があるかを判定する</strong>ことができるようになります。ox_target(Tier3-07)のようなライブラリの内部で使われている基礎技術です。</p>
+      <p><strong>こんな時に使う:</strong> 「見ている車両のナンバーを表示したい」「照準を合わせたNPCの名前を表示したい」など、自分でシンプルなターゲティング機能を作りたいとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>カメラの位置から視線方向に向かって「見えない光線」を飛ばし、最初に当たったものを調べる処理を<strong>レイキャスト</strong>(3D空間に仮想的な光線を飛ばして衝突判定する手法)と呼びます。FiveMでは<code>StartShapeTestRay</code>系のnative関数でこれを行います。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>client.lua: 画面中心の照準先を取得する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local function getAimTarget()
+    local playerPed = PlayerPedId()
+    local camCoords = GetGameplayCamCoord()
+    local camRotation = GetGameplayCamRot(2)
+
+    -- カメラの向きから、少し先の座標を計算する
+    local direction = RotationToDirection(camRotation)
+    local destination = camCoords + direction * 10.0 -- 10メートル先まで判定する
+
+    -- StartShapeTestRay(x1, y1, z1, x2, y2, z2, flags, ignoreEntity, p8)
+    local rayHandle = StartShapeTestRay(
+        camCoords.x, camCoords.y, camCoords.z,
+        destination.x, destination.y, destination.z,
+        -1, playerPed, 0
+    )
+
+    local _, hit, endCoords, _, hitEntity = GetShapeTestResult(rayHandle)
+
+    return hit, hitEntity, endCoords
+end
+
+function RotationToDirection(rotation)
+    local z = math.rad(rotation.z)
+    local x = math.rad(rotation.x)
+    local num = math.abs(math.cos(x))
+    return vector3(-math.sin(z) * num, math.cos(z) * num, math.sin(x))
+end</code></pre>
+      </div>
+
+      <h3>使用例: 照準先のエンティティ情報を表示する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">CreateThread(function()
+    while true do
+        Wait(0)
+        local hit, entity = getAimTarget()
+
+        if hit == 1 and DoesEntityExist(entity) then
+            if IsEntityAVehicle(entity) then
+                print('車両を見ています: ' .. GetVehicleNumberPlateText(entity))
+            elseif IsEntityAPed(entity) then
+                print('ペドを見ています')
+            end
+        end
+    end
+end)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li><code>ignoreEntity</code>(上記コードの<code>playerPed</code>)を指定しないと、自分自身に光線が当たってしまい、常に自分を「照準先」として検知してしまいます。</li>
+        <li>この処理を<code>Wait(0)</code>で毎フレーム実行すると負荷がかかります(Tier5-01「パフォーマンス計測と最適化」参照)。UIを表示している間だけ実行する等、必要なときだけ動かす設計にしましょう。</li>
+        <li><code>flags</code>引数(上記の<code>-1</code>)によって、どの種類のエンティティに光線が当たり判定を持つかが変わります。用途に応じて調整が必要です。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>実運用では、この仕組みを自分で組み立てるより、Tier3-07「ox_targetでインタラクションを作る」やTier3-29「qb-targetでインタラクションを作る」のような、既に最適化・調整済みのライブラリを使う方が安定します。ただし内部で何が起きているかを理解しておくと、これらのライブラリの挙動を理解しやすくなります。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

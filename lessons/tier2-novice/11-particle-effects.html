@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>パーティクルエフェクトを再生する | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t2-11-particle-effects">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="2">🟡 初級</span>
+      <span class="badge category-badge">🎆 エフェクト</span>
+    </div>
+
+    <h1>パーティクルエフェクトを再生する</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>炎・煙・火花のようなパーティクルエフェクトを指定した座標で再生する</strong>ことができるようになります。</p>
+      <p><strong>こんな時に使う:</strong> 花火を打ち上げたい、事故現場に煙を出したい、ショップの入り口にキラキラした演出をつけたいとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>パーティクルエフェクトも、モデルと同様に<strong>エフェクト辞書(ptfx辞書)</strong>ごとに分類されています。使う前に該当の辞書を読み込む(<code>RequestNamedPtfxAsset</code>)必要があり、これはアニメ辞書(Tier2-07)やモデル(Tier2-02)と同じパターンです。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>client.lua: パーティクルを1回再生する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local function playFireworkEffect(coords)
+    local dict = 'scr_indep_fireworks'
+
+    RequestNamedPtfxAsset(dict)
+    while not HasNamedPtfxAssetLoaded(dict) do
+        Wait(0)
+    end
+
+    UseParticleFxAssetNextCall(dict)
+
+    -- StartParticleFxNonLoopedAtCoord(effectName, x, y, z, rotX, rotY, rotZ, scale, ...)
+    StartParticleFxNonLoopedAtCoord('scr_indep_firework_starburst_01', coords.x, coords.y, coords.z, 0.0, 0.0, 0.0, 1.0, false, false, false)
+
+    RemoveNamedPtfxAsset(dict)
+end
+
+RegisterCommand('firework', function()
+    playFireworkEffect(GetEntityCoords(PlayerPedId()))
+end, false)</code></pre>
+      </div>
+
+      <h3>エフェクトをエンティティに追従させる(ループ再生)</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local activeEffect = nil
+
+local function startSmokeOnVehicle(vehicle)
+    local dict = 'core'
+    RequestNamedPtfxAsset(dict)
+    while not HasNamedPtfxAssetLoaded(dict) do
+        Wait(0)
+    end
+
+    UseParticleFxAssetNextCall(dict)
+    -- StartParticleFxLoopedOnEntity: エンティティに追従し続けるループエフェクト
+    activeEffect = StartParticleFxLoopedOnEntity('veh_backfire_black_smoke', vehicle, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, false, false, false)
+end
+
+local function stopSmoke()
+    if activeEffect then
+        StopParticleFxLooped(activeEffect, false)
+        activeEffect = nil
+    end
+end</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li><code>UseParticleFxAssetNextCall(dict)</code>は「次に呼ぶエフェクト再生関数だけ」にそのエフェクト辞書を使うという指定です。<strong>再生の直前に毎回呼ぶ</strong>必要があります。</li>
+        <li>ループエフェクト(<code>StartParticleFxLoopedOnEntity</code>等)は、Markerと同様に<strong>自分で止めない限り再生され続けます</strong>。<code>StopParticleFxLooped</code>で明示的に停止してください。</li>
+        <li>エフェクト名・辞書名は組み合わせが正確でないと再生されません(何もエラーが出ないまま失敗することが多いです)。コミュニティの「GTA5 Particle Effects list」等で正確な組み合わせを確認しましょう。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>爆発などの派手な効果は、パーティクルエフェクトではなく<code>AddExplosion</code>のような専用native関数を使う場合もあります。用途に応じて使い分けてください。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

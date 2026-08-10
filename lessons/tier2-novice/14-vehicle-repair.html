@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>車両の修理・ダメージ管理 | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t2-14-vehicle-repair">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="2">🟡 初級</span>
+      <span class="badge category-badge">🚗 車両操作</span>
+    </div>
+
+    <h1>車両の修理・ダメージ管理</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>車両を修理して見た目・性能を元に戻し、現在のダメージ状態(エンジン・車体の状態)を確認する</strong>ことができるようになります。</p>
+      <p><strong>こんな時に使う:</strong> 整備工場・修理コマンドを作りたい、ダメージ具合に応じてNPCの反応を変えたい、燃料システム(Tier4-15)と組み合わせて車両の状態を管理したいとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>GTA Vの車両は、エンジン・車体それぞれに独立した「体力」を持っており、事故やバトルでダメージを受けると数値が下がります。<code>SetVehicleFixed</code>で全ての損傷を修復でき、<code>GetVehicleEngineHealth</code>等で現在の状態を数値として取得できます。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>車両を修理する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local function repairVehicle(vehicle)
+    SetVehicleFixed(vehicle)              -- 見た目・エンジン状態を完全に修復する
+    SetVehicleDeformationFixed(vehicle)   -- 車体のへこみを元に戻す
+    SetVehicleDirtLevel(vehicle, 0.0)     -- 汚れをリセットする(0.0〜15.0)
+end
+
+RegisterCommand('repaircar', function()
+    local vehicle = GetVehiclePedIsIn(PlayerPedId(), false)
+    if vehicle ~= 0 then
+        repairVehicle(vehicle)
+    end
+end, false)</code></pre>
+      </div>
+
+      <h3>ダメージ状態を確認する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">RegisterCommand('carstatus', function()
+    local vehicle = GetVehiclePedIsIn(PlayerPedId(), false)
+    if vehicle == 0 then return end
+
+    local engineHealth = GetVehicleEngineHealth(vehicle) -- 0.0〜1000.0
+    local bodyHealth = GetVehicleBodyHealth(vehicle)     -- 0.0〜1000.0
+
+    print(('エンジン: %.0f / 車体: %.0f'):format(engineHealth, bodyHealth))
+end, false)</code></pre>
+      </div>
+
+      <h3>ダメージ度合いを段階的に判定する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local function getDamageLevel(vehicle)
+    local engineHealth = GetVehicleEngineHealth(vehicle)
+
+    if engineHealth > 800.0 then
+        return '良好'
+    elseif engineHealth > 400.0 then
+        return '軽度の損傷'
+    else
+        return '重度の損傷'
+    end
+end</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li>修理処理はclient側のnativeですが、<strong>誰でも自由に呼べる状態</strong>にすると「壊れた車両を見せかけだけ使う」チートの温床になります。整備工場などの機能として提供する場合は、Tier3-05で学んだサーバー側バリデーション(近くにいるか・お金を持っているか等)を組み合わせてください。</li>
+        <li><code>GetVehicleEngineHealth</code>の値は最大1000.0ですが、0.0を下回ると炎上・エンジン停止といった状態になります。マイナス値になり得る点に注意してください。</li>
+        <li>燃料システム(Tier4-15「ox_fuelで燃料システムを連携する」)とは別の仕組みです。「修理」と「給油」は独立した概念として扱ってください。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>実運用のガレージ・整備システムでは、ダメージ状態をDBに保存し、次回車両を出したときに前回のダメージが引き継がれる設計にすることもあります(Tier3-18「ガレージシステムの基礎設計」で扱います)。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

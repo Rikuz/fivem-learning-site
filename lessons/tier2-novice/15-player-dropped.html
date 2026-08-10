@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>切断理由の取得と後処理 | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t2-15-player-dropped">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="2">🟡 初級</span>
+      <span class="badge category-badge">📡 イベント/通信</span>
+    </div>
+
+    <h1>切断理由の取得と後処理</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>プレイヤーがサーバーから切断したタイミングを検知し、切断理由を取得しつつ後片付け処理を行う</strong>ことができるようになります。</p>
+      <p><strong>こんな時に使う:</strong> 切断時にプレイヤーのデータを保存したい、切断ログを記録したい、切断時にNPC・車両などそのプレイヤーが生成したものを片付けたいとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p><code>playerDropped</code>は、プレイヤーがサーバーから切断されたとき(自主的な退出、キック、タイムアウト等)にserver側で発火するイベントです。切断されたプレイヤーの<code>source</code>はまだこのイベント内でのみ有効なので、必要な情報はこのタイミングで取得しておく必要があります。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>server.lua: 切断理由を取得してログに残す</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">AddEventHandler('playerDropped', function(reason)
+    local playerId = source
+    local playerName = GetPlayerName(playerId)
+
+    print(('プレイヤー%s(%s)が切断しました。理由: %s'):format(playerName, playerId, reason))
+end)</code></pre>
+      </div>
+
+      <h3>切断時にデータを保存する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">AddEventHandler('playerDropped', function(reason)
+    local playerId = source
+    local identifier = GetPlayerIdentifiers(playerId)[1]
+
+    -- Tier3-15「プレイヤーデータの自動保存設計」と組み合わせる想定
+    saveInventory(identifier, playerId) -- Tier3-04で作った保存関数の例
+
+    -- メモリ上のデータをクリーンアップする(Tier3-04のinventoriesテーブル等)
+    inventories[playerId] = nil
+end)</code></pre>
+      </div>
+
+      <h3>切断理由の主なパターン</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">AddEventHandler('playerDropped', function(reason)
+    if reason:find('Timed out') then
+        print('タイムアウトによる切断')
+    elseif reason:find('kicked') then
+        print('キックによる切断')
+    else
+        print('自主的な切断、またはその他の理由: ' .. reason)
+    end
+end)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li><code>playerDropped</code>のイベントハンドラの中では、既にそのプレイヤーとの接続が切れかけています。<code>TriggerClientEvent</code>で何かを送っても届きません。</li>
+        <li>データ保存処理に時間がかかる非同期処理(DB書き込み等)を行う場合、処理が完了する前にresourceが再起動されるとデータが失われる可能性があります。重要なデータは定期オートセーブ(Tier3-15)と組み合わせて、切断時保存だけに頼らない設計が安全です。</li>
+        <li><code>reason</code>の文字列の形式はFiveMのバージョンによって変わることがあります。正確な分類が必要な場合は、部分一致(<code>string.find</code>)ではなく、公式ドキュメントで案内されている判定方法も確認してください。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>似たイベントに<code>playerConnecting</code>(接続開始時、Tier4-07で扱った)、<code>playerJoining</code>(参加処理中)があります。「接続」「参加完了」「切断」という3つのタイミングを意識して設計すると、プレイヤーのセッション管理が整理しやすくなります。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>
