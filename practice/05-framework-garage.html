@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>フレームワーク連携ガレージ | 実践演習 | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+  <link rel="stylesheet" href="../assets/css/lesson.css">
+</head>
+<body data-lesson-id="ex-05-framework-garage">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta exercise-difficulty">
+      <span class="badge tier-badge" data-tier="4">🔴 難易度: 中上級</span>
+    </div>
+
+    <h1>フレームワーク連携ガレージ</h1>
+
+    <section class="conclusion">
+      <h2>概要</h2>
+      <p>ESX・QBCoreのいずれか(導入している方)と連携し、プレイヤーが所有する車両をガレージで出し入れできるシステムを作ります。出庫時にダメージ状態・燃料も復元し、実際のRPサーバーに近い完成度を目指します。</p>
+    </section>
+
+    <section class="directory-structure">
+      <h2>ディレクトリ構造</h2>
+      <pre class="directory-tree">ex05-garage/
+├── fxmanifest.lua
+├── client.lua
+├── server.lua
+└── garage.sql</pre>
+    </section>
+
+    <section class="spec">
+      <h2>処理仕様</h2>
+      <ul class="spec-list">
+        <li>garage.sqlに所有車両テーブルを定義する。列の例: <code>identifier</code>, <code>model</code>, <code>plate</code>, <code>garage</code>, <code>stored</code>, <code>fuel</code>, <code>engine_health</code>, <code>body_health</code>。</li>
+        <li>プレイヤーのログイン完了イベント(導入しているフレームワークに応じたもの)のタイミングで、そのプレイヤーの識別子を取得できるようにする。</li>
+        <li>ox_targetでガレージの座標にインタラクションを追加し、「出庫」を選ぶとそのガレージに格納中(<code>stored = true</code>)の所有車両一覧を取得して選択できるようにする。</li>
+        <li>出庫時、DBに保存されたダメージ状態・燃料を読み出し、車両生成後にそれらを反映してから<code>stored</code>を<code>false</code>に更新する。</li>
+        <li>車両に乗った状態でox_targetから「格納」を選ぶと、現在のダメージ状態・燃料をDBに保存し、車両を削除、<code>stored</code>を<code>true</code>に戻す。</li>
+        <li>既に出庫中(<code>stored = false</code>)の車両をもう一度出庫しようとした場合は拒否する。</li>
+      </ul>
+    </section>
+
+    <section class="expected-behavior">
+      <h2>期待する動作</h2>
+      <ul class="spec-list">
+        <li>ガレージで所有車両一覧が表示され、選択すると車両が出てくる。</li>
+        <li>車両にダメージを与えてから格納し、再度出庫すると同じダメージ状態(修理されていない状態)で出てくる。</li>
+        <li>既に出ている車両をもう一度出庫しようとすると拒否される(車両が複製されない)。</li>
+        <li>導入しているフレームワーク(ESXまたはQBCore)に応じた正しいAPIでプレイヤーの識別子・所持金等を取得できている。</li>
+      </ul>
+    </section>
+
+    <section class="dependencies">
+      <h2>利用する依存関係</h2>
+      <table class="dependency-table">
+        <thead><tr><th>依存</th><th>用途</th></tr></thead>
+        <tbody>
+          <tr><td>oxmysql</td><td>所有車両データの永続化</td></tr>
+          <tr><td>ox_target</td><td>ガレージへのインタラクション追加</td></tr>
+          <tr><td>ESX または QBCore</td><td>プレイヤー識別子・ログイン完了イベントの取得</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="related-lessons">
+      <h2>関連レッスン</h2>
+      <ul class="related-lessons-list">
+        <li><a href="../lessons/tier4-upper-intermediate/01-framework-basics.html">ESX/QBCore/Qbox/oxの基本</a><span class="related-lessons-list__note">フレームワークの検知・プレイヤーデータ取得</span></li>
+        <li><a href="../lessons/tier4-upper-intermediate/09-player-loaded-event.html">ログイン完了イベントを使う</a><span class="related-lessons-list__note">初期化タイミングの取得</span></li>
+        <li><a href="../lessons/tier2-novice/06-spawn-vehicle.html">車両を生成・操作する</a><span class="related-lessons-list__note">CreateVehicleの基本</span></li>
+        <li><a href="../lessons/tier2-novice/14-vehicle-repair.html">車両の修理・ダメージ管理</a><span class="related-lessons-list__note">ダメージ状態の取得・復元</span></li>
+        <li><a href="../lessons/tier3-intermediate/07-ox-target.html">ox_targetでインタラクションを作る</a><span class="related-lessons-list__note">ガレージへのaddBoxZone追加</span></li>
+        <li><a href="../lessons/tier3-intermediate/18-garage-basics.html">ガレージシステムの基礎設計</a><span class="related-lessons-list__note">出し入れの基本フロー(この演習の土台)</span></li>
+      </ul>
+    </section>
+
+    <p class="no-solution-note">※このページに完成コードは載せていません。上記の仕様と関連レッスンを参考に、自分で実装してみましょう。</p>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      この演習を完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../assets/js/lessons-data.js"></script>
+  <script src="../assets/js/exercises-data.js"></script>
+  <script src="../assets/js/progress.js"></script>
+  <script src="../assets/js/nav.js"></script>
+</body>
+</html>

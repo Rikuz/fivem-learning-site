@@ -1,0 +1,82 @@
+// assets/js/exercises-data.js — 全実践演習の唯一の情報源(Single Source of Truth)
+// 演習を追加・変更する場合は、必ず対応するHTMLファイルと docs/EXERCISE_OUTLINE.md も同時に更新すること。
+// 演習ページは完成コードを載せず、設計仕様(処理仕様・期待する動作・依存関係)のみを示す。
+
+const EXERCISES = [
+  {
+    id: "ex-01-npc-reception",
+    title: "NPC受付システム",
+    difficulty: 1,
+    path: "practice/01-npc-reception.html",
+    summary: "NPCとBlipを配置し、近づいてコマンドを実行すると案内メッセージが出る受付システムを作る",
+    relatedLessons: ["t2-02-spawn-npc", "t2-03-blip-marker", "t2-04-commands", "t1-05-debug-basics"],
+    dependencies: [],
+  },
+  {
+    id: "ex-02-simple-shop",
+    title: "シンプルショップ(NUI+イベント)",
+    difficulty: 2,
+    path: "practice/02-simple-shop.html",
+    summary: "NUIで商品一覧を表示し、サーバー側で所持金を確認してから購入処理を行うショップを作る",
+    relatedLessons: ["t2-01-events-basics", "t3-01-nui-basics", "t3-02-nui-callback", "t3-05-server-validation", "t1-09-config-pattern"],
+    dependencies: [],
+  },
+  {
+    id: "ex-03-mining-skill",
+    title: "採掘ミニゲーム+スキルシステム",
+    difficulty: 2,
+    path: "practice/03-mining-skill.html",
+    summary: "アニメーション+プログレスバーで採掘し、確率で鉱石を入手、繰り返すとスキルレベルが上がるシステムを作る",
+    relatedLessons: ["t2-07-play-animation", "t3-08-ox-lib-notify-progress", "t3-24-fishing-mining-minigame", "t3-25-skill-xp-system"],
+    dependencies: ["ox_lib"],
+  },
+  {
+    id: "ex-04-shared-stash",
+    title: "共有倉庫(スタッシュ)システム",
+    difficulty: 3,
+    path: "practice/04-shared-stash.html",
+    summary: "ox_targetでインタラクション可能な倉庫を設置し、DBに永続化されたアイテムを預け入れ・引き出しできるようにする",
+    relatedLessons: ["t3-03-database-oxmysql", "t3-04-items-inventory", "t3-07-ox-target", "t3-17-json-vs-relational"],
+    dependencies: ["oxmysql", "ox_target"],
+  },
+  {
+    id: "ex-05-framework-garage",
+    title: "フレームワーク連携ガレージ",
+    difficulty: 4,
+    path: "practice/05-framework-garage.html",
+    summary: "ESX/QBCoreと連携し、所有車両をダメージ状態ごとDBに保存して出し入れできるガレージを作る",
+    relatedLessons: ["t4-01-framework-basics", "t4-09-player-loaded-event", "t2-06-spawn-vehicle", "t2-14-vehicle-repair", "t3-07-ox-target", "t3-18-garage-basics"],
+    dependencies: ["oxmysql", "ox_target", "ESX または QBCore"],
+  },
+  {
+    id: "ex-06-okok-atm",
+    title: "okok連携ATM",
+    difficulty: 4,
+    path: "practice/06-okok-atm.html",
+    summary: "ATMプロップにox_targetで入出金インタラクションを追加し、okokBankingV2とokokNotifyで銀行機能を実装する",
+    relatedLessons: ["t4-01-framework-basics", "t4-03-okok-integration", "t4-06-okok-banking-integration", "t3-05-server-validation", "t3-07-ox-target"],
+    dependencies: ["okokNotify", "okokBanking", "ox_target", "ESX または QBCore"],
+  },
+  {
+    id: "ex-07-heist-mission",
+    title: "マルチresource強盗ミッション",
+    difficulty: 5,
+    path: "practice/07-heist-mission.html",
+    summary: "ドア解錠・警察通報・StateBags同期・ルーティングバケット隔離を組み合わせた複数resource構成の強盗ミッションを作る",
+    relatedLessons: [
+      "t3-06-exports-between-resources",
+      "t3-09-multi-resource-structure",
+      "t4-14-ox-doorlock",
+      "t4-16-cd-dispatch",
+      "t5-03-statebags",
+      "t5-08-routing-buckets",
+      "t5-09-statebags-advanced",
+      "t3-22-discord-webhook-log",
+      "t2-15-player-dropped",
+      "t4-06-okok-banking-integration",
+    ],
+    dependencies: ["ox_doorlock", "cd_dispatch", "okokBanking", "Discord Webhook", "ESX または QBCore"],
+  },
+];
+
+window.EXERCISES = EXERCISES;

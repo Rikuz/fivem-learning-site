@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>マルチresource強盗ミッション | 実践演習 | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+  <link rel="stylesheet" href="../assets/css/lesson.css">
+</head>
+<body data-lesson-id="ex-07-heist-mission">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta exercise-difficulty">
+      <span class="badge tier-badge" data-tier="5">⚫ 難易度: 上級</span>
+    </div>
+
+    <h1>マルチresource強盗ミッション</h1>
+
+    <section class="conclusion">
+      <h2>概要</h2>
+      <p>複数のresourceで構成された強盗ミッションを作る、このシリーズの集大成となる演習です。ドアを解錠して侵入すると警察に通報が届き、成功すると報酬が支払われます。参加グループはルーティングバケットで隔離し、複数グループが同時に進行できるようにします。これまでの演習・多くのレッスンで学んだ要素を統合します。</p>
+    </section>
+
+    <section class="directory-structure">
+      <h2>ディレクトリ構造</h2>
+      <pre class="directory-tree">ex07-heist-core/            # 進行管理・報酬支払いのAPIをexportsで公開
+├── fxmanifest.lua
+├── client.lua
+└── server.lua
+
+ex07-heist-door/             # ox_doorlockと連携したドア解除ギミック
+├── fxmanifest.lua           # dependency 'ex07-heist-core', dependency 'ox_doorlock'
+└── client.lua
+
+ex07-heist-dispatch/         # cd_dispatchへの通報とDiscordログ
+├── fxmanifest.lua           # dependency 'ex07-heist-core'
+└── server.lua</pre>
+    </section>
+
+    <section class="spec">
+      <h2>処理仕様</h2>
+      <ul class="spec-list">
+        <li><code>ex07-heist-core</code>が強盗の開始・進行状況・終了を管理する中心resourceとなる。開始コマンド実行時、参加プレイヤー全員を一意なルーティングバケット番号に移動させ、強盗用に生成するNPC・オブジェクト等も同じバケットに紐付ける。</li>
+        <li>進行状況(例: <code>doorBreached</code>, <code>rewardPaid</code>)をStateBagsで管理し、<code>AddStateBagChangeHandler</code>で参加者全員のUI・演出に変化を伝える。</li>
+        <li><code>ex07-heist-core</code>は「ミッション開始」「進行状況の更新」「報酬支払い」等の関数を<code>exports</code>で公開し、他resourceから呼び出せるようにする。</li>
+        <li><code>ex07-heist-door</code>は、ox_doorlockで管理されているドアに対し、一定条件(例: プログレスバーの完了)を満たしたら<code>setDoorState</code>で解錠する。解錠と同時に、コアの<code>exports</code>経由で<code>doorBreached</code>のStateBagsをtrueにする。</li>
+        <li><code>ex07-heist-dispatch</code>は、<code>doorBreached</code>の変化を検知したら<code>cd_dispatch:AddNotification</code>で警察に通報を送り、同時にDiscord Webhookで「強盗が開始された」ログを管理者チャンネルに送信する。</li>
+        <li>ミッション成功時、参加プレイヤー全員に(okokBanking等で)報酬を分配し、ルーティングバケットを0に戻して参加者を通常ワールドに帰還させる。</li>
+        <li>参加プレイヤーが強盗中に切断した場合(<code>playerDropped</code>)、そのプレイヤーが生成した物・保持していた状態を後始末する。</li>
+      </ul>
+    </section>
+
+    <section class="expected-behavior">
+      <h2>期待する動作</h2>
+      <ul class="spec-list">
+        <li>強盗を開始すると、参加プレイヤーだけが専用インスタンスに移動する。同じ座標に一般プレイヤーがいても、お互いに見えず干渉しない。</li>
+        <li>同時に別グループが同じ強盗を開始しても、互いに干渉せず2件以上同時進行できる。</li>
+        <li>ドアを解錠すると、警察役のプレイヤーの画面に通報(Blip・通知)が届く。</li>
+        <li>ドア解錠のタイミングでDiscordの管理者チャンネルにもログが送信される。</li>
+        <li>ミッション完了で参加者全員に報酬が支払われ、元のワールド(バケット0)に戻る。</li>
+        <li>ミッション中に1人が離脱しても、残りの参加者の進行に支障が出ない。</li>
+      </ul>
+    </section>
+
+    <section class="dependencies">
+      <h2>利用する依存関係</h2>
+      <table class="dependency-table">
+        <thead><tr><th>依存</th><th>用途</th></tr></thead>
+        <tbody>
+          <tr><td>ox_doorlock</td><td>強盗対象のドアの施錠・解錠管理</td></tr>
+          <tr><td>cd_dispatch</td><td>警察への通報・ブリップ表示</td></tr>
+          <tr><td>okokBanking</td><td>クリア報酬の支払い</td></tr>
+          <tr><td>Discord Webhook</td><td>管理者向けの強盗発生ログ</td></tr>
+          <tr><td>ESX または QBCore</td><td>参加者のプレイヤーデータ・Job確認等</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="related-lessons">
+      <h2>関連レッスン</h2>
+      <ul class="related-lessons-list">
+        <li><a href="../lessons/tier3-intermediate/06-exports-between-resources.html">exportsで関数を公開する</a><span class="related-lessons-list__note">coreのAPIを他resourceに公開する方法</span></li>
+        <li><a href="../lessons/tier3-intermediate/09-multi-resource-structure.html">複数resourceにまたがるプロジェクト構成のコツ</a><span class="related-lessons-list__note">core/door/dispatchの3resource構成の設計</span></li>
+        <li><a href="../lessons/tier4-upper-intermediate/14-ox-doorlock.html">ox_doorlockでドアを施錠する</a><span class="related-lessons-list__note">setDoorStateの使い方</span></li>
+        <li><a href="../lessons/tier4-upper-intermediate/16-cd-dispatch.html">cd_dispatchで警察無線通知を送る</a><span class="related-lessons-list__note">AddNotificationの構文</span></li>
+        <li><a href="../lessons/tier5-advanced/03-statebags.html">StateBagsによる同期</a><span class="related-lessons-list__note">進行状況の同期の基本</span></li>
+        <li><a href="../lessons/tier5-advanced/08-routing-buckets.html">ルーティングバケットでインスタンスを分ける</a><span class="related-lessons-list__note">グループごとのインスタンス隔離</span></li>
+        <li><a href="../lessons/tier5-advanced/09-statebags-advanced.html">StateBagsの応用パターン</a><span class="related-lessons-list__note">ルーティングバケットと組み合わせた設計</span></li>
+        <li><a href="../lessons/tier3-intermediate/22-discord-webhook-log.html">重要操作をDiscord Webhookでログ収集する</a><span class="related-lessons-list__note">管理者ログの送信</span></li>
+        <li><a href="../lessons/tier2-novice/15-player-dropped.html">切断理由の取得と後処理</a><span class="related-lessons-list__note">離脱時のクリーンアップ</span></li>
+        <li><a href="../lessons/tier4-upper-intermediate/06-okok-banking-integration.html">okokBankingV2と連携する</a><span class="related-lessons-list__note">報酬の支払い</span></li>
+      </ul>
+    </section>
+
+    <p class="no-solution-note">※このページに完成コードは載せていません。この演習はこれまでの6演習・多数のレッスンを統合する内容です。一度に全部作ろうとせず、まずは単一resourceで基本フロー(ドア解錠→通報)を動かしてから、resource分割・ルーティングバケット・報酬分配へ段階的に発展させることをおすすめします。</p>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      この演習を完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../assets/js/lessons-data.js"></script>
+  <script src="../assets/js/exercises-data.js"></script>
+  <script src="../assets/js/progress.js"></script>
+  <script src="../assets/js/nav.js"></script>
+</body>
+</html>

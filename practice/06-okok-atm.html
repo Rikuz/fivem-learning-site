@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>okok連携ATM | 実践演習 | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+  <link rel="stylesheet" href="../assets/css/lesson.css">
+</head>
+<body data-lesson-id="ex-06-okok-atm">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta exercise-difficulty">
+      <span class="badge tier-badge" data-tier="4">🔴 難易度: 中上級</span>
+    </div>
+
+    <h1>okok連携ATM</h1>
+
+    <section class="conclusion">
+      <h2>概要</h2>
+      <p>街中のATMプロップにox_targetでインタラクションを追加し、okokBankingV2の口座から入出金でき、結果をokokNotifyで通知するシステムを作ります。okok系スクリプト2種類とフレームワーク・ox_targetを組み合わせる、統合力を試す演習です。</p>
+    </section>
+
+    <section class="directory-structure">
+      <h2>ディレクトリ構造</h2>
+      <pre class="directory-tree">ex06-atm/
+├── fxmanifest.lua
+├── client.lua
+└── server.lua</pre>
+    </section>
+
+    <section class="spec">
+      <h2>処理仕様</h2>
+      <ul class="spec-list">
+        <li>client.luaでATMのモデル(<code>addModel</code>)またはATM設置座標(<code>addBoxZone</code>)にox_targetのインタラクションを追加する。</li>
+        <li>「入金」「出金」の2つの選択肢を用意する。選択するとserver側にリクエストを送る(金額の受け渡し方法は自由。ただし送られてきた値をそのまま信用せず、上限額のチェック等は必ずserver側で行うこと)。</li>
+        <li>server側で、プレイヤーの所持現金(フレームワークAPI経由)と口座残高(okokBankingV2の<code>GetAccount</code>)の両方を確認してから処理を行う。</li>
+        <li>入金: 所持現金を減らし、<code>AddMoney</code>で口座残高を増やす。出金: <code>RemoveMoney</code>で口座残高を減らし、所持現金を増やす。</li>
+        <li>いずれの処理も<code>AddTransaction</code>で取引記録を残す。</li>
+        <li>処理結果(成功/失敗)を<code>okokNotify</code>で通知する。</li>
+      </ul>
+    </section>
+
+    <section class="expected-behavior">
+      <h2>期待する動作</h2>
+      <ul class="spec-list">
+        <li>ATMに近づくとox_targetの選択肢が表示される。</li>
+        <li>入金すると所持現金が減り、口座残高が増える。</li>
+        <li>出金すると口座残高が減り、所持現金が増える。</li>
+        <li>所持金または残高が足りない場合は処理が失敗し、okokNotifyでエラー通知が出る(お金は変化しない)。</li>
+        <li><code>GetPlayerTransactions</code>で取引履歴を確認すると、行った入出金が記録されている。</li>
+      </ul>
+    </section>
+
+    <section class="dependencies">
+      <h2>利用する依存関係</h2>
+      <table class="dependency-table">
+        <thead><tr><th>依存</th><th>用途</th></tr></thead>
+        <tbody>
+          <tr><td>okokNotify</td><td>処理結果の通知</td></tr>
+          <tr><td>okokBanking(V2)</td><td>口座残高の取得・入出金・取引記録</td></tr>
+          <tr><td>ox_target</td><td>ATMへのインタラクション追加</td></tr>
+          <tr><td>ESX または QBCore</td><td>プレイヤーの所持現金・識別子の取得</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="related-lessons">
+      <h2>関連レッスン</h2>
+      <ul class="related-lessons-list">
+        <li><a href="../lessons/tier4-upper-intermediate/01-framework-basics.html">ESX/QBCore/Qbox/oxの基本</a><span class="related-lessons-list__note">所持現金の取得方法</span></li>
+        <li><a href="../lessons/tier4-upper-intermediate/03-okok-integration.html">okokシリーズと連携する</a><span class="related-lessons-list__note">okokNotifyの通知構文</span></li>
+        <li><a href="../lessons/tier4-upper-intermediate/06-okok-banking-integration.html">okokBankingV2と連携する</a><span class="related-lessons-list__note">GetAccount/AddMoney/RemoveMoney/AddTransactionの構文</span></li>
+        <li><a href="../lessons/tier3-intermediate/05-server-validation.html">サーバー側バリデーション</a><span class="related-lessons-list__note">金額チェックをサーバー側で行う設計</span></li>
+        <li><a href="../lessons/tier3-intermediate/07-ox-target.html">ox_targetでインタラクションを作る</a><span class="related-lessons-list__note">ATMへのaddModel/addBoxZone追加</span></li>
+      </ul>
+    </section>
+
+    <p class="no-solution-note">※このページに完成コードは載せていません。上記の仕様と関連レッスンを参考に、自分で実装してみましょう。</p>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      この演習を完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../assets/js/lessons-data.js"></script>
+  <script src="../assets/js/exercises-data.js"></script>
+  <script src="../assets/js/progress.js"></script>
+  <script src="../assets/js/nav.js"></script>
+</body>
+</html>

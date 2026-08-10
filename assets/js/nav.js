@@ -1,12 +1,19 @@
 // assets/js/nav.js — 共通ヘッダー/パンくず/前後レッスンリンクの描画
 
-// lessons/tierX/*.html は2階層下にあるため、ルートへの相対パスを判定する
+// lessons/tierX/*.html は2階層下、practice/*.html は1階層下にあるため、ルートへの相対パスを判定する
 function computeSiteRoot() {
-  return /\/lessons\//.test(window.location.pathname) ? "../../" : "";
+  const path = window.location.pathname;
+  if (/\/lessons\//.test(path)) return "../../";
+  if (/\/practice\//.test(path)) return "../";
+  return "";
 }
 
 function findLessonById(id) {
   return (window.LESSONS || []).find((l) => l.id === id);
+}
+
+function findExerciseById(id) {
+  return (window.EXERCISES || []).find((e) => e.id === id);
 }
 
 function renderSiteHeader() {
@@ -20,6 +27,7 @@ function renderSiteHeader() {
       <nav class="site-header__links">
         <a href="${root}index.html">難易度別ロードマップ</a>
         <a href="${root}category.html">カテゴリ別一覧</a>
+        <a href="${root}practice.html">実践演習</a>
       </nav>
     </div>
   `;
@@ -37,20 +45,34 @@ function renderBreadcrumb() {
   }
 
   const lesson = findLessonById(lessonId);
-  if (!lesson) {
-    el.innerHTML = "";
+  if (lesson) {
+    const tierInfo = window.TIER_INFO[lesson.tier];
+    el.className = "breadcrumb";
+    el.innerHTML = `
+      <a href="${root}index.html">トップ</a>
+      <span> / </span>
+      <a href="${root}index.html">${tierInfo.emoji} ${tierInfo.label}</a>
+      <span> / </span>
+      <span>${lesson.title}</span>
+    `;
     return;
   }
 
-  const tierInfo = window.TIER_INFO[lesson.tier];
-  el.className = "breadcrumb";
-  el.innerHTML = `
-    <a href="${root}index.html">トップ</a>
-    <span> / </span>
-    <a href="${root}index.html">${tierInfo.emoji} ${tierInfo.label}</a>
-    <span> / </span>
-    <span>${lesson.title}</span>
-  `;
+  const exercise = findExerciseById(lessonId);
+  if (exercise) {
+    const difficultyInfo = window.TIER_INFO[exercise.difficulty];
+    el.className = "breadcrumb";
+    el.innerHTML = `
+      <a href="${root}index.html">トップ</a>
+      <span> / </span>
+      <a href="${root}practice.html">実践演習</a>
+      <span> / </span>
+      <span>${difficultyInfo.emoji} ${exercise.title}</span>
+    `;
+    return;
+  }
+
+  el.innerHTML = "";
 }
 
 function renderPrevNextNav() {
@@ -59,24 +81,47 @@ function renderPrevNextNav() {
   const lessonId = document.body.dataset.lessonId;
   if (!lessonId) return;
 
-  const lessons = window.LESSONS || [];
-  const index = lessons.findIndex((l) => l.id === lessonId);
-  if (index === -1) return;
-
   const root = computeSiteRoot();
-  const prev = index > 0 ? lessons[index - 1] : null;
-  const next = index < lessons.length - 1 ? lessons[index + 1] : null;
+  const lessons = window.LESSONS || [];
+  const lessonIndex = lessons.findIndex((l) => l.id === lessonId);
+
+  if (lessonIndex !== -1) {
+    const prev = lessonIndex > 0 ? lessons[lessonIndex - 1] : null;
+    const next = lessonIndex < lessons.length - 1 ? lessons[lessonIndex + 1] : null;
+
+    el.className = "prev-next-nav";
+    el.innerHTML = `
+      ${
+        prev
+          ? `<a href="${root}${prev.path}"><span class="prev-next-nav__label">← 前のレッスン</span>${prev.title}</a>`
+          : `<span></span>`
+      }
+      ${
+        next
+          ? `<a class="prev-next-nav__next" href="${root}${next.path}"><span class="prev-next-nav__label">次のレッスン →</span>${next.title}</a>`
+          : `<span></span>`
+      }
+    `;
+    return;
+  }
+
+  const exercises = window.EXERCISES || [];
+  const exerciseIndex = exercises.findIndex((e) => e.id === lessonId);
+  if (exerciseIndex === -1) return;
+
+  const prevEx = exerciseIndex > 0 ? exercises[exerciseIndex - 1] : null;
+  const nextEx = exerciseIndex < exercises.length - 1 ? exercises[exerciseIndex + 1] : null;
 
   el.className = "prev-next-nav";
   el.innerHTML = `
     ${
-      prev
-        ? `<a href="${root}${prev.path}"><span class="prev-next-nav__label">← 前のレッスン</span>${prev.title}</a>`
+      prevEx
+        ? `<a href="${root}${prevEx.path}"><span class="prev-next-nav__label">← 前の演習</span>${prevEx.title}</a>`
         : `<span></span>`
     }
     ${
-      next
-        ? `<a class="prev-next-nav__next" href="${root}${next.path}"><span class="prev-next-nav__label">次のレッスン →</span>${next.title}</a>`
+      nextEx
+        ? `<a class="prev-next-nav__next" href="${root}${nextEx.path}"><span class="prev-next-nav__label">次の演習 →</span>${nextEx.title}</a>`
         : `<span></span>`
     }
   `;

@@ -35,29 +35,34 @@ fivem-learning-site/
 ├── CLAUDE.md
 ├── README.md
 ├── index.html                      # トップ: 難易度別ロードマップ(タイムライン表示)
-├── category.html                   # カテゴリ別一覧(フィルタ機能付き)
+├── category.html                   # カテゴリ別一覧(フィルタ・逆引き検索機能付き)
+├── practice.html                   # 実践演習一覧(難易度順)
 ├── assets/
 │   ├── css/
 │   │   ├── base.css                # リセット・共通レイアウト・カラー変数
 │   │   ├── components.css          # カード/バッジ/進捗バー等の部品
-│   │   └── lesson.css              # レッスンページ専用スタイル
+│   │   └── lesson.css              # レッスンページ・演習ページ専用スタイル
 │   ├── js/
 │   │   ├── lessons-data.js         # 全レッスンのメタデータ(唯一の情報源)
+│   │   ├── exercises-data.js       # 全演習のメタデータ(唯一の情報源)
 │   │   ├── progress.js             # localStorage読み書き・完了マーク処理
 │   │   ├── render-index.js         # トップページのロードマップ描画
 │   │   ├── render-category.js      # カテゴリ一覧ページの描画・フィルタ処理
+│   │   ├── render-practice.js      # 演習一覧ページの描画
 │   │   └── nav.js                  # 共通ヘッダー/パンくず/前後レッスンリンクの描画
 │   └── vendor/
 │       └── prism/                  # コードハイライト(prism.js / prism.css をローカル同梱)
 ├── lessons/
-│   ├── tier1-beginner/             # 入門(5レッスン)
-│   ├── tier2-novice/               # 初級(5レッスン)
-│   ├── tier3-intermediate/         # 中級(5レッスン)
-│   ├── tier4-upper-intermediate/   # 中上級(5レッスン, okok/lb-phone含む)
-│   └── tier5-advanced/             # 上級(5レッスン)
+│   ├── tier1-beginner/             # 入門
+│   ├── tier2-novice/               # 初級
+│   ├── tier3-intermediate/         # 中級
+│   ├── tier4-upper-intermediate/   # 中上級(okok/lb-phone/Qbox/ox系含む)
+│   └── tier5-advanced/             # 上級
+├── practice/                       # 実践演習の詳細ページ(設計仕様のみ、完成コードは載せない)
 └── docs/
     ├── ARCHITECTURE.md
     ├── CONTENT_OUTLINE.md
+    ├── EXERCISE_OUTLINE.md
     ├── DESIGN_SYSTEM.md
     └── IMPLEMENTATION_PLAN.md
 ```
@@ -168,6 +173,20 @@ npx serve .
 </body>
 </html>
 ```
+
+---
+
+## 実践演習(practice/)のルール
+
+レッスンとは別に、`practice.html`(一覧)と`practice/*.html`(詳細)からなる**実践演習**を用意している。詳細な仕様は`docs/EXERCISE_OUTLINE.md`を参照(演習にとっての唯一の正)。
+
+1. **演習ページには完成コードを載せない。** レッスンは動くコードで教えるが、演習は「処理仕様・期待する動作・利用する依存関係・ディレクトリ構造」を箇条書きの**設計仕様**として提示し、学習者自身に実装させる。文章で「〜を作ってください」と指示するだけの書き方は禁止。
+2. **必ずディレクトリ構造(ファイルツリー)を明記する。** どの機能をどのファイルに書くべきかが一目でわかるようにする。
+3. **「関連レッスン」セクションで、実装に必要な既存レッスンへ直接リンクする。** 演習で使う概念がまだレッスンになければ、先にレッスンを追加してからリンクすること。
+4. 演習ページのIDは`ex-XX-slug`形式とし、`assets/js/exercises-data.js`の`EXERCISES`配列にエントリを追加する(id, title, difficulty(1〜5), summary, path, relatedLessons, dependencies)。片方だけの更新は禁止。
+5. `difficulty`のバッジ表示は`window.TIER_INFO`(🟢入門〜⚫上級)をそのまま流用し、レッスンの難易度感覚と統一する。
+6. `practice/*.html`は`lessons/tierX/*.html`より1階層浅いため、アセット参照は`../assets/...`(`../../`ではない)。
+7. `progress.js`の完了トグル(`body[data-lesson-id]`)は演習ページでも再利用してよいが、`index.html`の「全体の進捗」は`window.LESSONS`のみを対象とするため、演習の完了状態はレッスンの進捗率に影響しない。
 
 ---
 

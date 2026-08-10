@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>共有倉庫(スタッシュ)システム | 実践演習 | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+  <link rel="stylesheet" href="../assets/css/lesson.css">
+</head>
+<body data-lesson-id="ex-04-shared-stash">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta exercise-difficulty">
+      <span class="badge tier-badge" data-tier="3">🟠 難易度: 中級</span>
+    </div>
+
+    <h1>共有倉庫(スタッシュ)システム</h1>
+
+    <section class="conclusion">
+      <h2>概要</h2>
+      <p>特定の座標にox_targetでインタラクション可能な倉庫(スタッシュ)を設置し、アイテムを預け入れ・引き出しできるようにします。中身はDBに永続化し、サーバーを再起動しても内容が保持される設計にします。</p>
+    </section>
+
+    <section class="directory-structure">
+      <h2>ディレクトリ構造</h2>
+      <pre class="directory-tree">ex04-stash/
+├── fxmanifest.lua
+├── client.lua
+├── server.lua
+└── stash.sql</pre>
+    </section>
+
+    <section class="spec">
+      <h2>処理仕様</h2>
+      <ul class="spec-list">
+        <li>stash.sqlに、スタッシュの中身を保存するテーブルを定義する。設計は次のどちらかを選び、なぜその設計にしたかを説明できるようにする: ①スタッシュID・アイテム名・個数の組で1行ずつ保存する方式、②スタッシュIDと中身をまとめたJSON列で保存する方式。</li>
+        <li>client.luaでox_targetの<code>addBoxZone</code>を使い、倉庫の設置座標にインタラクションを追加する。</li>
+        <li>「開く」を選択したらserver側にリクエストを送り、現在のスタッシュの中身を取得してチャットまたは簡易的な一覧表示で確認できるようにする。</li>
+        <li>アイテムを預け入れる処理を実装する。プレイヤーが実際にそのアイテムを指定個数以上持っているかを確認してから、所持数を減らしスタッシュに加算する。</li>
+        <li>アイテムを引き出す処理を実装する。スタッシュにその個数分のアイテムが存在するかを確認してから、スタッシュから減らしプレイヤーに付与する。</li>
+        <li>預け入れ・引き出しが発生するたびに、変更後の状態をDBへ保存する。</li>
+      </ul>
+    </section>
+
+    <section class="expected-behavior">
+      <h2>期待する動作</h2>
+      <ul class="spec-list">
+        <li>倉庫に近づくとox_targetの選択肢が表示され、選ぶと中身が確認できる。</li>
+        <li>アイテムを預けると、プレイヤーの所持数が減り、スタッシュの中身が増える。</li>
+        <li>アイテムを引き出すと、スタッシュの中身が減り、プレイヤーの所持数が増える。</li>
+        <li>サーバーを再起動しても、スタッシュの中身がDBから正しく復元される。</li>
+        <li>所持していないアイテムを預けようとする、スタッシュにない個数を引き出そうとする、といった不正な操作は失敗し、何も変化しない。</li>
+      </ul>
+    </section>
+
+    <section class="dependencies">
+      <h2>利用する依存関係</h2>
+      <table class="dependency-table">
+        <thead><tr><th>依存</th><th>用途</th></tr></thead>
+        <tbody>
+          <tr><td>oxmysql</td><td>スタッシュの中身の永続化</td></tr>
+          <tr><td>ox_target</td><td>倉庫へのインタラクション追加</td></tr>
+          <tr><td>ox_inventory(任意)</td><td>プレイヤーの所持アイテム操作。自作の簡易インベントリで代用可</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="related-lessons">
+      <h2>関連レッスン</h2>
+      <ul class="related-lessons-list">
+        <li><a href="../lessons/tier3-intermediate/03-database-oxmysql.html">DB連携の基礎(oxmysql)</a><span class="related-lessons-list__note">SELECT/UPDATEの基本</span></li>
+        <li><a href="../lessons/tier3-intermediate/04-items-inventory.html">アイテム・インベントリの基本</a><span class="related-lessons-list__note">所持数の増減処理・ox_inventoryのexport</span></li>
+        <li><a href="../lessons/tier3-intermediate/07-ox-target.html">ox_targetでインタラクションを作る</a><span class="related-lessons-list__note">倉庫へのaddBoxZone追加</span></li>
+        <li><a href="../lessons/tier3-intermediate/17-json-vs-relational.html">JSON保存 vs リレーショナル設計の使い分け</a><span class="related-lessons-list__note">スタッシュのテーブル設計をどちらにするか判断する材料</span></li>
+      </ul>
+    </section>
+
+    <p class="no-solution-note">※このページに完成コードは載せていません。上記の仕様と関連レッスンを参考に、自分で実装してみましょう。</p>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      この演習を完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../assets/js/lessons-data.js"></script>
+  <script src="../assets/js/exercises-data.js"></script>
+  <script src="../assets/js/progress.js"></script>
+  <script src="../assets/js/nav.js"></script>
+</body>
+</html>

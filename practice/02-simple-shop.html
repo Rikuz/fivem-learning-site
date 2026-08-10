@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>シンプルショップ(NUI+イベント) | 実践演習 | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+  <link rel="stylesheet" href="../assets/css/lesson.css">
+</head>
+<body data-lesson-id="ex-02-simple-shop">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta exercise-difficulty">
+      <span class="badge tier-badge" data-tier="2">🟡 難易度: 初級</span>
+    </div>
+
+    <h1>シンプルショップ(NUI+イベント)</h1>
+
+    <section class="conclusion">
+      <h2>概要</h2>
+      <p>NUIで商品一覧を表示し、購入ボタンを押すとサーバー側で所持金を確認してから購入処理を行うショップを実装する演習です。DBは使わず、所持金・商品リストはメモリ上のテーブルで管理します。client↔server↔NUIの3方向の通信を1つの機能でひと通り経験できます。</p>
+    </section>
+
+    <section class="directory-structure">
+      <h2>ディレクトリ構造</h2>
+      <pre class="directory-tree">ex02-shop/
+├── fxmanifest.lua
+├── client.lua
+├── server.lua
+└── ui/
+    ├── index.html
+    ├── style.css
+    └── script.js</pre>
+    </section>
+
+    <section class="spec">
+      <h2>処理仕様</h2>
+      <ul class="spec-list">
+        <li>server.luaに商品リストを<code>{ name, label, price }</code>の配列としてConfig等に定義する。</li>
+        <li>server.luaにプレイヤーごとの所持金を管理する簡易テーブル(初期値1000等)を用意する(DBは使わない)。</li>
+        <li><code>/shop</code>コマンドでNUIを開き、<code>SetNuiFocus</code>でマウス操作を有効化し、<code>SendNUIMessage</code>で商品リストをJSに渡す。</li>
+        <li>JS側は受け取った商品リストを一覧表示し、購入ボタン押下時に<code>fetch</code>で<code>RegisterNUICallback</code>へ選択した商品名を送信する。</li>
+        <li>server側は「送られてきた商品名が実在するか」「所持金が価格以上あるか」の両方を確認してから所持金を減算する。価格はサーバー側の定義だけを使い、client/NUIから金額を送らせない。</li>
+        <li>購入結果(成功/失敗とその理由)をコールバックのレスポンスとしてNUIに返し、画面にフィードバックを表示する。</li>
+        <li>閉じるボタンで<code>SetNuiFocus(false, false)</code>を呼び、NUIを非表示にする。</li>
+      </ul>
+    </section>
+
+    <section class="expected-behavior">
+      <h2>期待する動作</h2>
+      <ul class="spec-list">
+        <li><code>/shop</code>実行でショップ画面が開き、マウスでボタンを押せる。</li>
+        <li>所持金が足りない商品を購入しようとすると失敗メッセージが表示され、所持金は変化しない。</li>
+        <li>購入に成功すると所持金が正しく減り、画面にも新しい所持金額が反映される。</li>
+        <li>存在しない商品名を無理やり送っても(改造クライアントを想定)、エラーにならず安全に無視される。</li>
+        <li>閉じるボタンでNUIが閉じ、マウス操作がゲーム側に戻る。</li>
+      </ul>
+    </section>
+
+    <section class="dependencies">
+      <h2>利用する依存関係</h2>
+      <table class="dependency-table">
+        <thead><tr><th>依存</th><th>用途</th></tr></thead>
+        <tbody>
+          <tr><td>なし</td><td>標準のNUI機能のみで実装できる</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="related-lessons">
+      <h2>関連レッスン</h2>
+      <ul class="related-lessons-list">
+        <li><a href="../lessons/tier2-novice/01-events-basics.html">イベントの基礎(client↔server通信)</a><span class="related-lessons-list__note">TriggerServerEvent/TriggerClientEventの基本</span></li>
+        <li><a href="../lessons/tier3-intermediate/01-nui-basics.html">NUIの基礎(画面UIを表示する)</a><span class="related-lessons-list__note">SendNUIMessage、SetNuiFocusの使い方</span></li>
+        <li><a href="../lessons/tier3-intermediate/02-nui-callback.html">NUIコールバック(双方向通信)</a><span class="related-lessons-list__note">RegisterNUICallbackとfetch()の使い方</span></li>
+        <li><a href="../lessons/tier3-intermediate/05-server-validation.html">サーバー側バリデーション</a><span class="related-lessons-list__note">価格・存在確認をサーバー側で行う設計</span></li>
+        <li><a href="../lessons/tier1-beginner/09-config-pattern.html">Config.luaの設計パターン</a><span class="related-lessons-list__note">商品リストを1箇所にまとめる設計</span></li>
+      </ul>
+    </section>
+
+    <p class="no-solution-note">※このページに完成コードは載せていません。上記の仕様と関連レッスンを参考に、自分で実装してみましょう。</p>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      この演習を完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../assets/js/lessons-data.js"></script>
+  <script src="../assets/js/exercises-data.js"></script>
+  <script src="../assets/js/progress.js"></script>
+  <script src="../assets/js/nav.js"></script>
+</body>
+</html>
