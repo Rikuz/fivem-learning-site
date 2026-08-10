@@ -63,6 +63,7 @@ fivem-learning-site/
     ├── ARCHITECTURE.md
     ├── CONTENT_OUTLINE.md
     ├── EXERCISE_OUTLINE.md
+    ├── TRACK_OUTLINE.md          # プロジェクトトラック(目的別の通し道)の設計書。2026-08-10時点で目次のみ確定、実装は未着手
     ├── DESIGN_SYSTEM.md
     └── IMPLEMENTATION_PLAN.md
 ```
@@ -187,6 +188,12 @@ npx serve .
 5. `difficulty`のバッジ表示は`window.TIER_INFO`(🟢入門〜⚫上級)をそのまま流用し、レッスンの難易度感覚と統一する。
 6. `practice/*.html`は`lessons/tierX/*.html`より1階層浅いため、アセット参照は`../assets/...`(`../../`ではない)。
 7. `progress.js`の完了トグル(`body[data-lesson-id]`)は演習ページでも再利用してよいが、`index.html`の「全体の進捗」は`window.LESSONS`のみを対象とするため、演習の完了状態はレッスンの進捗率に影響しない。
+
+---
+
+## プロジェクトトラック(tracks/)について
+
+「lb-phoneアプリを1本作りきる」「犯罪(ゲーム内)scriptを1本作りきる」のような目的ベースの通し道を、Tier別ロードマップ・カテゴリ逆引き検索に次ぐ第3の入口として用意する予定の機能。設計(目次)は`docs/TRACK_OUTLINE.md`に確定済みだが、**2026-08-10時点で`tracks.html`/`tracks/*.html`・関連の新規レッスン/演習の実装はまだ行っていない**。着手する際は`docs/TRACK_OUTLINE.md`のチェックリストに従うこと。
 
 ---
 
