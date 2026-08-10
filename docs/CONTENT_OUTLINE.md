@@ -2,7 +2,7 @@
 
 このドキュメントが**コンテンツ制作の唯一の正とする仕様書**です。Claude Codeはレッスン本文を書く際、必ずこの一覧の説明・使用構文に従ってください。ここに書かれていない仕様を憶測で追加しないこと。
 
-5つのtier × 各5レッスン = 計25レッスンをMVP(Phase 1実装範囲)とした。以降、要望に応じてレッスンを追加しており(2026-08-10時点で88レッスン)、tierごとの件数は5件に固定されない。追加する場合も、同じtier構造・カテゴリキーの枠組みを使うこと。
+5つのtier × 各5レッスン = 計25レッスンをMVP(Phase 1実装範囲)とした。以降、要望に応じてレッスンを追加しており(2026-08-10時点で90レッスン)、tierごとの件数は5件に固定されない。追加する場合も、同じtier構造・カテゴリキーの枠組みを使うこと。
 
 ---
 
@@ -58,6 +58,8 @@
 | `t3-02-nui-callback` | NUIコールバック(双方向通信) | `nui` | t3-01 | `RegisterNUICallback`でJS→Lua方向を受け取る、JS側の`fetch()`による送信パターン |
 | `t3-03-database-oxmysql` | DB連携の基礎(oxmysql) | `database` | t2-01 | `oxmysql`のインストール、`MySQL.Async.fetchAll` / `MySQL.Async.execute`によるSELECT/INSERTの基本、コールバックの受け方 |
 | `t3-04-items-inventory` | アイテム・インベントリの基本 | `database`, `framework` | t3-03 | シンプルなアイテム所持データの管理例(テーブル設計 + 増減処理)に加えて、下記「ox_inventory 正確な構文」を使用し実際のexportも紹介する |
+| `t3-30-ox-inventory-item-registry` | ox_inventoryにアイテムを追加する | `database` | t3-04 | 下記「ox_inventory アイテム定義 正確な構文」を使用。`data/items.lua`に新規アイテムを定義するフィールド(label, weight, stack, close, consume, client.image等) |
+| `t3-31-ox-inventory-usable-items` | ox_inventoryで使用可能アイテムを作る | `database` | t3-30 | 下記「ox_inventory 使用可能アイテム 正確な構文」を使用。`client.export`とexportsの登録でインベントリから呼び出せるアイテムを作る |
 | `t3-05-server-validation` | サーバー側バリデーション | `security` | t3-03 | クライアントから送られた値を無条件に信用しない設計、サーバー側での再チェックの実装例 |
 | `t3-06-exports-between-resources` | exportsで関数を公開する | `events` | t2-01 | `exports('関数名', function)`でresource間から呼べる関数を公開する、`exports['resource名']:関数名(...)`で呼び出す |
 | `t3-07-ox-target` | ox_targetでインタラクションを作る | `targeting` | t2-02 | 下記「ox_target 正確な構文」を使用。`addBoxZone`/`addModel`でターゲット可能なゾーン・モデルを登録する |
@@ -194,6 +196,59 @@ local success = exports.ox_inventory:RemoveItem(source, 'water', 1)
 local count = exports.ox_inventory:GetItemCount(source, 'water')
 ```
 > ※`source`はプレイヤーID(数値)。第4引数にmetadata(耐久値や刻印などアイテムごとの付加データ)、第5引数にslot番号を指定できる場合がある。ox_inventoryはバージョンによって引数が増減することがあるため、導入しているox_inventoryのREADME・公式ドキュメントも必ず確認すること。
+
+### ox_inventory アイテム定義 正確な構文(要順守・憶測禁止。overextended.dev/docs/ox_inventory/Guides/creatingItems で確認済み)
+
+```lua
+-- data/items.lua(ox_inventory本体側のファイル)に新規アイテムを追加する
+['burger'] = {
+    label = 'Burger',
+    description = 'Just what is the secret formula?',
+    weight = 220,
+    stack = true,
+    close = true,
+    client = {
+        status = { hunger = 200000 },
+        anim = { dict = 'mp_player_inteat@burger', clip = 'mp_player_int_eat_burger_fp' },
+        prop = {
+            model = 'prop_cs_burger_01',
+            pos = { x = 0.02, y = 0.02, z = -0.02 },
+            rot = { x = 0.0, y = 0.0, z = 0.0 }
+        },
+        usetime = 2500,
+    }
+}
+```
+> ※主なフィールド: `label`(表示名), `description`(説明文), `weight`(重量), `stack`(スタック可能か), `close`(使用時にインベントリを閉じるか), `consume`(使用時に消費する個数。小数を指定すると耐久値として扱われる), `canUse`(武器を持ったまま使用できるか), `client.status`(esx_status等のステータス値を調整), `client.anim`/`client.prop`(使用時のアニメーション・持ち物), `client.usetime`(使用にかかる時間)。アイテム画像は既定では`web/images/アイテム名.png`のファイル名で自動的に読み込まれる(ファイル名がアイテム名と異なる場合の指定方法は導入バージョンのドキュメントを確認すること)。
+
+### ox_inventory 使用可能アイテム 正確な構文(要順守・憶測禁止。overextended.dev/docs/ox_inventory/Guides/creatingItems 及び ox_inventory/modules/items/client.lua で確認済み)
+
+```lua
+-- data/items.lua側で、使用時に呼び出すexportを指定する
+['water_bottle'] = {
+    label = 'Water Bottle',
+    weight = 500,
+    stack = true,
+    close = true,
+    client = {
+        export = 'my-resource.drinkWater' -- 'リソース名.export名' の形式
+    }
+}
+```
+```lua
+-- my-resource側(自分のresource)でexportを登録する
+-- 第1引数はexport名(items.luaのclient.exportで指定した名前)
+exports('drinkWater', function(data, slot)
+    -- exports.ox_inventory:useItem(...) でサーバー側に使用を通知し、承認されたら効果を適用する
+    exports.ox_inventory:useItem(data, function(data)
+        if data then
+            -- ここで実際の効果(空腹度/喉の渇きの回復など)を適用する
+            lib.notify({ description = '水を飲んで喉が潤った' })
+        end
+    end)
+end)
+```
+> ※`item.client?.export`(または`client.event`)フィールドの有無で、ox_inventoryが使用時にexport/eventを呼ぶかどうかを判定している(ox_inventory本体のソースコードで確認済み)。`exports.ox_inventory:useItem(data, callback)`を挟むことで、実際にアイテムが消費されたかをサーバー側に確認してから効果を適用する設計になっている。バージョンによって仕様が変わる場合があるため、公式ドキュメントも確認すること。
 
 ---
 

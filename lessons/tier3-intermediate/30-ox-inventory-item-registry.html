@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ox_inventoryにアイテムを追加する | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t3-30-ox-inventory-item-registry">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="3">🟠 中級</span>
+      <span class="badge category-badge">🗄️ DB連携</span>
+    </div>
+
+    <h1>ox_inventoryにアイテムを追加する</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>ox_inventoryにまだ存在しない新しいアイテムを、自分で定義して使えるようにする</strong>ことができるようになります。Tier3-04では既に存在する<code>'water'</code>や<code>'bread'</code>のようなアイテムを増減させる方法を学びましたが、そのアイテム自体が「どこでどう定義されているか」を扱うのがこのレッスンです。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>ox_inventoryのアイテムは、ox_inventory本体の<code>data/items.lua</code>というファイルに、アイテム名をキーとした連想配列(テーブル)として定義されています。ここに新しいキーを追加するだけで、<code>AddItem</code>/<code>RemoveItem</code>(Tier3-04)から使える新しいアイテムになります。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>data/items.lua: 新しいアイテムを追加する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">['burger'] = {
+    label = 'Burger',
+    description = 'Just what is the secret formula?',
+    weight = 220,
+    stack = true,
+    close = true,
+    client = {
+        status = { hunger = 200000 },
+        anim = { dict = 'mp_player_inteat@burger', clip = 'mp_player_int_eat_burger_fp' },
+        prop = {
+            model = 'prop_cs_burger_01',
+            pos = { x = 0.02, y = 0.02, z = -0.02 },
+            rot = { x = 0.0, y = 0.0, z = 0.0 }
+        },
+        usetime = 2500,
+    }
+}</code></pre>
+      </div>
+
+      <h3>シンプルな道具アイテムの例(食べ物以外)</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">['lockpick'] = {
+    label = 'ロックピック',
+    description = '鍵をこじ開けるための道具',
+    weight = 100,
+    stack = true,
+    close = false, -- 使用してもインベントリを閉じない
+    consume = 1,   -- 使用のたびに1個消費する
+}</code></pre>
+      </div>
+
+      <h3>追加したアイテムをTier3-04の方法で操作する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">-- 新しく定義した'burger'をそのままAddItem/RemoveItemで使える
+exports.ox_inventory:AddItem(source, 'burger', 1)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li>主なフィールド: <code>label</code>(表示名), <code>description</code>(説明文), <code>weight</code>(重量。インベントリの重量制限計算に使われる), <code>stack</code>(同じアイテムをまとめて持てるか), <code>close</code>(使用時にインベントリ画面を自動で閉じるか), <code>consume</code>(使用のたびに消費する個数。小数を指定すると耐久値として扱われる)。用途に合わせて過不足なく設定してください。</li>
+        <li>アイテム画像は既定では<code>web/images/アイテム名.png</code>というファイル名で自動的に読み込まれます。<code>burger</code>なら<code>web/images/burger.png</code>を用意してください。画像がないとインベントリ上でアイコンが表示されません。</li>
+        <li>アイテム名(キー)に日本語や記号、スペースを使うとエラーの原因になります。英数字とアンダースコアのみを使ってください(表示名は<code>label</code>で日本語にできます)。</li>
+        <li><code>data/items.lua</code>はox_inventory本体側のファイルです。直接編集するとox_inventoryのアップデート時に上書きされる可能性があるため、実運用ではox_inventoryが対応しているアイテム追加専用の仕組み(バージョンによって異なる)を確認してから編集してください。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p class="version-note">本レッスンのフィールド名・コード例は公式ドキュメント(overextended.dev/docs/ox_inventory/Guides/creatingItems)で確認済みです。次のレッスン(Tier3-31)では、このアイテムをインベントリ画面から実際に「使用」できるようにする方法(usable item)を扱います。バージョンによって仕様が変わる場合があるため、公式ドキュメントも確認してください。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

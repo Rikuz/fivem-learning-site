@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ox_inventoryで使用可能アイテムを作る | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t3-31-ox-inventory-usable-items">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="3">🟠 中級</span>
+      <span class="badge category-badge">🗄️ DB連携</span>
+    </div>
+
+    <h1>ox_inventoryで使用可能アイテムを作る</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>インベントリ画面でアイテムをダブルクリック(使用)したときに、自分のスクリプトの処理を実行させる</strong>ことができるようになります。Tier3-30で追加したアイテムに「使うと効果が発動する」という機能を持たせる回です。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>ox_inventoryは、アイテムの<code>client.export</code>(または<code>client.event</code>)フィールドの有無を見て、使用時にそのexport(またはイベント)を呼び出すかどうかを判定しています(ox_inventory本体のソースコードで確認済み)。呼び出す側は<code>'リソース名.export名'</code>という文字列で指定し、呼ばれる側は自分のresourceで<code>exports('export名', function(data, slot) ... end)</code>という形で処理を登録します。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>data/items.lua: 使用時にexportを呼ぶよう指定する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">['water_bottle'] = {
+    label = 'Water Bottle',
+    weight = 500,
+    stack = true,
+    close = true,
+    client = {
+        export = 'my-resource.drinkWater' -- 'リソース名.export名' の形式
+    }
+}</code></pre>
+      </div>
+
+      <h3>my-resource/client.lua: exportを登録する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">-- 第1引数はexport名(items.luaのclient.exportで指定した名前と一致させる)
+exports('drinkWater', function(data, slot)
+    -- exports.ox_inventory:useItem(...) でサーバー側に使用を通知し、承認されてから効果を適用する
+    exports.ox_inventory:useItem(data, function(data)
+        if data then
+            -- ここで実際の効果(空腹度/喉の渇きの回復など)を適用する
+            lib.notify({ description = '水を飲んで喉が潤った' })
+        end
+    end)
+end)</code></pre>
+      </div>
+
+      <h3>Tier3-30の「burger」アイテムを使用可能にする例</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">-- data/items.luaのburgerに client = { export = 'my-resource.eatBurger', ... } を追加した想定
+
+exports('eatBurger', function(data, slot)
+    exports.ox_inventory:useItem(data, function(data)
+        if data then
+            local playerPed = PlayerPedId()
+            local maxHealth = GetEntityMaxHealth(playerPed)
+            local health = GetEntityHealth(playerPed)
+            SetEntityHealth(playerPed, math.min(maxHealth, health + 20))
+            lib.notify({ description = 'バーガーを食べた', type = 'success' })
+        end
+    end)
+end)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li>items.lua側の<code>client.export</code>に指定した文字列(<code>'リソース名.export名'</code>)と、実際に<code>exports('export名', ...)</code>で登録した名前が<strong>完全に一致</strong>している必要があります。1文字でも違うと使用時に何も起こりません。</li>
+        <li><code>exports.ox_inventory:useItem(data, callback)</code>を挟まずに、いきなり効果を適用してはいけません。この呼び出しがサーバー側で「本当にそのアイテムを持っていて、消費が成立したか」を確認する役割を持っています。これを省略すると、既にアイテムを使い切っているのに何度でも効果だけ発動できてしまう不正の温床になります。</li>
+        <li><code>close = true</code>を指定したアイテムは、使用と同時にインベントリ画面が閉じます。薬など「使ったらすぐ画面を閉じたい」アイテムには<code>true</code>、道具など「使いながら画面を見ていたい」アイテムには<code>false</code>を使い分けてください(Tier3-30参照)。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p class="version-note">本レッスンの構文(<code>client.export</code>フィールド、<code>exports.ox_inventory:useItem</code>)は公式ドキュメント(overextended.dev/docs/ox_inventory/Guides/creatingItems)およびox_inventory本体のソースコード(<code>modules/items/client.lua</code>)で確認済みです。<code>client.event</code>(exportの代わりにイベントを発火させる方式)という選択肢もあります。バージョンによって仕様が変わる場合があるため、公式ドキュメントも確認してください。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>
