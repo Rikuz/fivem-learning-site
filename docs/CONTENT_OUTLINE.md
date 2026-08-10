@@ -2,7 +2,7 @@
 
 このドキュメントが**コンテンツ制作の唯一の正とする仕様書**です。Claude Codeはレッスン本文を書く際、必ずこの一覧の説明・使用構文に従ってください。ここに書かれていない仕様を憶測で追加しないこと。
 
-5つのtier × 各5レッスン = 計25レッスンをMVP(Phase 1実装範囲)とした。以降、要望に応じてレッスンを追加しており(2026-08-10時点で101レッスン)、tierごとの件数は5件に固定されない。追加する場合も、同じtier構造・カテゴリキーの枠組みを使うこと。
+5つのtier × 各5レッスン = 計25レッスンをMVP(Phase 1実装範囲)とした。以降、要望に応じてレッスンを追加しており(2026-08-10時点で112レッスン)、tierごとの件数は5件に固定されない。追加する場合も、同じtier構造・カテゴリキーの枠組みを使うこと。プロジェクトトラック(`docs/TRACK_OUTLINE.md`)向けのレッスンも、この一覧・ルールにそのまま従う(トラック専用の特別ルールは設けない)。
 
 ---
 
@@ -425,6 +425,17 @@ end)
 | `t4-18-qb-clothing` | qb-clothingで服屋システムを使う | `appearance`, `framework` | t4-17 | 下記「qb-clothing 正確な構文」を使用。服屋メニュー・ワードローブを開く |
 | `t4-19-renewed-banking` | Renewed-Bankingと連携する | `framework`, `database` | t4-06 | 下記「Renewed-Banking 正確な構文」を使用。okokBanking以外の銀行スクリプト連携 |
 | `t4-20-qb-inventory-basics` | qb-inventoryの基本 | `database`, `framework` | t3-04, t4-01 | 下記「qb-inventory 正確な構文」を使用。`AddItem`/`RemoveItem`とQBCore.Functions.CreateUseableItemによる使用可能アイテム登録(ox_inventoryとの対比) |
+| `t4-21-lb-phone-starter-template` | lb-phoneアプリのスターターテンプレート | `lb-phone` | t4-04 | コピペで動く完成雛形一式(fxmanifest登録・ui/index.html・client.lua)を初めてひとまとめに提示。`lessons/tier4-upper-intermediate/samples/lb-phone-starter/`に実サンプル同梱 |
+| `t4-22-lb-phone-screen-navigation` | アプリ内の画面遷移と戻る操作 | `lb-phone`, `nui` | t4-21 | リスト→詳細のSPA的JSルーティング基礎と、電話アプリの「戻るボタン」実装パターン |
+| `t4-23-lb-phone-notification-badge` | アプリの新着通知バッジ | `lb-phone` | t4-05, t4-22 | `SendCustomAppMessage`の応用でアプリアイコンに未読件数を表示する |
+| `t4-24-wanted-level-system` | 指名手配度(Wanted Level)システム | `crime` | t3-05, t2-01 | 犯罪行為でスコアを加算し、一定値でMDT(t4-28)側に可視化される仕組みを自作する |
+| `t4-25-fence-black-market` | 故売/闇市場(fence NPC)システム | `crime` | t3-07, t3-04 | ox_targetでNPCに盗品を売却し現金化する。買取価格の変動・売却上限の設計 |
+| `t4-26-chop-shop` | 盗難車両の解体(チョップショップ) | `crime`, `vehicle` | t2-06, t3-07 | 車両を解体してパーツアイテム化する処理。ナンバープレートの再発行との関連 |
+| `t4-27-money-laundering` | マネーロンダリング | `crime`, `framework` | t4-10 | 汚れた現金を段階的に組織口座(t4-10)へ正規化する仕組み。時間経過・手数料の設計 |
+| `t4-28-mdt-police-terminal` | MDT(警察端末)の基礎 | `law-enforcement`, `nui` | t3-01, t3-03 | 犯罪履歴・指名手配情報(t4-24)を確認する自作NUI画面。ox_target/oxmysqlのみで構築し外部MDTスクリプトには依存しない |
+| `t4-29-arrest-handcuff-system` | 逮捕・拘束(handcuff)システム | `law-enforcement` | t2-07, t2-01 | 対象プレイヤーを拘束・護送するアニメーション同期の基本 |
+| `t4-30-jail-system` | 投獄(Jail)システム | `law-enforcement` | t4-29 | 行動制限+時間経過での自動釈放。脱獄対策の考え方 |
+| `t4-31-evidence-management` | 証拠品・押収品管理 | `law-enforcement`, `database` | t3-37 | `RegisterStash`(t3-37)の応用でevidence bagを実装し、押収品を記録する |
 
 ### okokBankingV2 正確な構文(要順守・憶測禁止。docs.okokscripts.io/scripts/okokbankingv2/exports で確認済み)
 
@@ -686,7 +697,7 @@ exports['Renewed-Banking']:CreateJobAccount(jobTable, initialBalance)
 
 ## カテゴリキー一覧(`docs/ARCHITECTURE.md`と同期させること)
 
-`environment`, `lua-basics`, `npc-entity`, `nui`, `database`, `framework`, `okok`, `lb-phone`, `events`, `performance`, `security`, `vehicle`, `animation`, `targeting`, `ui-library`, `world`, `effects`, `appearance`, `camera`, `gameplay`, `admin-tools`, `voice`, `dispatch`
+`environment`, `lua-basics`, `npc-entity`, `nui`, `database`, `framework`, `okok`, `lb-phone`, `events`, `performance`, `security`, `vehicle`, `animation`, `targeting`, `ui-library`, `world`, `effects`, `appearance`, `camera`, `gameplay`, `admin-tools`, `voice`, `dispatch`, `crime`, `law-enforcement`
 
 ## 今後レッスンを追加する場合のルール
 

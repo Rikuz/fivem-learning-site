@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>【lb-phoneトラック】配車/デリバリー依頼アプリ | 実践演習 | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+  <link rel="stylesheet" href="../assets/css/lesson.css">
+</head>
+<body data-lesson-id="ex-09-lb-phone-delivery-app">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta exercise-difficulty">
+      <span class="badge tier-badge" data-tier="4">🔴 難易度: 中上級</span>
+    </div>
+
+    <h1>【lb-phoneトラック】配車/デリバリー依頼アプリ</h1>
+
+    <section class="conclusion">
+      <h2>概要</h2>
+      <p>lb-phoneアプリから配車(タクシー)やデリバリーを依頼すると、対応可能なドライバー役のプレイヤーに通知とBlipが表示される、ゲーム内イベント連携型のアプリを作ります。ex-08がDB中心のアプリだったのに対し、こちらはリアルタイムのプレイヤー間連携が中心になります。</p>
+    </section>
+
+    <section class="directory-structure">
+      <h2>ディレクトリ構造</h2>
+      <pre class="directory-tree">ex09-delivery/
+├── fxmanifest.lua
+├── client.lua
+├── server.lua
+└── ui/
+    ├── index.html      -- 依頼フォーム画面・依頼状況画面
+    ├── style.css
+    └── script.js</pre>
+    </section>
+
+    <section class="spec">
+      <h2>処理仕様</h2>
+      <ul class="spec-list">
+        <li>アプリ内に「配車を依頼する」フォームを用意し、依頼者の現在地(座標)を添えてserver側にリクエストを送る(座標はclient側のGetEntityCoordsから取得し、server側では距離計算等の検証に使う)。</li>
+        <li>server側は、対応可能なドライバー役のプレイヤー(オンライン中の特定Job、またはこのアプリを起動している全員)に依頼内容を通知する。</li>
+        <li>ドライバー側の画面(通常のNUIまたは同じlb-phoneアプリ)に依頼内容を表示し、Blip(Tier2-03参照)で依頼者の位置をミニマップに表示する。</li>
+        <li>ドライバーが「受注」を選択すると、依頼者側のアプリに「ドライバーが向かっています」という状態が反映される(Tier4-23の通知バッジ・Tier4-22の画面遷移と組み合わせる)。他のドライバーには依頼が既に受注済みであることを伝え、二重受注を防ぐ。</li>
+        <li>依頼完了(ドライバーが依頼者に近づいた等)で、依頼状態を完了に更新し、双方に通知する。</li>
+      </ul>
+    </section>
+
+    <section class="expected-behavior">
+      <h2>期待する動作</h2>
+      <ul class="spec-list">
+        <li>依頼者がアプリから依頼を送ると、ドライバー役のプレイヤーに通知とBlipが表示される。</li>
+        <li>ドライバーが受注すると、依頼者のアプリ画面の状態が「対応中」に切り替わる。</li>
+        <li>1件の依頼を複数のドライバーが同時に受注しようとしても、最初の1人だけが受注できる(二重受注が起きない)。</li>
+        <li>同時に複数の依頼が発生しても、それぞれ独立して管理される(依頼Aの受注がBの状態を書き換えない)。</li>
+        <li>依頼が完了すると、双方の画面が「完了」状態になる。</li>
+      </ul>
+    </section>
+
+    <section class="dependencies">
+      <h2>利用する依存関係</h2>
+      <table class="dependency-table">
+        <thead><tr><th>依存</th><th>用途</th></tr></thead>
+        <tbody>
+          <tr><td>lb-phone</td><td>カスタムアプリの土台</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="related-lessons">
+      <h2>関連レッスン</h2>
+      <ul class="related-lessons-list">
+        <li><a href="../lessons/tier4-upper-intermediate/21-lb-phone-starter-template.html">lb-phoneアプリのスターターテンプレート</a><span class="related-lessons-list__note">アプリ全体の土台</span></li>
+        <li><a href="../lessons/tier4-upper-intermediate/22-lb-phone-screen-navigation.html">アプリ内の画面遷移と戻る操作</a><span class="related-lessons-list__note">依頼フォーム→状況画面の遷移</span></li>
+        <li><a href="../lessons/tier2-novice/03-blip-marker.html">Blip/Markerを表示する</a><span class="related-lessons-list__note">依頼者の位置をドライバーの地図に表示</span></li>
+        <li><a href="../lessons/tier2-novice/01-events-basics.html">イベントの基礎(client↔server通信)</a><span class="related-lessons-list__note">依頼・受注・完了のリアルタイム連携</span></li>
+      </ul>
+    </section>
+
+    <p class="no-solution-note">※このページに完成コードは載せていません。上記の仕様と関連レッスンを参考に、自分で実装してみましょう。</p>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      この演習を完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../assets/js/lessons-data.js"></script>
+  <script src="../assets/js/exercises-data.js"></script>
+  <script src="../assets/js/progress.js"></script>
+  <script src="../assets/js/nav.js"></script>
+</body>
+</html>

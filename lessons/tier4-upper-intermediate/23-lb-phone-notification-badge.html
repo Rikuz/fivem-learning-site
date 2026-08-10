@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>アプリの新着通知バッジ | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t4-23-lb-phone-notification-badge">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="4">🔴 中上級</span>
+      <span class="badge category-badge">📱 lb-phone連携</span>
+    </div>
+
+    <h1>アプリの新着通知バッジ</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>プレイヤーがアプリを開いていなくても、ホーム画面のアプリアイコンに未読件数のバッジを表示する</strong>ことができるようになります。メッセージアプリやデリバリー依頼アプリで「新着があるかどうか一目でわかる」体験を作れます。</p>
+      <p><strong>こんな時に使う:</strong> 演習ex-08のメッセージアプリで新着メッセージがあることを知らせたい、演習ex-09のデリバリーアプリで新しい依頼を知らせたいとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>Tier4-05で学んだ<code>SendCustomAppMessage</code>は、アプリを開いているときの画面更新に使ってきましたが、実は<strong>アプリを開いていない状態でも呼び出せます</strong>。lb-phone本体がアイコンにバッジ数を表示する専用のメッセージ形式を用意しているため、それに従ってデータを送るだけでバッジが更新されます。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>server.lua: 新着があったらバッジ数を送る</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local unreadCounts = {} -- playerId -> 未読件数(メモリ管理。実運用ではDBと同期させる)
+
+local function notifyNewMessage(targetPlayerId)
+    unreadCounts[targetPlayerId] = (unreadCounts[targetPlayerId] or 0) + 1
+
+    TriggerClientEvent('myscript:updateBadge', targetPlayerId, unreadCounts[targetPlayerId])
+end</code></pre>
+      </div>
+
+      <h3>client.lua: バッジ更新をlb-phoneに伝える</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">RegisterNetEvent('myscript:updateBadge')
+AddEventHandler('myscript:updateBadge', function(count)
+    exports['lb-phone']:SendCustomAppMessage('my_phone_app', {
+        action = 'updateBadge',
+        count = count
+    })
+end)</code></pre>
+      </div>
+
+      <h3>アプリを開いたら未読を既読にする</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">RegisterNetEvent('myPhoneApp:open')
+AddEventHandler('myPhoneApp:open', function()
+    local playerId = source
+    unreadCounts[playerId] = 0
+
+    -- バッジを0にリセットする通知も送る
+    TriggerClientEvent('myscript:updateBadge', playerId, 0)
+
+    exports['lb-phone']:SendCustomAppMessage('my_phone_app', {
+        action = 'open',
+        -- ...一覧データ等
+    })
+end)</code></pre>
+      </div>
+
+      <h3>ui/script.js側: action分岐にバッジ更新を追加する(Tier4-21の型を拡張)</h3>
+      <div class="code-block">
+        <pre><code class="language-javascript">window.addEventListener('message', (event) => {
+  const data = event.data;
+
+  if (data.action === 'open') {
+    handleAppMessage(data);
+  } else if (data.action === 'updateBadge') {
+    // lb-phone側がこのメッセージを見てアイコンのバッジを更新する
+    // (アプリ画面自体には特別な描画は不要な場合が多い)
+  }
+});</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li>バッジ用のメッセージ(<code>SendCustomAppMessage</code>)は、Tier4-21のような画面更新用メッセージと<strong>同じアプリ識別子(<code>'my_phone_app'</code>)</strong>に送る必要があります。アプリ識別子が食い違うと、そもそも対象のアプリが見つからずバッジが更新されません。</li>
+        <li>未読数をメモリ上のテーブルだけで管理していると、サーバー再起動で消えてしまいます。実運用ではTier3-15の自動保存パターンや、ex-08のDB設計と組み合わせて未読状態を永続化してください。</li>
+        <li>アプリを開いた瞬間に必ずバッジを0にリセットする処理を忘れると、既読にしたはずなのにバッジが残り続けるバグになります。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p class="version-note">バッジ機能自体の詳細なメッセージ形式(<code>action</code>名や必須フィールド)は、導入しているlb-phoneのバージョンによって呼び方が異なる場合があります。本レッスンは「開いていないアプリにも通知を送れる」という考え方の紹介であり、実装時は導入しているlb-phoneのドキュメントで正確な形式を確認してください。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>lb-phoneアプリのスターターテンプレート | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t4-21-lb-phone-starter-template">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="4">🔴 中上級</span>
+      <span class="badge category-badge">📱 lb-phone連携</span>
+    </div>
+
+    <h1>lb-phoneアプリのスターターテンプレート</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>lb-phoneアプリを作るときに毎回ゼロから書く必要がある「型」を理解し、コピーしてすぐ次のアプリ開発に取り掛かれる</strong>ようになります。これまでのTier4-04・Tier4-05で学んだ知識を、実際に動く最小構成のアプリとして初めてひとまとめに提示します。</p>
+      <p><strong>こんな時に使う:</strong> 新しいlb-phoneアプリを作り始めるたびに、この構成をコピーして中身を書き換えていく出発点として使います。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>lb-phoneアプリは、①`Config.CustomApps`へのアプリ登録(Tier4-04)、②アプリを開いたときにデータを送るLua側の処理、③データを受け取って画面を描画するJS側の処理、という3点セットで成り立っています。この型さえ押さえれば、あとは中身(表示するデータ・操作)を差し替えるだけで次々に新しいアプリを作れます。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>ディレクトリ構成</h3>
+      <div class="code-block">
+        <pre><code class="language-bash">my-phone-app/
+├── fxmanifest.lua
+├── client.lua
+└── ui/
+    ├── index.html
+    ├── style.css
+    └── script.js</code></pre>
+      </div>
+
+      <h3>fxmanifest.lua</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">fx_version 'cerulean'
+game 'gta5'
+
+client_script 'client.lua'
+
+ui_page 'ui/index.html'
+files {
+    'ui/index.html',
+    'ui/style.css',
+    'ui/script.js'
+}</code></pre>
+      </div>
+
+      <h3>lb-phone/config/config.lua への追記(Tier4-04参照)</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">Config.CustomApps = {
+    ["my_phone_app"] = {
+        name = "マイアプリ",
+        description = "自作の連携アプリです",
+        developer = "自分の名前",
+        defaultApp = true,
+        ui = "my-phone-app/ui/index.html",
+    },
+}</code></pre>
+      </div>
+
+      <h3>client.lua: アプリを開いたらデータを送る</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">RegisterNetEvent('myPhoneApp:open')
+AddEventHandler('myPhoneApp:open', function()
+    exports['lb-phone']:SendCustomAppMessage('my_phone_app', {
+        action = 'open',
+        title = 'マイアプリ',
+        items = { '1件目のデータ', '2件目のデータ', '3件目のデータ' }
+    })
+end)</code></pre>
+      </div>
+
+      <h3>ui/index.html</h3>
+      <div class="code-block">
+        <pre><code class="language-markup">&lt;!doctype html&gt;
+&lt;html&gt;
+&lt;head&gt;
+  &lt;meta charset="utf-8"&gt;
+  &lt;link rel="stylesheet" href="style.css"&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;div id="app" class="app"&gt;
+    &lt;header class="app-header"&gt;
+      &lt;h1 id="app-title"&gt;マイアプリ&lt;/h1&gt;
+    &lt;/header&gt;
+    &lt;main id="app-body" class="app-body"&gt;
+      &lt;p id="placeholder"&gt;まだデータを受信していません&lt;/p&gt;
+    &lt;/main&gt;
+  &lt;/div&gt;
+  &lt;script src="script.js"&gt;&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;</code></pre>
+      </div>
+
+      <h3>ui/script.js: データを受け取って描画する</h3>
+      <div class="code-block">
+        <pre><code class="language-javascript">function handleAppMessage(data) {
+  if (data.action !== 'open') return;
+
+  document.getElementById('app').style.display = 'flex';
+  document.getElementById('app-title').textContent = data.title || 'マイアプリ';
+
+  const body = document.getElementById('app-body');
+  body.innerHTML = '';
+
+  data.items.forEach((item) => {
+    const el = document.createElement('p');
+    el.textContent = item;
+    body.appendChild(el);
+  });
+}
+
+window.addEventListener('message', (event) => {
+  handleAppMessage(event.data);
+});</code></pre>
+      </div>
+
+      <p>実際に動かして確認できるサンプル一式を <a href="samples/lb-phone-starter/ui/index.html">samples/lb-phone-starter/ui/index.html</a> に用意しています。ブラウザで開き、画面左下の「デモ」ボタンを押すと、<code>SendCustomAppMessage</code>を受信した想定の画面を確認できます。</p>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li><code>Config.CustomApps</code>のキー(<code>"my_phone_app"</code>)、<code>SendCustomAppMessage</code>の第1引数、<code>ui</code>のパスの3箇所は<strong>全て一致している必要があります</strong>(Tier4-04/Tier4-05の注意点の再確認です)。</li>
+        <li>lb-phoneアプリの画面はスマホの限られたサイズの中に描画されます。CSSは320×560程度の縦長サイズを前提に、はみ出さないレイアウトを組んでください(このサンプルの<code>style.css</code>を参照)。</li>
+        <li>このテンプレートは「開いたら即座にデータを送る」設計です。Tier4-05で学んだ通り、実際のアプリでは<code>onOpen</code>直後にUIがまだ読み込み中の場合があるため、より丁寧に作る場合はUI側からの「準備完了」通知を待ってからデータを送る設計にしてください。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>この型を土台に、次のレッスン(Tier4-22)で複数画面への遷移、Tier4-23で新着通知バッジを追加していきます。演習ex-08・ex-09では、この型を使って実際に1本のアプリを完成させます。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

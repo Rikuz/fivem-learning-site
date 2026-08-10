@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>アプリ内の画面遷移と戻る操作 | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t4-22-lb-phone-screen-navigation">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="4">🔴 中上級</span>
+      <span class="badge category-badge">📱 lb-phone連携</span>
+      <span class="badge category-badge">🖥️ UI表示(NUI)</span>
+    </div>
+
+    <h1>アプリ内の画面遷移と戻る操作</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>1つのアプリの中で「一覧画面→詳細画面」のように複数の画面を切り替え、戻るボタンで前の画面に戻る</strong>ことができるようになります。Tier4-21のスターターテンプレートは1画面だけでしたが、実際のアプリの多くは複数画面で構成されています。</p>
+      <p><strong>こんな時に使う:</strong> メッセージ一覧から1件をタップすると詳細が開く、商品一覧から詳細ページに遷移する、といった構成のアプリを作りたいとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>lb-phoneアプリのHTMLはページ遷移(別のHTMLファイルへの移動)をしません。<strong>1つのHTML内で、画面ごとの要素を用意し、JSでそれらのCSS表示/非表示を切り替える</strong>という、SPA(Single Page Application。1つのHTMLの中でJSが画面内容を書き換えていく作り方)的な手法を使います。どの画面が今開いているかを表す「画面スタック(履歴)」をJS側の配列で管理すると、戻るボタンの実装も自然に書けます。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>ui/index.html: 画面ごとにdivを用意する</h3>
+      <div class="code-block">
+        <pre><code class="language-markup">&lt;div id="app" class="app"&gt;
+  &lt;header class="app-header"&gt;
+    &lt;button id="back-btn" class="back-btn" style="display:none"&gt;← 戻る&lt;/button&gt;
+    &lt;h1 id="app-title"&gt;一覧&lt;/h1&gt;
+  &lt;/header&gt;
+
+  &lt;div id="screen-list" class="screen"&gt;
+    &lt;!-- 一覧画面の中身(JSで動的に追加) --&gt;
+  &lt;/div&gt;
+
+  &lt;div id="screen-detail" class="screen" style="display:none"&gt;
+    &lt;!-- 詳細画面の中身(JSで動的に追加) --&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</code></pre>
+      </div>
+
+      <h3>ui/script.js: 画面スタックで管理する</h3>
+      <div class="code-block">
+        <pre><code class="language-javascript">const screenStack = ['screen-list']; // 現在開いている画面の履歴(末尾が現在の画面)
+
+function showScreen(screenId) {
+  // 全ての画面を一旦隠す
+  document.querySelectorAll('.screen').forEach((el) => {
+    el.style.display = 'none';
+  });
+
+  document.getElementById(screenId).style.display = 'block';
+
+  // 一覧画面(履歴の一番最初)以外なら戻るボタンを表示する
+  document.getElementById('back-btn').style.display =
+    screenStack.length > 1 ? 'inline-block' : 'none';
+}
+
+function navigateTo(screenId) {
+  screenStack.push(screenId);
+  showScreen(screenId);
+}
+
+function goBack() {
+  if (screenStack.length <= 1) return; // これ以上戻れない(一覧画面が最初)
+  screenStack.pop();
+  showScreen(screenStack[screenStack.length - 1]);
+}
+
+document.getElementById('back-btn').addEventListener('click', goBack);</code></pre>
+      </div>
+
+      <h3>一覧のアイテムをクリックしたら詳細画面に遷移する例</h3>
+      <div class="code-block">
+        <pre><code class="language-javascript">function renderList(items) {
+  const container = document.getElementById('screen-list');
+  container.innerHTML = '';
+
+  items.forEach((item, index) => {
+    const el = document.createElement('p');
+    el.textContent = item.title;
+    el.addEventListener('click', () => {
+      renderDetail(item);
+      navigateTo('screen-detail');
+    });
+    container.appendChild(el);
+  });
+}
+
+function renderDetail(item) {
+  document.getElementById('screen-detail').innerHTML = `<p>${item.body}</p>`;
+}</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li>戻るボタンの表示・非表示は、<strong>画面スタックの長さ</strong>を見て判断してください。単純に「詳細画面かどうか」で分岐すると、画面数が増えたときに対応できなくなります。</li>
+        <li><code>screenStack</code>に画面IDをpushするだけでpopし忘れると、戻るボタンを何度押しても同じ画面に留まり続けるバグになります。<code>navigateTo</code>と<code>goBack</code>を必ずセットで使ってください。</li>
+        <li>アプリを閉じて再度開いたときに、前回の画面(詳細画面)が残ったままにならないよう、開くたびに<code>screenStack</code>を初期状態にリセットする処理を入れてください。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>この「戻る」の仕組みは、通常のNUI(Tier3-38で学んだEscキーでの全体クローズ)とは役割が異なります。Escキーは「アプリ全体を閉じる」、この戻るボタンは「アプリ内の1つ前の画面に戻る」という違いを意識してください。両方を組み合わせ、「詳細画面ではEscで一覧に戻り、一覧画面でEscでアプリを閉じる」という多段階の挙動にすることもできます。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

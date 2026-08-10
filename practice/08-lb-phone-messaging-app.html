@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>【lb-phoneトラック】メッセージ/掲示板アプリ | 実践演習 | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+  <link rel="stylesheet" href="../assets/css/lesson.css">
+</head>
+<body data-lesson-id="ex-08-lb-phone-messaging-app">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta exercise-difficulty">
+      <span class="badge tier-badge" data-tier="3">🟠 難易度: 中級</span>
+    </div>
+
+    <h1>【lb-phoneトラック】メッセージ/掲示板アプリ</h1>
+
+    <section class="conclusion">
+      <h2>概要</h2>
+      <p>lb-phoneのカスタムアプリとして、プレイヤー間でメッセージを送り合える簡易メッセージ/掲示板アプリを作ります。ex-02(NUI+イベント)のパターンをlb-phone文脈に適用し、Tier4-21〜23で学んだスターターテンプレート・画面遷移・通知バッジを1つのアプリとして統合する演習です。</p>
+    </section>
+
+    <section class="directory-structure">
+      <h2>ディレクトリ構造</h2>
+      <pre class="directory-tree">ex08-messenger/
+├── fxmanifest.lua
+├── client.lua
+├── server.lua
+├── messenger.sql
+└── ui/
+    ├── index.html      -- 一覧画面・詳細画面(Tier4-22の画面遷移パターン)
+    ├── style.css
+    └── script.js</pre>
+    </section>
+
+    <section class="spec">
+      <h2>処理仕様</h2>
+      <ul class="spec-list">
+        <li><code>messenger.sql</code>に、送信者識別子・受信者識別子(全体宛の場合はNULL可)・本文・送信日時・既読フラグを保存するテーブルを定義する。</li>
+        <li>lb-phoneのカスタムアプリとして登録する(<code>Config.CustomApps</code>、Tier4-04参照)。</li>
+        <li>アプリを開いたら、そのプレイヤー宛のメッセージ一覧をDBから取得し一覧表示する(Tier4-21のスターターテンプレートを土台にする)。</li>
+        <li>一覧の1件を選ぶと詳細画面に遷移し、本文全体を表示する(Tier4-22の画面遷移パターン)。詳細画面には一覧に戻るボタンを設置する。</li>
+        <li>メッセージ送信フォームから、宛先(プレイヤーID等)と本文を入力して送信できるようにする(Tier3-34のox_lib入力ダイアログを使ってもよい)。送信はserver側でDBに保存する。</li>
+        <li>メッセージが保存されたら、受信者がオンラインであれば新着通知バッジを更新する(Tier4-23)。</li>
+        <li>アプリを開いて該当メッセージを既読にしたら、DBの既読フラグを更新しバッジをリセットする。</li>
+      </ul>
+    </section>
+
+    <section class="expected-behavior">
+      <h2>期待する動作</h2>
+      <ul class="spec-list">
+        <li>アプリを開くと自分宛のメッセージ一覧が表示される。</li>
+        <li>一覧から1件選ぶと詳細画面に遷移し、戻るボタンで一覧に戻れる。</li>
+        <li>メッセージを送信すると、相手のDBに正しく保存される。</li>
+        <li>相手がログイン中であれば、アプリを開いていない状態でもアイコンに未読バッジが表示される。</li>
+        <li>アプリを開いて既読にすると、バッジがリセットされる。</li>
+        <li>サーバーを再起動しても過去のメッセージ履歴が失われない。</li>
+      </ul>
+    </section>
+
+    <section class="dependencies">
+      <h2>利用する依存関係</h2>
+      <table class="dependency-table">
+        <thead><tr><th>依存</th><th>用途</th></tr></thead>
+        <tbody>
+          <tr><td>lb-phone</td><td>カスタムアプリの土台</td></tr>
+          <tr><td>oxmysql</td><td>メッセージ履歴の永続化</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="related-lessons">
+      <h2>関連レッスン</h2>
+      <ul class="related-lessons-list">
+        <li><a href="../lessons/tier4-upper-intermediate/21-lb-phone-starter-template.html">lb-phoneアプリのスターターテンプレート</a><span class="related-lessons-list__note">アプリ全体の土台</span></li>
+        <li><a href="../lessons/tier4-upper-intermediate/22-lb-phone-screen-navigation.html">アプリ内の画面遷移と戻る操作</a><span class="related-lessons-list__note">一覧→詳細の画面遷移</span></li>
+        <li><a href="../lessons/tier4-upper-intermediate/23-lb-phone-notification-badge.html">アプリの新着通知バッジ</a><span class="related-lessons-list__note">未読件数のバッジ表示</span></li>
+        <li><a href="../lessons/tier3-intermediate/03-database-oxmysql.html">DB連携の基礎(oxmysql)</a><span class="related-lessons-list__note">メッセージ履歴の保存・取得</span></li>
+      </ul>
+    </section>
+
+    <p class="no-solution-note">※このページに完成コードは載せていません。上記の仕様と関連レッスンを参考に、自分で実装してみましょう。</p>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      この演習を完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../assets/js/lessons-data.js"></script>
+  <script src="../assets/js/exercises-data.js"></script>
+  <script src="../assets/js/progress.js"></script>
+  <script src="../assets/js/nav.js"></script>
+</body>
+</html>

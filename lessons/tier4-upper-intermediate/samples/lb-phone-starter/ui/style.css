@@ -1,0 +1,53 @@
+/* lb-phoneアプリは電話の画面サイズ内に描画されるため、スマホ画面を意識した縦長・コンパクトなレイアウトにする */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", sans-serif;
+  background: transparent;
+}
+
+.app {
+  display: none; /* JS側で style.display = 'flex' に切り替えるまで非表示 */
+  width: 320px;
+  height: 560px;
+  background: #f2f2f2;
+  border-radius: 12px;
+  overflow: hidden;
+  flex-direction: column;
+}
+
+.app-header {
+  background: #1e88e5;
+  color: #fff;
+  padding: 14px 16px;
+  flex-shrink: 0;
+}
+
+.app-header h1 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.app-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+#placeholder {
+  color: #888;
+  text-align: center;
+  margin-top: 40px;
+}
+
+.demo-trigger {
+  position: fixed;
+  bottom: 16px;
+  left: 16px;
+  padding: 8px 14px;
+  font-size: 13px;
+  cursor: pointer;
+}

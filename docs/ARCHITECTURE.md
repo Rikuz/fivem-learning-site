@@ -53,6 +53,16 @@
 - レッスンページと同じ`progress.js`の完了トグルを再利用する(`body[data-lesson-id="ex-XX-..."]`)。ただし演習IDは`window.LESSONS`には含まれないため、`index.html`の「全体の進捗」計算には影響しない(演習の完了管理はレッスンの学習進捗とは別軸として扱う)。
 - ディレクトリは`lessons/`から1階層浅い`practice/`直下に置くため、相対パスは`../assets/...`(`../../`ではない)。`nav.js`の`computeSiteRoot()`が`/practice/`を判定して`../`を返す。
 
+### 6. `tracks.html` — プロジェクトトラック一覧
+- `assets/js/tracks-data.js` の `TRACKS` 配列を情報源とし、カード一覧を表示する(`practice.html`と同じレイアウトを流用)。
+- 各カードから `tracks/*.html` のトラック詳細ページへ遷移する。
+
+### 7. `tracks/*.html` — トラック詳細ページ(目的別の順路)
+- Tier別ロードマップ・カテゴリ逆引き検索に次ぐ第3の入口。「lb-phoneアプリを1本作りきる」等、目的から出発して既存/新規レッスン・演習を順番にたどれるチェックリストページ。
+- 各ステップは`{ type: 'lesson' | 'exercise', id, note }`で表現し、`window.LESSONS`/`window.EXERCISES`から該当タイトル・パスを解決してリンクを描画する(トラック自身は本文を持たず、索引に徹する)。
+- ステップの完了チェックは`progress.js`を再利用する(`body[data-lesson-id="track-xxx"]`でトラック全体の進捗を1つのチェックボックス群として管理)。
+- ディレクトリは`practice/`と同じく`lessons/`から1階層浅い`tracks/`直下に置く。相対パスは`../assets/...`。詳細は`docs/TRACK_OUTLINE.md`参照。
+
 ---
 
 ## データモデル: `lessons-data.js`
@@ -132,6 +142,8 @@ window.LESSONS = LESSONS;
 | `admin-tools` | 管理者・運用ツール |
 | `voice` | ボイス・無線 |
 | `dispatch` | ディスパッチ通知 |
+| `crime` | 犯罪行為(ゲーム内) |
+| `law-enforcement` | 警察業務 |
 
 ---
 
