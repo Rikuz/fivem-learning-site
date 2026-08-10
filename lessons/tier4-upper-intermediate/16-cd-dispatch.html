@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>cd_dispatchで警察無線通知を送る | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t4-16-cd-dispatch">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="4">🔴 中上級</span>
+      <span class="badge category-badge">🚓 ディスパッチ</span>
+    </div>
+
+    <h1>cd_dispatchで警察無線通知を送る</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>cd_dispatch(FiveMで使われるディスパッチ通知スクリプト)を使い、事件発生時に警察官の画面へ通知とミニマップ上のブリップを表示する</strong>ことができるようになります。</p>
+      <p><strong>こんな時に使う:</strong> 強盗事件が発生したら警察に自動で通報を送りたい、110番通報のような演出を作りたいとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>cd_dispatchは<code>cd_dispatch:AddNotification</code>という共通のserverイベントに、事件のタイトル・座標・対象job等をまとめたテーブルを送ることで、対象のJob(例: 警察)を持つ全プレイヤーに通知とBlip(Tier2-03参照)を表示してくれます。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>client.lua: 事件を通報する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local function reportRobbery()
+    local data = exports['cd_dispatch']:GetPlayerInfo() -- 現在地・性別・通り名などを取得できる
+
+    TriggerServerEvent('cd_dispatch:AddNotification', {
+        job_table = { 'police' },
+        coords = data.coords,
+        title = '10-15 - 強盗事件',
+        message = ('%sが%sで強盗をしています'):format(data.sex, data.street),
+        flash = 0,
+        unique_id = data.unique_id,
+        sound = 1,
+        blip = {
+            sprite = 431,
+            scale = 1.2,
+            colour = 3,
+            flashes = false,
+            text = '911 - 強盗事件',
+            time = 5, -- ブリップの表示時間(分)
+            radius = 0,
+        }
+    })
+end
+
+RegisterCommand('triggerrobbery', reportRobbery, false)</code></pre>
+      </div>
+
+      <h3>ショップの防犯アラーム(Tier3-26)と組み合わせる例</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">RegisterNetEvent('shop:robbed')
+AddEventHandler('shop:robbed', function()
+    local playerId = source
+    local ped = GetPlayerPed(playerId)
+    local coords = GetEntityCoords(ped)
+
+    TriggerClientEvent('cd_dispatch:AddNotification', -1, {
+        job_table = { 'police' },
+        coords = coords,
+        title = '10-15 - 店舗強盗',
+        message = '店舗で強盗が発生しました',
+        sound = 1,
+        blip = { sprite = 431, scale = 1.2, colour = 3, text = '911 - 店舗強盗', time = 5, radius = 0 }
+    })
+end)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li><code>job_table</code>に指定したJob名(<code>'police'</code>等)は、実際にフレームワーク側で登録されているJob名(Tier4-01参照)と完全に一致している必要があります。</li>
+        <li>通報を誰でも自由に発火できる状態にすると、いたずらで通報を連発される危険があります。実際のゲームイベント(強盗の実行成功など)に紐付けて発火させ、コマンド単体で誰でも呼べないようにしてください。</li>
+        <li>cd_dispatchは有償スクリプトであり、バージョンによって<code>AddNotification</code>のテーブル構造(特に<code>unique_id</code>のようなフィールド)が変わる場合があります。導入しているバージョンの公式ドキュメント(docs.codesign.pro)を確認してください。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>Tier3-28で学んだ無線チャンネルシステムと組み合わせることで、「通知を受け取った警察官同士が同じ無線チャンネルで連携する」という、より実践的なディスパッチシステムに発展させられます。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ビジネス/組織口座の管理 | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t4-10-business-account-management">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="4">🔴 中上級</span>
+      <span class="badge category-badge">🧩 フレームワーク連携</span>
+      <span class="badge category-badge">🔔 okok連携</span>
+    </div>
+
+    <h1>ビジネス/組織口座の管理</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>個人ではなく「組織(会社・ギャング・警察署など)」に紐付いた口座を作り、その資金を管理する</strong>ことができるようになります。</p>
+      <p><strong>こんな時に使う:</strong> Tier3-26のショップの売上を組織の資金として貯めたい、給料(Tier4-02)を組織の口座から支払いたい、複数人で共有する資金を管理したいとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>Tier4-06で学んだokokBankingV2の<code>society</code>という概念は、まさにこの「組織口座」を指しています。個人の口座がプレイヤーのcitizenidを識別子にするのに対し、組織口座は<strong>job名</strong>(またはギャング名)を識別子として使います。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>server.lua: 組織の残高を確認する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local function getSocietyBalance(jobName)
+    local account = exports['okokBanking']:GetAccount(jobName)
+    return account and account.balance or 0
+end
+
+RegisterCommand('societybalance', function(source)
+    -- Tier4-01のフレームワーク連携で、プレイヤーの所属Jobを取得する想定
+    local jobName = getPlayerJob(source) -- 例: QBCoreならPlayer.PlayerData.job.name
+
+    local balance = getSocietyBalance(jobName)
+    TriggerClientEvent('myscript:notify', source, ('組織の残高: $%s'):format(balance))
+end, false)</code></pre>
+      </div>
+
+      <h3>server.lua: ショップの売上を組織口座に入金する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local function depositToSociety(jobName, amount, reason)
+    exports['okokBanking']:AddMoney(jobName, amount)
+    exports['okokBanking']:AddTransaction(jobName, {
+        value = amount,
+        type = 'deposit',
+        reason = reason,
+    })
+end
+
+-- Tier3-26のショップ購入処理の中で呼び出す例
+depositToSociety('mechanic', 500, '整備サービスの売上')</code></pre>
+      </div>
+
+      <h3>server.lua: 組織資金からの給料支払い(Tier4-02の応用)</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local function paySalaryFromSociety(jobName, playerId, amount)
+    local balance = getSocietyBalance(jobName)
+
+    if balance < amount then
+        return false -- 組織の資金が足りず支払えない
+    end
+
+    exports['okokBanking']:RemoveMoney(jobName, amount)
+    -- 個人口座への入金はTier4-06参照
+    exports['okokBanking']:AddMoney(getPlayerCitizenId(playerId), amount)
+    return true
+end</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li>組織口座への入出金権限を誰にでも与えると、資金を勝手に引き出されてしまいます。Tier4-02のJob確認(特に階級・grade)と組み合わせ、経営者権限を持つプレイヤーだけが引き出せるようにするなどの制限が必要です。</li>
+        <li>組織資金がマイナスにならないよう、給料支払い等の出金処理では必ず事前に残高を確認してください(Tier3-05のサーバー側バリデーションと同じ考え方)。</li>
+        <li>複数の組織が同時に取引を行う可能性がある場合、Tier5-02の非同期処理の考え方(残高確認と減算の間に別の処理が割り込む「競合状態」)にも注意が必要です。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>okokBankingV2以外にも、Tier4-19で扱うRenewed-Bankingの<code>CreateJobAccount</code>のように、組織口座の作成を専用exportで行える銀行スクリプトもあります。導入しているスクリプトのドキュメントを確認してください。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

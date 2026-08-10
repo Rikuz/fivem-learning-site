@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Discord連携(OAuth・ロール確認) | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t4-13-discord-oauth-integration">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="4">🔴 中上級</span>
+      <span class="badge category-badge">📡 イベント/通信</span>
+    </div>
+
+    <h1>Discord連携(OAuth・ロール確認)</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>プレイヤーのDiscordアカウントを識別し、サーバーのDiscordで持っているロール(役職)に応じて機能を制限する</strong>連携の考え方を理解できるようになります。</p>
+      <p><strong>こんな時に使う:</strong> Discordで「メンバー」ロールを持つ人だけ参加を許可したい、Discordブースター特典をゲーム内に反映したいとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>FiveMのプレイヤーには、Tier2-15でも触れた<code>GetPlayerIdentifiers</code>で取得できる識別子の1つとして<code>discord:</code>から始まるDiscordユーザーIDが含まれます(プレイヤーがFiveMクライアントでDiscordと連携している場合)。このIDと、Discord Bot側のAPI(Botのトークンを使ってサーバーメンバーのロール情報を取得するAPI)を組み合わせることで、ロールに応じた判定ができます。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>server.lua: プレイヤーのDiscord IDを取得する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local function getDiscordId(playerId)
+    for _, id in ipairs(GetPlayerIdentifiers(playerId)) do
+        if id:find('discord:') then
+            return id:gsub('discord:', '')
+        end
+    end
+    return nil
+end</code></pre>
+      </div>
+
+      <h3>server.lua: Discord APIにロール情報を問い合わせる(概念)</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local DISCORD_BOT_TOKEN = 'あなたのBotトークン' -- Tier3-22同様、Config等に分離し秘匿すること
+local DISCORD_GUILD_ID = 'あなたのサーバーID'
+local REQUIRED_ROLE_ID = '必要なロールのID'
+
+local function checkPlayerHasRole(discordId, callback)
+    PerformHttpRequest(
+        ('https://discord.com/api/guilds/%s/members/%s'):format(DISCORD_GUILD_ID, discordId),
+        function(statusCode, responseText)
+            if statusCode ~= 200 then
+                callback(false)
+                return
+            end
+
+            local member = json.decode(responseText)
+            local hasRole = false
+            for _, roleId in ipairs(member.roles or {}) do
+                if roleId == REQUIRED_ROLE_ID then hasRole = true end
+            end
+            callback(hasRole)
+        end,
+        'GET',
+        '',
+        { ['Authorization'] = 'Bot ' .. DISCORD_BOT_TOKEN }
+    )
+end</code></pre>
+      </div>
+
+      <h3>playerConnectingと組み合わせる(Tier4-07参照)</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">AddEventHandler('playerConnecting', function(playerName, setKickReason, deferrals)
+    deferrals.defer()
+    Wait(0)
+
+    local source = source
+    local discordId = getDiscordId(source)
+
+    if not discordId then
+        deferrals.done('Discordと連携したFiveMアカウントで参加してください')
+        return
+    end
+
+    checkPlayerHasRole(discordId, function(hasRole)
+        if hasRole then
+            deferrals.done()
+        else
+            deferrals.done('Discordサーバーで必要なロールを取得してから参加してください')
+        end
+    end)
+end)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li>Discord BotのトークンはWebhook URL以上に機密性が高い情報です。<strong>絶対にコードに直書きしたままコミットしないでください</strong>。漏洩するとBotを乗っ取られる危険があります。</li>
+        <li>Discord APIには利用回数の制限(レート制限)があります。全プレイヤーの接続のたびに毎回問い合わせると、制限に達してエラーになることがあります。実運用ではキャッシュ(Tier3-16参照)と組み合わせることも検討してください。</li>
+        <li>プレイヤーがDiscordとFiveMを連携していない場合、<code>discord:</code>識別子自体が存在しません。この場合の扱い(拒否するか、機能を制限した上で許可するか)をあらかじめ決めておきましょう。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p class="version-note">Discord APIの詳細な仕様(エンドポイント・レート制限・認証方式)は変更されることがあるため、実装時はDiscordの公式APIドキュメント(discord.com/developers/docs)を必ず確認してください。本レッスンは連携の考え方の紹介にとどめています。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

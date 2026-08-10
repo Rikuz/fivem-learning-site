@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DBスキーマのバージョン管理・マイグレーション | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t4-08-db-schema-migration">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="4">🔴 中上級</span>
+      <span class="badge category-badge">🗄️ DB連携</span>
+    </div>
+
+    <h1>DBスキーマのバージョン管理・マイグレーション</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>テーブル構造の変更を、既存のデータを壊さずに安全に反映する</strong>マイグレーション(DB構造の変更手順を記録・適用する仕組み)の考え方を実装できるようになります。</p>
+      <p><strong>こんな時に使う:</strong> 開発を続けるうちに「usersテーブルに新しい列を追加したい」となったとき、複数のサーバー(開発用・本番用)でDB構造を揃えたいとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>Tier3-03で作った<code>users</code>テーブルのようなDB構造は、開発が進むにつれて列の追加・変更が必要になります。<code>ALTER TABLE</code>を思いつきで直接実行すると、「どのサーバーにどの変更を適用したか」が分からなくなりがちです。<strong>マイグレーションファイル</strong>(1つの変更を1つのSQLファイルとして順番に管理する仕組み)を使うと、この混乱を防げます。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>マイグレーションファイルの構成例</h3>
+      <div class="code-block">
+        <pre><code class="language-bash">migrations/
+├── 001_create_users_table.sql
+├── 002_add_inventory_column.sql
+└── 003_add_last_login_column.sql</code></pre>
+      </div>
+
+      <h3>002_add_inventory_column.sql</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">-- 既にinventory列がある場合はエラーにならないよう、存在確認してから追加するのが安全
+ALTER TABLE users ADD COLUMN IF NOT EXISTS inventory LONGTEXT DEFAULT NULL;</code></pre>
+      </div>
+
+      <h3>003_add_last_login_column.sql</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login DATETIME DEFAULT NULL;</code></pre>
+      </div>
+
+      <h3>適用済みのマイグレーションを記録するテーブル</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">CREATE TABLE IF NOT EXISTS migrations (
+    filename VARCHAR(255) PRIMARY KEY,
+    applied_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);</code></pre>
+      </div>
+      <p>このテーブルに「どのマイグレーションファイルを適用済みか」を記録しておけば、新しいサーバーを立てたときや、他の開発者の環境でも、未適用のファイルだけを順番に実行すればDB構造を揃えられます。</p>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li><code>ALTER TABLE</code>を本番DBに直接実行する前に、<strong>必ずバックアップを取ってください</strong>。列の削除・型変更は元に戻せない場合があります。</li>
+        <li>マイグレーションファイルは、番号順に<strong>1度だけ</strong>適用される前提で書きます。既に適用したファイルの中身を後から書き換えると、環境ごとにDB構造がずれる原因になります。修正したい場合は新しいマイグレーションファイルを追加してください。</li>
+        <li>データが既に入っているテーブルに<code>NOT NULL</code>制約付きの列を追加すると、既存の行に対してデフォルト値の指定が必要になる場合があります。<code>DEFAULT</code>句を忘れずに指定しましょう。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>大規模なチーム開発では、マイグレーション管理専用のツール(Node.jsのプロジェクトで使われるようなマイグレーションライブラリ)を導入することもありますが、個人〜小規模チームの開発では、この単純な連番SQLファイルの管理でも十分に効果があります。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Renewed-Bankingと連携する | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t4-19-renewed-banking">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="4">🔴 中上級</span>
+      <span class="badge category-badge">🧩 フレームワーク連携</span>
+      <span class="badge category-badge">🗄️ DB連携</span>
+    </div>
+
+    <h1>Renewed-Bankingと連携する</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>Tier4-06で扱ったokokBankingV2以外の選択肢として、Renewed-Banking(コミュニティで人気の銀行システム)と連携する</strong>ことができるようになります。</p>
+      <p><strong>こんな時に使う:</strong> 導入しているサーバーがokokBankingではなくRenewed-Bankingを採用しているとき。銀行スクリプトを乗り換える際にexportの違いを把握したいとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>Renewed-Bankingは、okokBankingV2と同じく口座残高の取得・入出金・取引記録を扱いますが、exportの名前が異なります。両者は<strong>役割は同じでも構文に互換性はない</strong>ため、どちらを導入しているかを確認してから正しいexport名を使う必要があります。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>残高を取得する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">-- 存在しない口座の場合はfalseが返る
+local amount = exports['Renewed-Banking']:getAccountMoney(account)
+
+if amount then
+    print(('口座残高: $%s'):format(amount))
+end</code></pre>
+      </div>
+
+      <h3>入金・出金する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local depositSuccess = exports['Renewed-Banking']:addAccountMoney(account, 500)
+local withdrawSuccess = exports['Renewed-Banking']:removeAccountMoney(account, 200)
+
+if not withdrawSuccess then
+    print('出金に失敗しました(残高不足の可能性があります)')
+end</code></pre>
+      </div>
+
+      <h3>職業(job)ごとの組織口座を作成する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">exports['Renewed-Banking']:CreateJobAccount({ name = 'mechanic', label = '整備工場' }, 5000)
+-- 第1引数: job名・表示名を含むテーブル、第2引数: 初期残高</code></pre>
+      </div>
+
+      <h3>Tier4-10「ビジネス/組織口座の管理」のokokBanking版との比較</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">-- okokBankingV2の場合(Tier4-06参照)
+exports['okokBanking']:AddMoney(society, value)
+
+-- Renewed-Bankingの場合
+exports['Renewed-Banking']:addAccountMoney(account, value)
+-- 「入金する」という同じ操作でも、exportの名前も引数の順序も異なる点に注意</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li>okokBanking用に書いたコードをそのまま使い回すと、exportのリソース名(<code>'okokBanking'</code> vs <code>'Renewed-Banking'</code>)も関数名も違うため動きません。どちらの銀行スクリプトを導入しているか、必ず事前に確認してください。</li>
+        <li>両方の銀行スクリプトを同時に導入するのは避けてください。プレイヤーの所持金が2つのシステムに分散し、整合性が取れなくなります。</li>
+        <li><code>getAccountMoney</code>は口座が存在しない場合<code>false</code>を返します。数値として扱う前に、必ずこの戻り値を確認してください。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p class="version-note">本レッスンのexport構文(<code>getAccountMoney</code>、<code>addAccountMoney</code>、<code>removeAccountMoney</code>、<code>CreateJobAccount</code>)は公式ドキュメント(renewed.dev/banking/exports)で確認済みです。qb-managementからの移行用に<code>exports['qb-management']:AddMoney</code>を<code>exports['Renewed-Banking']:addAccountMoney</code>に読み替える互換情報も公式に案内されています。バージョンによって仕様が変わる場合があるため、公式ドキュメントを確認してください。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

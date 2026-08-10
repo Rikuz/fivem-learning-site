@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>screenshot-basicでスクリーンショットを取得する | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t4-11-screenshot-basic">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="4">🔴 中上級</span>
+      <span class="badge category-badge">🛠️ 管理者ツール</span>
+    </div>
+
+    <h1>screenshot-basicでスクリーンショットを取得する</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>screenshot-basic(FiveM公式が提供するスクリーンショット取得用リソース)を使い、プレイヤーの画面を証拠として保存する</strong>ことができるようになります。</p>
+      <p><strong>こんな時に使う:</strong> 通報(Tier3-21)を受けた際の証拠として画面を残したい、身分証明書のような画像をゲーム内で生成したいとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>screenshot-basicは、server側から特定プレイヤーの画面のスクリーンショットを要求できるリソースです。取得した画像は、サーバー上のファイルとして保存するか、data URI(画像データを文字列として表現したもの)としてコールバックで受け取るかを選べます。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>server.lua: 特定プレイヤーのスクリーンショットを取得する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">exports['screenshot-basic']:requestClientScreenshot(GetPlayers()[1], {
+    fileName = 'cache/screenshot.jpg'
+}, function(err, data)
+    print('err', err)
+    print('data', data)
+end)</code></pre>
+      </div>
+
+      <h3>通報システム(Tier3-21)と組み合わせる例</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">RegisterCommand('reportscreenshot', function(source, args)
+    if not IsPlayerAceAllowed(source, 'command.adminmenu') then return end
+
+    local targetId = tonumber(args[1])
+    if not targetId then return end
+
+    exports['screenshot-basic']:requestClientScreenshot(targetId, {
+        encoding = 'jpg',
+        quality = 0.8
+    }, function(err, data)
+        if err then
+            print('スクリーンショットの取得に失敗しました: ' .. tostring(err))
+            return
+        end
+
+        -- dataにはdata URI文字列が入る。Discord Webhook(Tier3-22)に添付する等の活用ができる
+        print('スクリーンショットを取得しました')
+    end)
+end, false)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li>この機能を使うには、少なくともある程度新しいバージョンのFiveMクライアント・サーバーが必要です(古いバージョンでは動作しません)。動作しない場合はまずアップデートを確認してください。</li>
+        <li>プレイヤーの同意なくスクリーンショットを取得する機能は、プライバシーに関わります。通報対応など、正当な理由がある場合に限定して使い、利用規約等でその旨を明記しておくことが望まれます。</li>
+        <li><code>fileName</code>を指定した場合、画像はサーバーのファイルシステムに保存されます。保存先の容量管理(古い画像の自動削除等)も運用上考慮してください。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>取得したスクリーンショットをTier3-22のDiscord Webhookで管理者チャンネルに自動送信する運用もよく見られます。ただしdata URIをそのままWebhookのJSONに含めるのは適さないため、実際にはmultipart形式でのファイルアップロードなど別の送信方法を検討する必要があります。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

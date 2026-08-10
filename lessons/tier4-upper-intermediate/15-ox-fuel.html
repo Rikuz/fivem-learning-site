@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ox_fuelで燃料システムを連携する | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t4-15-ox-fuel">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="4">🔴 中上級</span>
+      <span class="badge category-badge">🚗 車両操作</span>
+    </div>
+
+    <h1>ox_fuelで燃料システムを連携する</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>ox_fuel(FiveMの燃料システムリソース)の支払い方法を、自分のサーバーのフレームワークに合わせてカスタマイズする</strong>ことができるようになります。</p>
+      <p><strong>こんな時に使う:</strong> ガソリンスタンドで給油できるようにしたい、ESX/QBCore以外の独自フレームワークで所持金を管理していて、標準の支払い処理をそのまま使えないとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>ox_fuelは、車両の燃料残量をStateBags(Tier5-03参照)で管理し、給油時の支払い処理を<code>setPaymentMethod</code>というexportで差し替えられる設計になっています。これにより、ESX/QBCore/独自フレームワークのどれを使っていても、支払い部分だけを自分の環境に合わせて実装できます。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>server.lua: 支払い方法をカスタマイズする(ESXの例)</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">exports.ox_fuel:setPaymentMethod(function(playerId, amount)
+    local xPlayer = ESX.GetPlayerFromId(playerId)
+    local bankAmount = xPlayer.getAccount('bank').money
+
+    if bankAmount >= amount then
+        xPlayer.removeAccountMoney('bank', amount)
+        return true -- 支払い成功
+    end
+
+    return false -- 支払い失敗(所持金不足)
+end)</code></pre>
+      </div>
+
+      <h3>QBCoreの場合の例</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">exports.ox_fuel:setPaymentMethod(function(playerId, amount)
+    local Player = QBCore.Functions.GetPlayer(playerId)
+    if Player.PlayerData.money['bank'] >= amount then
+        Player.Functions.RemoveMoney('bank', amount)
+        return true
+    end
+    return false
+end)</code></pre>
+      </div>
+
+      <h3>現在の燃料残量を取得する(StateBag経由)</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local fuel = Entity(vehicleNetId).state.fuel
+print(('燃料残量: %.1f%%'):format(fuel))</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li><code>setPaymentMethod</code>に渡す関数は、必ず<code>true</code>(成功)か<code>false</code>/<code>nil</code>(失敗)を返してください。戻り値がないと、ox_fuel側が支払いの成否を正しく判定できません。</li>
+        <li>燃料残量はStateBag(<code>Entity(vehicle).state.fuel</code>)として管理されているため、Tier5-03で学んだ「clientから直接書き換えず、正規の仕組みを通す」という原則がここでも当てはまります。</li>
+        <li>ox_fuelはox_inventoryとの併用を前提に設計されています。導入しているインベントリシステムがox_inventoryでない場合、ジェリー缶(携行缶)などのアイテム連携部分は別途調整が必要になることがあります。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p class="version-note">本レッスンの構文(<code>setPaymentMethod</code>、StateBagでの燃料取得)はOverextended公式ドキュメント(overextended.dev/ox_fuel)で確認済みです。<code>setMoneyCheck</code>(所持金チェック方法自体のカスタマイズ)等、他のexportもあるため、詳細は公式ドキュメントを確認してください。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

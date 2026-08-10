@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ox_doorlockでドアを施錠する | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t4-14-ox-doorlock">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="4">🔴 中上級</span>
+      <span class="badge category-badge">🎯 ターゲティング</span>
+      <span class="badge category-badge">🌍 ワールド操作</span>
+    </div>
+
+    <h1>ox_doorlockでドアを施錠する</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>ox_doorlock(FiveMで広く使われるドア管理リソース)でドアの施錠・解錠を制御する</strong>ことができるようになります。</p>
+      <p><strong>こんな時に使う:</strong> 自宅・店舗のドアに鍵をかけたい、権限のある人だけがドアを開けられるようにしたいとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>ox_doorlockは、GTA Vのマップ上にある扉(ドア)をゲーム内コマンドで登録し、施錠状態をDBで管理してくれるリソースです。ドア自体の登録は<strong>ゲーム内の<code>/doorlock</code>コマンド</strong>でその場に立って行い(Luaファイルに座標を直接書く方式ではありません)、以後は<code>doorId</code>という番号でそのドアを操作します。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>ドアを施錠・解錠する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">-- state: trueまたは1で施錠、falseまたは0で解錠
+exports.ox_doorlock:setDoorState(doorId, true)  -- 施錠
+exports.ox_doorlock:setDoorState(doorId, false) -- 解錠</code></pre>
+      </div>
+
+      <h3>ドアの情報を取得する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local door = exports.ox_doorlock:getDoor(doorId)
+local doorByName = exports.ox_doorlock:getDoorFromName('my_house_door')
+
+if door then
+    print('施錠状態: ' .. tostring(door.state))
+end</code></pre>
+      </div>
+
+      <h3>ox_targetと組み合わせて、鍵を持っている人だけ操作できるようにする例</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">RegisterNetEvent('myscript:toggleHouseDoor')
+AddEventHandler('myscript:toggleHouseDoor', function(doorId)
+    local playerId = source
+    local hasKey = playerHasHouseKey(playerId) -- 自作の鍵所持チェック関数(Tier3-04のインベントリ確認等)
+
+    if not hasKey then
+        TriggerClientEvent('myscript:notify', playerId, '鍵を持っていません')
+        return
+    end
+
+    local door = exports.ox_doorlock:getDoor(doorId)
+    exports.ox_doorlock:setDoorState(doorId, not door.state)
+end)</code></pre>
+      </div>
+
+      <h3>設定を編集する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">exports.ox_doorlock:editDoor(doorId, { distance = 3.0 }) -- 操作可能な距離を変更する例</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li>ドアの登録自体は<strong>Lua設定ファイルではなくゲーム内コマンド</strong>で行う点に注意してください。「Config.luaにドアの座標を書けばいい」と勘違いしないようにしましょう。</li>
+        <li>鍵の所持判定(誰が開けられるか)は、ox_doorlock自体の機能ではなく<strong>自分のスクリプト側で実装する</strong>必要があります。上記コード例のように、自作のチェックと<code>setDoorState</code>を組み合わせてください。</li>
+        <li>施錠・解錠の判定は必ずserver側で行い、client側から直接<code>setDoorState</code>を呼び放題にしないでください(Tier3-05のサーバー側バリデーションと同じ考え方)。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p class="version-note">本レッスンのexport構文(<code>setDoorState</code>、<code>getDoor</code>、<code>getDoorFromName</code>、<code>editDoor</code>)はOverextended公式ドキュメント(overextended.dev/docs/ox_doorlock)で確認済みです。ドアの登録手順(<code>/doorlock</code>コマンドの詳しい使い方)は、導入しているバージョンのREADMEも確認してください。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>illenium-appearanceでキャラクリエイトする | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t4-17-illenium-appearance">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="4">🔴 中上級</span>
+      <span class="badge category-badge">👤 外見・キャラクリエイト</span>
+    </div>
+
+    <h1>illenium-appearanceでキャラクリエイトする</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>illenium-appearance(ESX/QBCore向けの人気キャラクリエイトスクリプト)でキャラクター作成・見た目編集画面を開き、結果を受け取ってDBに保存する</strong>ことができるようになります。</p>
+      <p><strong>こんな時に使う:</strong> Tier2-13のペド見た目変更を1から自作せず、洗練されたキャラクリエイト画面を導入したいとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>illenium-appearanceは、Tier2-10で学んだカメラ演出とTier2-13の服装変更を内部で組み合わせ、プレイヤーが自分でスライダーやボタンを操作して見た目を編集できるUIを提供してくれるリソースです。呼び出す側は<code>startPlayerCustomization</code>というexportを呼ぶだけで、複雑なカメラ制御・UI表示を自分で作る必要がありません。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>client.lua: キャラクリエイト画面を開く</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local function openCharacterCreator()
+    exports['illenium-appearance']:startPlayerCustomization(function(appearance)
+        if appearance then
+            -- プレイヤーが「確定」した場合、appearanceに見た目データが入る
+            TriggerServerEvent('myscript:saveAppearance', appearance)
+        else
+            -- 「キャンセル」した場合はnilが渡ってくる
+            print('キャラクリエイトがキャンセルされました')
+        end
+    end)
+end
+
+RegisterCommand('customize', openCharacterCreator, false)</code></pre>
+      </div>
+
+      <h3>server.lua: 見た目データをDBに保存する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">RegisterNetEvent('myscript:saveAppearance')
+AddEventHandler('myscript:saveAppearance', function(appearance)
+    local source = source
+    local identifier = GetPlayerIdentifiers(source)[1]
+
+    MySQL.Async.execute('UPDATE users SET appearance = @appearance WHERE identifier = @id', {
+        ['@appearance'] = json.encode(appearance), -- Tier3-17参照: 見た目データはJSON列で保存するのが一般的
+        ['@id'] = identifier
+    })
+end)</code></pre>
+      </div>
+
+      <h3>保存済みの見た目を再度読み込む(概念)</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">-- 実際の反映方法(見た目データを再度ペドに適用するAPI)は
+-- illenium-appearance側に別のexportが用意されているため、
+-- 導入バージョンのドキュメントで確認すること
+</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li><code>startPlayerCustomization</code>のコールバックは、確定時とキャンセル時の両方で呼ばれます。<code>appearance</code>が<code>nil</code>かどうかを必ず確認してから保存処理を行ってください。</li>
+        <li>初回キャラクター作成時と、後から見た目を変更する場合(美容院など)とでは、illenium-appearance側に用意されている設定(第2引数の<code>conf</code>テーブル)が異なることがあります。用途に応じたオプションを確認してください。</li>
+        <li>見た目データの保存先(<code>appearance</code>列)は、Tier3-17で学んだJSON保存が適しています。個別の項目(髪型・肌の色など)ごとにテーブルを分けると管理が煩雑になりがちです。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p class="version-note">本レッスンの<code>startPlayerCustomization</code>のexport構文は、公式GitHubリポジトリ(github.com/iLLeniumStudios/illenium-appearance)のソースコードで確認済みです。保存済みデータの再適用方法など、細部の仕様は導入しているバージョンのドキュメント(docs.illenium.dev)を確認してください。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>
