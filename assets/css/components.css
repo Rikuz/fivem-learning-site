@@ -204,6 +204,33 @@
   font-weight: bold;
 }
 
+/* keyword-search: したいこと逆引き検索(category.html) */
+.keyword-search {
+  margin-bottom: var(--space-2);
+}
+
+.keyword-search__label {
+  display: block;
+  font-size: var(--font-size-small);
+  font-weight: bold;
+  color: var(--color-muted);
+  margin-bottom: 6px;
+}
+
+.keyword-search__input {
+  width: 100%;
+  padding: 10px 14px;
+  font-size: var(--font-size-base);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  font-family: var(--font-body);
+}
+
+.keyword-search__input:focus {
+  outline: 2px solid var(--tier2-main);
+  outline-offset: 1px;
+}
+
 /* category-filter(category.html) */
 .category-filter {
   display: flex;

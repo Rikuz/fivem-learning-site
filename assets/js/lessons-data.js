@@ -1,5 +1,6 @@
 // assets/js/lessons-data.js — 全レッスンの唯一の情報源(Single Source of Truth)
 // レッスンを追加・変更する場合は、必ず対応するHTMLファイルも同時に作成/更新すること。
+// keywords: category.htmlの「したいこと」逆引き検索で使う自然文キーワード。複数可。
 
 const LESSONS = [
   // ===== Tier 1: 入門 =====
@@ -12,6 +13,7 @@ const LESSONS = [
     path: "lessons/tier1-beginner/01-setup-environment.html",
     estimatedMinutes: 20,
     summary: "txAdminでのローカルサーバー起動、VS Code + Lua拡張機能の導入、resourcesフォルダの場所を理解する",
+    keywords: ["ローカルサーバーを立てたい", "FiveMサーバーを起動したい", "開発環境を作りたい", "txAdminを使いたい"],
   },
   {
     id: "t1-02-lua-basics",
@@ -22,6 +24,7 @@ const LESSONS = [
     path: "lessons/tier1-beginner/02-lua-basics.html",
     estimatedMinutes: 25,
     summary: "変数、テーブル(連想配列)、関数、if文、for/whileループ、print()によるデバッグ出力を学ぶ",
+    keywords: ["Luaの基本文法を知りたい", "変数の使い方", "テーブルの使い方", "for文の書き方", "関数の作り方"],
   },
   {
     id: "t1-03-first-script",
@@ -32,6 +35,7 @@ const LESSONS = [
     path: "lessons/tier1-beginner/03-first-script.html",
     estimatedMinutes: 30,
     summary: "resourceフォルダ作成→fxmanifest.lua作成→server.cfgにensure追加→F8コンソールで動作確認する",
+    keywords: ["初めてのスクリプトを作りたい", "resourceを作りたい", "Hello Worldを表示したい", "ensureの使い方"],
   },
   {
     id: "t1-04-fxmanifest",
@@ -42,6 +46,7 @@ const LESSONS = [
     path: "lessons/tier1-beginner/04-fxmanifest.html",
     estimatedMinutes: 20,
     summary: "fx_version, game, client_script, server_script, shared_script, dependencyの意味と使い分けを理解する",
+    keywords: ["fxmanifest.luaの書き方を知りたい", "client_scriptとserver_scriptの違い", "dependencyの使い方"],
   },
   {
     id: "t1-05-debug-basics",
@@ -52,6 +57,7 @@ const LESSONS = [
     path: "lessons/tier1-beginner/05-debug-basics.html",
     estimatedMinutes: 20,
     summary: "F8コンソールの開き方、エラーメッセージの読み方(ファイル名・行番号)、print()による原因の切り分け方",
+    keywords: ["エラーの原因を調べたい", "F8コンソールの使い方", "デバッグの仕方", "print()でログを出したい"],
   },
 
   // ===== Tier 2: 初級 =====
@@ -64,6 +70,7 @@ const LESSONS = [
     path: "lessons/tier2-novice/01-events-basics.html",
     estimatedMinutes: 25,
     summary: "RegisterNetEvent, TriggerServerEvent, TriggerClientEventを使い、client/serverで処理を分ける理由を理解する",
+    keywords: ["イベントを発火させたい", "clientとserverでデータをやり取りしたい", "TriggerServerEventの使い方", "RegisterNetEventの使い方"],
   },
   {
     id: "t2-02-spawn-npc",
@@ -74,6 +81,7 @@ const LESSONS = [
     path: "lessons/tier2-novice/02-spawn-npc.html",
     estimatedMinutes: 25,
     summary: "CreatePedでNPCを生成し、FreezeEntityPositionで固定、DeletePedで削除、GetEntityCoordsで座標取得する",
+    keywords: ["NPCを配置したい", "CreatePedの使い方", "NPCを削除したい", "キャラクターを出現させたい"],
   },
   {
     id: "t2-03-blip-marker",
@@ -84,6 +92,7 @@ const LESSONS = [
     path: "lessons/tier2-novice/03-blip-marker.html",
     estimatedMinutes: 20,
     summary: "AddBlipForCoordでミニマップにアイコンを表示し、DrawMarkerで3D空間にマーカーを表示する",
+    keywords: ["ミニマップにアイコンを表示したい", "Blipを追加したい", "3Dマーカーを表示したい", "DrawMarkerの使い方"],
   },
   {
     id: "t2-04-commands",
@@ -94,6 +103,7 @@ const LESSONS = [
     path: "lessons/tier2-novice/04-commands.html",
     estimatedMinutes: 20,
     summary: "RegisterCommandでコマンドを登録し、IsPlayerAceAllowedで権限チェックの基本を行う",
+    keywords: ["独自コマンドを作りたい", "チャットコマンドを追加したい", "権限のあるコマンドを作りたい", "ACE権限を使いたい"],
   },
   {
     id: "t2-05-threads-loops",
@@ -104,6 +114,7 @@ const LESSONS = [
     path: "lessons/tier2-novice/05-threads-loops.html",
     estimatedMinutes: 25,
     summary: "CreateThreadとWait()の使い方、Wait()を省略してはいけない理由(サーバー全体が重くなる)を理解する",
+    keywords: ["ループ処理を書きたい", "Wait()の使い方", "サーバーを重くしない書き方", "CreateThreadの使い方"],
   },
 
   // ===== Tier 3: 中級 =====
@@ -116,6 +127,7 @@ const LESSONS = [
     path: "lessons/tier3-intermediate/01-nui-basics.html",
     estimatedMinutes: 30,
     summary: "fxmanifest.luaにui_pageを指定し、SendNUIMessageでLua→JSにデータを送り、SetNuiFocusでマウス操作を有効化する",
+    keywords: ["画面にUIを表示したい", "NUIを使いたい", "SendNUIMessageの使い方", "HTMLの画面を出したい"],
   },
   {
     id: "t3-02-nui-callback",
@@ -126,6 +138,7 @@ const LESSONS = [
     path: "lessons/tier3-intermediate/02-nui-callback.html",
     estimatedMinutes: 30,
     summary: "RegisterNUICallbackでJS→Lua方向を受け取り、JS側のfetch()による送信パターンを理解する",
+    keywords: ["JSからLuaにデータを送りたい", "NUIコールバックを使いたい", "fetch()でLuaを呼びたい", "RegisterNUICallbackの使い方"],
   },
   {
     id: "t3-03-database-oxmysql",
@@ -136,6 +149,7 @@ const LESSONS = [
     path: "lessons/tier3-intermediate/03-database-oxmysql.html",
     estimatedMinutes: 30,
     summary: "oxmysqlのインストールと、MySQL.Async.fetchAll / MySQL.Async.executeによるSELECT/INSERTの基本を学ぶ",
+    keywords: ["データベースを使いたい", "oxmysqlの使い方", "MySQLに保存したい", "SELECT/INSERTしたい"],
   },
   {
     id: "t3-04-items-inventory",
@@ -146,6 +160,7 @@ const LESSONS = [
     path: "lessons/tier3-intermediate/04-items-inventory.html",
     estimatedMinutes: 30,
     summary: "シンプルなアイテム所持データの管理例(テーブル設計+増減処理)と、ox_inventoryの実際のexport構文を学ぶ",
+    keywords: ["アイテムを管理したい", "インベントリを作りたい", "ox_inventoryを使いたい", "所持品を増減させたい"],
   },
   {
     id: "t3-05-server-validation",
@@ -156,6 +171,7 @@ const LESSONS = [
     path: "lessons/tier3-intermediate/05-server-validation.html",
     estimatedMinutes: 25,
     summary: "クライアントから送られた値を無条件に信用しない設計と、サーバー側での再チェックの実装例を学ぶ",
+    keywords: ["不正な値を防ぎたい", "チート対策をしたい", "サーバー側でチェックしたい", "入力値を検証したい"],
   },
 
   // ===== Tier 4: 中上級(okok/lb-phone含む) =====
@@ -168,6 +184,7 @@ const LESSONS = [
     path: "lessons/tier4-upper-intermediate/01-framework-basics.html",
     estimatedMinutes: 30,
     summary: "フレームワークの検知方法、プレイヤーデータ(お金・職業など)の取得、ESX/QBCore/Qbox/ox_coreのAPIの違いを学ぶ",
+    keywords: ["ESXを使いたい", "QBCoreを使いたい", "Qboxに対応したい", "ox_coreを使いたい", "プレイヤーのお金を取得したい", "職業を取得したい"],
   },
   {
     id: "t4-02-framework-jobs",
@@ -178,6 +195,7 @@ const LESSONS = [
     path: "lessons/tier4-upper-intermediate/02-framework-jobs.html",
     estimatedMinutes: 30,
     summary: "ESX/QBCore/QboxのJob確認、ox_coreのgroup確認、Job専用のNPC/エリア制御、給料処理の実装例を学ぶ",
+    keywords: ["Jobシステムを使いたい", "給料を支払いたい", "職業専用エリアを作りたい", "勤務中かどうか確認したい"],
   },
   {
     id: "t4-03-okok-integration",
@@ -188,6 +206,7 @@ const LESSONS = [
     path: "lessons/tier4-upper-intermediate/03-okok-integration.html",
     estimatedMinutes: 25,
     summary: "okokNotifyで通知を出し、okokTextUIでテキストUIを自作スクリプトから呼び出す",
+    keywords: ["okokNotifyで通知したい", "okokTextUIを表示したい", "通知を出したい", "画面下にテキストを出したい"],
   },
   {
     id: "t4-04-lb-phone-custom-app",
@@ -198,6 +217,7 @@ const LESSONS = [
     path: "lessons/tier4-upper-intermediate/04-lb-phone-custom-app.html",
     estimatedMinutes: 30,
     summary: "Config.CustomAppsへのアプリ登録と、AddCustomApp/RemoveCustomAppエクスポートの使い方を学ぶ",
+    keywords: ["lb-phoneにアプリを追加したい", "スマホアプリを作りたい", "Config.CustomAppsの書き方", "AddCustomAppの使い方"],
   },
   {
     id: "t4-05-lb-phone-nui-bridge",
@@ -208,6 +228,18 @@ const LESSONS = [
     path: "lessons/tier4-upper-intermediate/05-lb-phone-nui-bridge.html",
     estimatedMinutes: 30,
     summary: "SendCustomAppMessageの使い方と、onOpenのタイミングでのデータ送信の注意点を学ぶ",
+    keywords: ["lb-phoneアプリとLuaを通信させたい", "SendCustomAppMessageの使い方", "電話アプリにデータを送りたい"],
+  },
+  {
+    id: "t4-06-okok-banking-integration",
+    title: "okokBankingV2と連携する",
+    tier: 4,
+    categories: ["okok", "framework"],
+    prerequisites: ["t4-03-okok-integration"],
+    path: "lessons/tier4-upper-intermediate/06-okok-banking-integration.html",
+    estimatedMinutes: 25,
+    summary: "okokBankingV2のexport(GetAccount, AddMoney, RemoveMoney, AddTransaction, GetPlayerTransactions)を使い、口座残高の取得・入出金・取引履歴の記録を行う",
+    keywords: ["銀行システムを連携したい", "口座残高を確認したい", "お金を入金/出金したい", "okokBankingを使いたい", "取引履歴を取得したい"],
   },
 
   // ===== Tier 5: 上級 =====
@@ -220,6 +252,7 @@ const LESSONS = [
     path: "lessons/tier5-advanced/01-performance-resmon.html",
     estimatedMinutes: 25,
     summary: "F8コンソールのresmon 1でリソースごとの負荷を確認し、Wait()の値を調整する考え方を学ぶ",
+    keywords: ["処理が重い原因を調べたい", "resmonの使い方", "パフォーマンスを改善したい", "Wait()の値を調整したい"],
   },
   {
     id: "t5-02-async-db-patterns",
@@ -230,6 +263,7 @@ const LESSONS = [
     path: "lessons/tier5-advanced/02-async-db-patterns.html",
     estimatedMinutes: 30,
     summary: "コールバック地獄を避ける設計と、処理の直列化・並列化の使い分けを学ぶ",
+    keywords: ["非同期処理を整理したい", "コールバック地獄を避けたい", "複数のDB処理をまとめたい"],
   },
   {
     id: "t5-03-statebags",
@@ -240,6 +274,7 @@ const LESSONS = [
     path: "lessons/tier5-advanced/03-statebags.html",
     estimatedMinutes: 30,
     summary: "Entity StateBag / Player StateBagを使った効率的なデータ同期(頻繁なイベント発火の代替)を学ぶ",
+    keywords: ["データを効率よく同期したい", "StateBagsを使いたい", "エンティティにデータを持たせたい"],
   },
   {
     id: "t5-04-security-hardening",
@@ -250,6 +285,7 @@ const LESSONS = [
     path: "lessons/tier5-advanced/04-security-hardening.html",
     estimatedMinutes: 30,
     summary: "サーバー権威設計の徹底と、よくある改ざん手口とその対策パターンを学ぶ",
+    keywords: ["チートを防ぎたい", "改ざん対策をしたい", "レート制限をかけたい", "サーバー権威設計にしたい"],
   },
   {
     id: "t5-05-advanced-nui",
@@ -260,6 +296,7 @@ const LESSONS = [
     path: "lessons/tier5-advanced/05-advanced-nui.html",
     estimatedMinutes: 25,
     summary: "ビルドツール(Vite等)を使ったNUI構築の考え方と、ビルドレス構成との違い・使い分けを学ぶ",
+    keywords: ["Reactでnuiを作りたい", "ビルドツールを使いたい", "Viteを導入したい", "高度なUIを作りたい"],
   },
 ];
 
@@ -300,7 +337,7 @@ const CATEGORY_SUMMARY = {
   nui: "プレイヤー画面にHTML/CSSで作ったオリジナルUIを表示できるようになります。",
   database: "MySQLと連携してデータの保存・取得ができるようになります。",
   framework: "ESX/QBCoreなどのフレームワークと連携したスクリプトが作れるようになります。",
-  okok: "okokシリーズ(通知・テキストUIなど)を自作スクリプトから呼び出せるようになります。",
+  okok: "okokシリーズ(通知・テキストUI・銀行システムなど)を自作スクリプトから呼び出せるようになります。",
   "lb-phone": "lb-phoneにカスタムアプリを追加し、UIと連携できるようになります。",
   events: "client/server間の通信や、コマンド・スレッドの扱い方がわかるようになります。",
   performance: "サーバーの負荷を計測し、重くならないスクリプトを書けるようになります。",

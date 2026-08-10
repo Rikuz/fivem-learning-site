@@ -65,6 +65,31 @@ local count = exports.ox_inventory:GetItemCount(source, 'water')
 | `t4-03-okok-integration` | okokシリーズと連携する | `okok`, `nui` | t3-02 | 下記「okokシリーズ 正確な構文」を使用。通知(okokNotify)とテキストUI(okokTextUI)を自作スクリプトから呼び出す |
 | `t4-04-lb-phone-custom-app` | lb-phoneにカスタムアプリを追加する | `lb-phone` | t3-01 | 下記「lb-phone 正確な構文」を使用。`Config.CustomApps`へのアプリ登録、`AddCustomApp`/`RemoveCustomApp`エクスポート |
 | `t4-05-lb-phone-nui-bridge` | lb-phoneアプリのUIとLua間通信 | `lb-phone`, `nui` | t4-04 | 通常のNUIとの違い(`SendNUIMessage`ではなく`SendCustomAppMessage`を使う点)、`onOpen`のタイミングとデータ送信の注意点 |
+| `t4-06-okok-banking-integration` | okokBankingV2と連携する | `okok`, `framework` | t4-03 | 下記「okokBankingV2 正確な構文」を使用。口座残高の取得・入出金・取引履歴取得を自作スクリプトから呼び出す |
+
+### okokBankingV2 正確な構文(要順守・憶測禁止。docs.okokscripts.io/scripts/okokbankingv2/exports で確認済み)
+
+```lua
+-- 口座情報を取得する(society: 口座の識別子。個人口座はプレイヤーのcitizenid等、business口座は組織名など)
+local account = exports['okokBanking']:GetAccount(society)
+
+-- 入金する
+exports['okokBanking']:AddMoney(society, value)
+
+-- 出金する
+exports['okokBanking']:RemoveMoney(society, value)
+
+-- 取引履歴に記録を追加する(source省略可。Discord Webhook通知にも使われる)
+exports['okokBanking']:AddTransaction(citizenid, transactionData, source)
+-- transactionDataのtypeフィールドで使われる代表的な値:
+--   deposit(入金) / withdraw(出金) / transfer(送金) /
+--   savings_deposit(貯金への入金) / savings_withdraw(貯金からの出金) /
+--   savings_transfer(貯金内送金) / loan_create(ローン作成)
+
+-- プレイヤーの取引履歴を取得する(limit省略で全件、0以下なら空テーブル)
+local transactions = exports['okokBanking']:GetPlayerTransactions(citizenid, limit)
+```
+> ※exportのリソース名は`'okokBanking'`(V2でも変わらず、`Config.SocietyResource = "okokBanking"`)。`transactionData`の詳細なテーブル構造(sender/receiver/value/type/reason等のキー名)は公式ドキュメントのconfig-file/exportsページにも一部しか明記されていないため、実際に導入しているバージョンのドキュメント・config.luaも確認すること。
 
 ### ESX/QBCore/Qbox/ox_core 検知・取得の構文
 

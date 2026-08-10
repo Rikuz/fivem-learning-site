@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>okokBankingV2と連携する | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t4-06-okok-banking-integration">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="4">🔴 中上級</span>
+      <span class="badge category-badge">🔔 okok連携</span>
+      <span class="badge category-badge">🧩 フレームワーク連携</span>
+    </div>
+
+    <h1>okokBankingV2と連携する</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>okokBankingV2(FiveMで広く使われる銀行システムスクリプト)の口座残高を取得し、入出金を行い、取引履歴を記録・取得する</strong>ことができるようになります。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>okokBankingV2は、個人口座・ビジネス口座・貯金(savings)・ローンなどをまとめて管理する銀行システムです。自作スクリプトからは、<code>exports</code>経由でokokBankingV2が公開している関数(server側)を呼び出して連携します。</p>
+      <p>口座は<strong>society</strong>という識別子で区別されます。個人口座であればプレイヤーのcitizenidなど、ビジネス口座であれば組織名などが<code>society</code>として使われます(実際にどの値を使うかは導入しているフレームワーク・設定に依存します)。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>口座情報・残高を取得する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local account = exports['okokBanking']:GetAccount(society)
+
+if account then
+    print('口座の取得に成功しました')
+end</code></pre>
+      </div>
+
+      <h3>入金する / 出金する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">-- 入金する
+exports['okokBanking']:AddMoney(society, 500)
+
+-- 出金する(所持金が足りるかは事前にGetAccount等で確認しておく)
+exports['okokBanking']:RemoveMoney(society, 200)</code></pre>
+      </div>
+
+      <h3>取引履歴を記録する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">-- citizenid: プレイヤーの識別子(citizenid、Job名、口座識別子など)
+-- transactionData: 送金元・送金先・金額・種別・理由などをまとめたテーブル
+-- source: 省略可。Discord Webhook通知等に使われるサーバー側のプレイヤーID
+exports['okokBanking']:AddTransaction(citizenid, {
+    value = 500,
+    type = 'deposit', -- deposit(入金) / withdraw(出金) / transfer(送金) /
+                       -- savings_deposit / savings_withdraw / savings_transfer / loan_create
+    reason = '給料の入金',
+}, source)</code></pre>
+      </div>
+
+      <h3>取引履歴を取得する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">-- limitを省略すると全件、0以下を指定すると空テーブルが返る
+local allTransactions = exports['okokBanking']:GetPlayerTransactions(citizenid)
+local recentTransactions = exports['okokBanking']:GetPlayerTransactions(citizenid, 10)
+
+for _, tx in ipairs(recentTransactions) do
+    print(tx.type, tx.value)
+end</code></pre>
+      </div>
+
+      <h3>実例: 自作スクリプトの報酬をプレイヤーの口座に振り込む</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">RegisterNetEvent('myscript:completeDelivery')
+AddEventHandler('myscript:completeDelivery', function()
+    local playerId = source
+    local citizenid = getCitizenId(playerId) -- 自作スクリプト側でプレイヤーの識別子を取得する処理(Tier4-01参照)
+    local reward = 300
+
+    exports['okokBanking']:AddMoney(citizenid, reward)
+    exports['okokBanking']:AddTransaction(citizenid, {
+        value = reward,
+        type = 'deposit',
+        reason = '配達報酬',
+    }, playerId)
+
+    TriggerClientEvent('myscript:notify', playerId, ('配達報酬 $%s が振り込まれました'):format(reward))
+end)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li>exportのリソース名は<code>'okokBanking'</code>です(V2でも変わりません)。<code>'okokBankingV2'</code>のようにバージョン名を含めて書くとexportの呼び出しに失敗します。</li>
+        <li><code>AddMoney</code>/<code>RemoveMoney</code>を呼ぶだけでは取引履歴には残りません。プレイヤーに見える取引明細やDiscord Webhook通知も出したい場合は、<code>AddTransaction</code>もあわせて呼び出してください。</li>
+        <li>お金の増減処理は必ずserver側で、かつ金額はサーバー側の定義・計算結果のみを使ってください(Tier3「サーバー側バリデーション」・Tier5「セキュリティ強化」と同じ考え方です)。clientから送られてきた金額をそのまま<code>AddMoney</code>に渡してはいけません。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p class="version-note">※本レッスンのexport構文(<code>GetAccount</code>, <code>AddMoney</code>, <code>RemoveMoney</code>, <code>AddTransaction</code>, <code>GetPlayerTransactions</code>)は公式ドキュメント(docs.okokscripts.io/scripts/okokbankingv2/exports)で確認済みです。ただし<code>transactionData</code>テーブルの詳細なキー構成(sender/receiverの正確なフィールド名など)は公式ドキュメントにも一部しか記載がありませんでした。実際に導入しているバージョンのドキュメント・config.luaも必ず確認してください。バージョンによって仕様が変わる場合があります。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

@@ -4,9 +4,11 @@ function parseFilterFromURL() {
   const params = new URLSearchParams(window.location.search);
   const cat = params.get("cat");
   const tier = params.get("tier");
+  const q = params.get("q");
   return {
     categories: cat ? cat.split(",").filter(Boolean) : [],
     tiers: tier ? tier.split(",").filter(Boolean).map(Number) : [],
+    query: q || "",
   };
 }
 
@@ -14,9 +16,45 @@ function updateURL(state) {
   const params = new URLSearchParams();
   if (state.categories.length) params.set("cat", state.categories.join(","));
   if (state.tiers.length) params.set("tier", state.tiers.join(","));
+  if (state.query) params.set("q", state.query);
   const query = params.toString();
   const newURL = window.location.pathname + (query ? "?" + query : "");
   window.history.replaceState(null, "", newURL);
+}
+
+// 「したいこと」から探す逆引き検索: タイトル/サマリー/keywordsに部分一致するか判定する
+function matchesQuery(lesson, query) {
+  if (!query) return true;
+  const normalized = query.trim().toLowerCase();
+  if (!normalized) return true;
+
+  const haystack = [lesson.title, lesson.summary, ...(lesson.keywords || [])]
+    .join(" ")
+    .toLowerCase();
+
+  return haystack.includes(normalized);
+}
+
+function renderSearchBox(state, onChange) {
+  const el = document.getElementById("keyword-search");
+  if (!el) return;
+  el.className = "keyword-search";
+  el.innerHTML = `
+    <label class="keyword-search__label" for="keyword-search-input">したいことから探す(逆引き検索)</label>
+    <input
+      type="search"
+      id="keyword-search-input"
+      class="keyword-search__input"
+      placeholder="例: NPCを配置したい / 通知を出したい / 銀行と連携したい"
+      value="${state.query.replace(/"/g, "&quot;")}"
+    >
+  `;
+
+  const input = document.getElementById("keyword-search-input");
+  input.addEventListener("input", () => {
+    state.query = input.value;
+    onChange(state);
+  });
 }
 
 function renderFilterUI(state, onChange) {
@@ -103,7 +141,8 @@ function filterLessons(lessons, state) {
     const catOK =
       state.categories.length === 0 ||
       lesson.categories.some((c) => state.categories.includes(c));
-    return tierOK && catOK;
+    const queryOK = matchesQuery(lesson, state.query);
+    return tierOK && catOK && queryOK;
   });
 }
 
@@ -112,6 +151,12 @@ function renderResults(state) {
   if (!el) return;
   const lessons = window.LESSONS || [];
   const filtered = filterLessons(lessons, state);
+
+  if (filtered.length === 0) {
+    el.innerHTML = `<p class="category-summary">該当するレッスンが見つかりませんでした。検索語や絞り込み条件を変えてみてください。</p>`;
+    renderProgressUI();
+    return;
+  }
 
   if (state.categories.length === 0) {
     // カテゴリ未選択時はフラットな一覧を表示
@@ -148,6 +193,7 @@ function initCategoryPage() {
     renderResults(newState);
   };
 
+  renderSearchBox(state, rerender);
   renderFilterUI(state, rerender);
   renderResults(state);
 }
