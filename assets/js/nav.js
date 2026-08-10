@@ -1,10 +1,11 @@
 // assets/js/nav.js — 共通ヘッダー/パンくず/前後レッスンリンクの描画
 
-// lessons/tierX/*.html は2階層下、practice/*.html は1階層下にあるため、ルートへの相対パスを判定する
+// lessons/tierX/*.html・tracks/*.html は2階層/1階層下、practice/*.html は1階層下にあるため、ルートへの相対パスを判定する
 function computeSiteRoot() {
   const path = window.location.pathname;
   if (/\/lessons\//.test(path)) return "../../";
   if (/\/practice\//.test(path)) return "../";
+  if (/\/tracks\//.test(path)) return "../";
   return "";
 }
 
@@ -14,6 +15,10 @@ function findLessonById(id) {
 
 function findExerciseById(id) {
   return (window.EXERCISES || []).find((e) => e.id === id);
+}
+
+function findTrackById(id) {
+  return (window.TRACKS || []).find((t) => t.id === id);
 }
 
 function renderSiteHeader() {
@@ -28,6 +33,7 @@ function renderSiteHeader() {
         <a href="${root}index.html">難易度別ロードマップ</a>
         <a href="${root}category.html">カテゴリ別一覧</a>
         <a href="${root}practice.html">実践演習</a>
+        <a href="${root}tracks.html">プロジェクトトラック</a>
       </nav>
     </div>
   `;
@@ -38,6 +44,22 @@ function renderBreadcrumb() {
   if (!el) return;
   const root = computeSiteRoot();
   const lessonId = document.body.dataset.lessonId;
+  const trackId = document.body.dataset.trackId;
+
+  if (trackId) {
+    const track = findTrackById(trackId);
+    if (track) {
+      el.className = "breadcrumb";
+      el.innerHTML = `
+        <a href="${root}index.html">トップ</a>
+        <span> / </span>
+        <a href="${root}tracks.html">プロジェクトトラック</a>
+        <span> / </span>
+        <span>${track.emoji} ${track.title}</span>
+      `;
+      return;
+    }
+  }
 
   if (!lessonId) {
     el.innerHTML = "";

@@ -37,18 +37,21 @@ fivem-learning-site/
 ├── index.html                      # トップ: 難易度別ロードマップ(タイムライン表示)
 ├── category.html                   # カテゴリ別一覧(フィルタ・逆引き検索機能付き)
 ├── practice.html                   # 実践演習一覧(難易度順)
+├── tracks.html                     # プロジェクトトラック一覧(目的別の通し道)
 ├── assets/
 │   ├── css/
 │   │   ├── base.css                # リセット・共通レイアウト・カラー変数
 │   │   ├── components.css          # カード/バッジ/進捗バー等の部品
-│   │   └── lesson.css              # レッスンページ・演習ページ専用スタイル
+│   │   └── lesson.css              # レッスンページ・演習ページ・トラック詳細ページ専用スタイル
 │   ├── js/
 │   │   ├── lessons-data.js         # 全レッスンのメタデータ(唯一の情報源)
 │   │   ├── exercises-data.js       # 全演習のメタデータ(唯一の情報源)
+│   │   ├── tracks-data.js          # 全プロジェクトトラックのメタデータ(唯一の情報源)
 │   │   ├── progress.js             # localStorage読み書き・完了マーク処理
 │   │   ├── render-index.js         # トップページのロードマップ描画
 │   │   ├── render-category.js      # カテゴリ一覧ページの描画・フィルタ処理
 │   │   ├── render-practice.js      # 演習一覧ページの描画
+│   │   ├── render-tracks.js        # トラック一覧・トラック詳細ページの描画
 │   │   └── nav.js                  # 共通ヘッダー/パンくず/前後レッスンリンクの描画
 │   └── vendor/
 │       └── prism/                  # コードハイライト(prism.js / prism.css をローカル同梱)
@@ -59,11 +62,12 @@ fivem-learning-site/
 │   ├── tier4-upper-intermediate/   # 中上級(okok/lb-phone/Qbox/ox系含む)
 │   └── tier5-advanced/             # 上級
 ├── practice/                       # 実践演習の詳細ページ(設計仕様のみ、完成コードは載せない)
+├── tracks/                         # プロジェクトトラックの詳細ページ(順序付きチェックリスト)
 └── docs/
     ├── ARCHITECTURE.md
     ├── CONTENT_OUTLINE.md
     ├── EXERCISE_OUTLINE.md
-    ├── TRACK_OUTLINE.md          # プロジェクトトラック(目的別の通し道)の設計書。2026-08-10時点で目次のみ確定、実装は未着手
+    ├── TRACK_OUTLINE.md          # プロジェクトトラック(目的別の通し道)の設計書
     ├── DESIGN_SYSTEM.md
     └── IMPLEMENTATION_PLAN.md
 ```
@@ -193,7 +197,7 @@ npx serve .
 
 ## プロジェクトトラック(tracks/)について
 
-「lb-phoneアプリを1本作りきる」「犯罪(ゲーム内)scriptを1本作りきる」のような目的ベースの通し道を、Tier別ロードマップ・カテゴリ逆引き検索に次ぐ第3の入口として用意する予定の機能。設計(目次)は`docs/TRACK_OUTLINE.md`に確定済みだが、**2026-08-10時点で`tracks.html`/`tracks/*.html`・関連の新規レッスン/演習の実装はまだ行っていない**。着手する際は`docs/TRACK_OUTLINE.md`のチェックリストに従うこと。
+「lb-phoneアプリを1本作りきる」「犯罪(ゲーム内)scriptを1本作りきる」のような目的ベースの通し道を、Tier別ロードマップ・カテゴリ逆引き検索に次ぐ第3の入口として実装済みの機能。`tracks.html`(一覧)+ `tracks/*.html`(各トラックの詳細ページ)からなり、データは`assets/js/tracks-data.js`の`TRACKS`配列(id, title, summary, goal, steps: [{type: 'lesson'|'exercise', id, note}])を唯一の情報源とする(レッスン/演習の本体は持たず、id経由で`lessons-data.js`/`exercises-data.js`を参照するだけの索引)。設計の詳細・各ステップの根拠は`docs/TRACK_OUTLINE.md`を参照。新しいトラックを追加する場合も、レッスン・演習と同様に「ドキュメント更新→データ追加→ページ作成→検証」の順を守ること。
 
 ---
 

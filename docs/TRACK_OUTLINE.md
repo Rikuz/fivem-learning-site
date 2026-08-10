@@ -94,10 +94,12 @@ window.TRACKS = TRACKS;
 
 ## 実装時のチェックリスト(着手時に参照)
 
-- [ ] `assets/js/tracks-data.js`を新設し、`TRACKS`配列を定義する
-- [ ] `tracks.html`(一覧)・`tracks/*.html`(2本)を作成する。`nav.js`の`computeSiteRoot()`・ヘッダーリンクに`tracks.html`を追加する(`practice.html`追加時と同じ手順)
-- [ ] 新規レッスン12件(lb-phone 3件 + 犯罪script 9件)を`lessons/tierX/`に追加し、`lessons-data.js`にエントリを追加する
-- [ ] 新規演習4件を`practice/`に追加し、`exercises-data.js`にエントリを追加する
-- [ ] 新カテゴリ`crime`🚨・`law-enforcement`👮を`ARCHITECTURE.md`・`DESIGN_SYSTEM.md`・`CONTENT_OUTLINE.md`・`lessons-data.js`の`CATEGORY_INFO`/`CATEGORY_SUMMARY`に追加する
-- [ ] MDT等、外部スクリプトに依存するステップは実装前に公式ドキュメントで構文を確認し、`CONTENT_OUTLINE.md`に「正確な構文」ブロックとして追記する
-- [ ] 全体検証(ファイル存在・ID重複・前提参照・ルート絶対パス)を実施してからコミット・デプロイする
+**2026-08-11時点で実装完了。** 以下は実施済みの記録として残す。
+
+- [x] `assets/js/tracks-data.js`を新設し、`TRACKS`配列を定義する
+- [x] `tracks.html`(一覧)・`tracks/*.html`(2本)を作成する。`nav.js`の`computeSiteRoot()`・ヘッダーリンクに`tracks.html`を追加する(`practice.html`追加時と同じ手順)
+- [x] 新規レッスン12件(lb-phone 3件 + 犯罪script 9件、実際にはMDT/handcuff/jail/evidence等を含め計11件)を`lessons/tierX/`に追加し、`lessons-data.js`にエントリを追加する
+- [x] 新規演習4件を`practice/`に追加し、`exercises-data.js`にエントリを追加する
+- [x] 新カテゴリ`crime`🚨・`law-enforcement`👮を`ARCHITECTURE.md`・`DESIGN_SYSTEM.md`・`CONTENT_OUTLINE.md`・`lessons-data.js`の`CATEGORY_INFO`/`CATEGORY_SUMMARY`に追加する
+- [x] MDT等、外部スクリプトに依存するステップは自作(NUI+oxmysql+ox_target)で構成し、未検証の外部依存を導入しない設計にした(`28-mdt-police-terminal.html`のversion-note参照)
+- [x] 全体検証(ファイル存在・ID重複・前提参照・ルート絶対パス)を実施してからコミット・デプロイする
