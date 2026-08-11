@@ -38,20 +38,23 @@ fivem-learning-site/
 ├── category.html                   # カテゴリ別一覧(フィルタ・逆引き検索機能付き)
 ├── practice.html                   # 実践演習一覧(難易度順)
 ├── tracks.html                     # プロジェクトトラック一覧(目的別の通し道)
+├── samples.html                    # サンプルコード一覧(演習と1対1対応する実際に動くリソース一式)
 ├── assets/
 │   ├── css/
 │   │   ├── base.css                # リセット・共通レイアウト・カラー変数
 │   │   ├── components.css          # カード/バッジ/進捗バー等の部品
-│   │   └── lesson.css              # レッスンページ・演習ページ・トラック詳細ページ専用スタイル
+│   │   └── lesson.css              # レッスンページ・演習ページ・トラック詳細ページ・サンプル解説ページ専用スタイル
 │   ├── js/
 │   │   ├── lessons-data.js         # 全レッスンのメタデータ(唯一の情報源)
 │   │   ├── exercises-data.js       # 全演習のメタデータ(唯一の情報源)
 │   │   ├── tracks-data.js          # 全プロジェクトトラックのメタデータ(唯一の情報源)
+│   │   ├── samples-data.js         # 全サンプルコードのメタデータ(唯一の情報源)
 │   │   ├── progress.js             # localStorage読み書き・完了マーク処理
 │   │   ├── render-index.js         # トップページのロードマップ描画
 │   │   ├── render-category.js      # カテゴリ一覧ページの描画・フィルタ処理
 │   │   ├── render-practice.js      # 演習一覧ページの描画
 │   │   ├── render-tracks.js        # トラック一覧・トラック詳細ページの描画
+│   │   ├── render-samples.js       # サンプルコード一覧ページの描画
 │   │   └── nav.js                  # 共通ヘッダー/パンくず/前後レッスンリンクの描画
 │   └── vendor/
 │       └── prism/                  # コードハイライト(prism.js / prism.css をローカル同梱)
@@ -63,6 +66,7 @@ fivem-learning-site/
 │   └── tier5-advanced/             # 上級
 ├── practice/                       # 実践演習の詳細ページ(設計仕様のみ、完成コードは載せない)
 ├── tracks/                         # プロジェクトトラックの詳細ページ(順序付きチェックリスト)
+├── samples/                        # サンプルコードの解説ページ+実際に動くリソース一式(演習と同数、1対1対応)
 └── docs/
     ├── ARCHITECTURE.md
     ├── CONTENT_OUTLINE.md
@@ -192,6 +196,18 @@ npx serve .
 5. `difficulty`のバッジ表示は`window.TIER_INFO`(🟢入門〜⚫上級)をそのまま流用し、レッスンの難易度感覚と統一する。
 6. `practice/*.html`は`lessons/tierX/*.html`より1階層浅いため、アセット参照は`../assets/...`(`../../`ではない)。
 7. `progress.js`の完了トグル(`body[data-lesson-id]`)は演習ページでも再利用してよいが、`index.html`の「全体の進捗」は`window.LESSONS`のみを対象とするため、演習の完了状態はレッスンの進捗率に影響しない。
+
+---
+
+## サンプルコード(samples/)について
+
+演習(`practice/*.html`)には完成コードを載せない方針のため、あえて別の入口として`samples.html`(一覧)+ `samples/*.html`(各演習に対応するサンプルの解説ページ)+ `samples/<resource-name>/`(実際に動くリソース一式の実ファイル)を用意している。演習と同じ数(16件)、同じidで1対1対応する。
+
+1. **`samples/<resource-name>/`には、対応する演習の「ディレクトリ構造」セクションに書かれているファイル名・構成をそのまま再現した実ファイルを置く。** マルチresource構成の演習(ex-07, ex-11)は、演習の指定通り複数のresourceディレクトリに分ける。
+2. **`samples/ex-XX-slug.html`(解説ページ)には、実ファイルと同一内容のコードをレッスンページと同じ`<pre><code class="language-lua">`形式で埋め込む。** file://で直接開いた場合にfetch()が使えないため(CLAUDE.md冒頭の技術方針参照)、実ファイルの内容をこのページに動的読み込みさせることはできない。実ファイルを更新したら、解説ページの埋め込みコードも必ず同時に更新すること。
+3. サンプルのidは対応する演習と全く同じ`ex-XX-slug`を使う。`assets/js/samples-data.js`の`SAMPLES`配列にエントリを追加する(id, title, difficulty, summary, dependencies, exercisePath, path, resources: [{name, files}])。
+4. `samples/*.html`のbodyには`data-sample-id`(演習ページの`data-lesson-id`とは別属性)を付け、`nav.js`のパンくず・前後サンプルナビゲーションに使う。完了トグルチェックボックスは付けない(「サンプルを見た」と「演習を完了した」は別の状態のため)。
+5. `samples/*.html`は`practice/*.html`と同じく1階層深い(`../assets/...`)。
 
 ---
 
