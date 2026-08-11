@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>マルチresource強盗ミッション(サンプルコード) | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+  <link rel="stylesheet" href="../assets/css/lesson.css">
+  <link rel="stylesheet" href="../assets/vendor/prism/prism.css">
+</head>
+<body data-sample-id="ex-07-heist-mission">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta exercise-difficulty">
+      <span class="badge tier-badge" data-tier="5">⚫ 難易度: 上級</span>
+    </div>
+
+    <h1>マルチresource強盗ミッション(サンプルコード)</h1>
+
+    <section class="conclusion">
+      <h2>概要</h2>
+      <p>ドア解除・警察通報・報酬支払いを3つのresourceに分割し、ルーティングバケットで複数グループを隔離するサンプルです。演習の仕様は<a href="../practice/07-heist-mission.html">マルチresource強盗ミッション(演習ページ)</a>を参照してください。</p>
+    </section>
+
+    <section class="directory-structure">
+      <h2>ディレクトリ構造</h2>
+      <pre class="directory-tree">ex07-heist-core/            -- 進行管理・報酬支払いのAPIをexportsで公開
+├── fxmanifest.lua
+├── client.lua
+└── server.lua
+
+ex07-heist-door/             -- ox_doorlockと連携したドア解除ギミック
+├── fxmanifest.lua           -- dependency 'ex07-heist-core', dependency 'ox_doorlock'
+└── client.lua
+
+ex07-heist-dispatch/         -- cd_dispatchへの通報とDiscordログ
+├── fxmanifest.lua           -- dependency 'ex07-heist-core'
+└── server.lua</pre>
+    </section>
+
+    <section class="code-example">
+      <h2>コード: ex07-heist-core(進行管理・報酬支払い)</h2>
+
+      <h3>ex07-heist-core/fxmanifest.lua</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">fx_version 'cerulean'
+game 'gta5'
+
+author 'FiveM学習サイト サンプル'
+description 'ex-07: 強盗ミッション(コア)'
+version '1.0.0'
+
+client_script 'client.lua'
+server_script 'server.lua'</code></pre>
+      </div>
+
+      <h3>ex07-heist-core/server.lua</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local activeMissions = {} -- bucketId -> { players = {}, doorBreached = false }
+local nextBucketId = 1
+
+local function startMission(playerIds)
+    local bucketId = nextBucketId
+    nextBucketId = nextBucketId + 1
+
+    activeMissions[bucketId] = { players = playerIds, doorBreached = false }
+
+    for _, playerId in ipairs(playerIds) do
+        -- 参加プレイヤーを一意なルーティングバケットに移動させる(Tier5-08参照)
+        -- 同じ座標に一般プレイヤーがいても、バケットが異なれば互いに見えなくなる
+        SetPlayerRoutingBucket(playerId, bucketId)
+        Player(playerId).state:set('heistBucket', bucketId, true)
+    end
+
+    return bucketId
+end
+
+local function payReward(bucketId, amountPerPlayer)
+    local mission = activeMissions[bucketId]
+    if not mission then return end
+
+    for _, playerId in ipairs(mission.players) do
+        -- 実際にはokokBanking等で口座に振り込む(Tier4-06参照)。ここでは通知のみのデモ実装。
+        TriggerClientEvent('ex07heist:notify', playerId, ('報酬$%sを受け取りました'):format(amountPerPlayer))
+        SetPlayerRoutingBucket(playerId, 0) -- 通常ワールド(バケット0)に帰還させる
+    end
+
+    activeMissions[bucketId] = nil
+end
+
+-- 他resourceから呼び出せるようexportsで公開する(Tier3-06参照)
+exports('StartMission', startMission)
+exports('PayReward', payReward)
+
+RegisterCommand('heiststart', function(source)
+    local playerId = source
+    local bucketId = startMission({ playerId }) -- デモのため実行者1人だけを参加者にする
+
+    TriggerClientEvent('ex07heist:missionStarted', playerId, bucketId)
+end, false)
+
+RegisterCommand('heistcomplete', function(source)
+    local playerId = source
+    local bucketId = Player(playerId).state.heistBucket
+    if not bucketId then return end
+
+    payReward(bucketId, 5000)
+end, false)
+
+-- ドアギミック(ex07-heist-door)からの通知を受け、参加プレイヤー全員のStateBagsを更新する(Tier5-03参照)
+RegisterNetEvent('ex07heistcore:doorBreached')
+AddEventHandler('ex07heistcore:doorBreached', function(bucketId)
+    local mission = activeMissions[bucketId]
+    if not mission then return end
+
+    mission.doorBreached = true
+
+    for _, playerId in ipairs(mission.players) do
+        Player(playerId).state:set('doorBreached', true, true)
+    end
+end)
+
+-- 参加プレイヤーが強盗中に切断した場合の後始末(Tier2-15参照)
+AddEventHandler('playerDropped', function(reason)
+    local playerId = source
+    local bucketId = Player(playerId).state.heistBucket
+
+    if bucketId and activeMissions[bucketId] then
+        activeMissions[bucketId] = nil
+    end
+end)</code></pre>
+      </div>
+
+      <h3>ex07-heist-core/client.lua</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">RegisterNetEvent('ex07heist:missionStarted')
+AddEventHandler('ex07heist:missionStarted', function(bucketId)
+    TriggerEvent('chat:addMessage', { args = { '[強盗]', ('ミッションを開始しました(バケットID: %d)'):format(bucketId) } })
+end)
+
+RegisterNetEvent('ex07heist:notify')
+AddEventHandler('ex07heist:notify', function(message)
+    TriggerEvent('chat:addMessage', { args = { '[強盗]', message } })
+end)</code></pre>
+      </div>
+    </section>
+
+    <section class="code-example">
+      <h2>コード: ex07-heist-door(ドア解除ギミック)</h2>
+
+      <h3>ex07-heist-door/fxmanifest.lua</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">fx_version 'cerulean'
+game 'gta5'
+
+author 'FiveM学習サイト サンプル'
+description 'ex-07: 強盗ミッション(ドアギミック)'
+version '1.0.0'
+
+dependency 'ex07-heist-core'
+dependency 'ox_doorlock'
+dependency 'ox_target'
+dependency 'ox_lib'
+
+client_script 'client.lua'</code></pre>
+      </div>
+
+      <h3>ex07-heist-door/client.lua</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local HEIST_DOOR_ID = 'ex07_heist_vault_door' -- ox_doorlockの/doorlockコマンドで事前に登録しておく前提(Tier4-14参照)
+local HEIST_DOOR_COORDS = vec3(260.0, -900.0, 30.0)
+
+exports.ox_target:addBoxZone({
+    coords = HEIST_DOOR_COORDS,
+    size = vec3(1.5, 1.5, 2.5),
+    options = {
+        {
+            name = 'breach_door',
+            icon = 'fa-solid fa-screwdriver-wrench',
+            label = 'ドアをこじ開ける',
+            onSelect = function()
+                -- 一定の条件(プログレスバーの完了)を満たしたら解錠する
+                local success = lib.progressBar({
+                    duration = 8000,
+                    label = 'ドアをこじ開けています...',
+                    canCancel = true,
+                    disable = { move = true, car = true },
+                })
+
+                if not success then return end
+
+                exports.ox_doorlock:setDoorState(HEIST_DOOR_ID, false)
+
+                -- ex07-heist-coreのStateBags(Tier5-03)経由で他の参加者にも状態を伝える
+                local bucketId = LocalPlayer.state.heistBucket
+                if bucketId then
+                    TriggerServerEvent('ex07heistcore:doorBreached', bucketId)
+                end
+            end,
+        },
+    }
+})</code></pre>
+      </div>
+    </section>
+
+    <section class="code-example">
+      <h2>コード: ex07-heist-dispatch(通報・ログ)</h2>
+
+      <h3>ex07-heist-dispatch/fxmanifest.lua</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">fx_version 'cerulean'
+game 'gta5'
+
+author 'FiveM学習サイト サンプル'
+description 'ex-07: 強盗ミッション(通報・ログ)'
+version '1.0.0'
+
+dependency 'ex07-heist-core'
+dependency 'cd_dispatch'
+
+server_script 'server.lua'</code></pre>
+      </div>
+
+      <h3>ex07-heist-dispatch/server.lua</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local WEBHOOK_URL = 'https://discord.com/api/webhooks/xxxxx/yyyyy' -- 実際のWebhook URLに置き換える
+
+-- 重要操作をDiscord Webhookでログ収集する(Tier3-22参照)
+local function logToDiscord(title, description)
+    local payload = json.encode({
+        embeds = { { title = title, description = description, color = 15158332 } }
+    })
+
+    PerformHttpRequest(WEBHOOK_URL, function() end, 'POST', payload, {
+        ['Content-Type'] = 'application/json'
+    })
+end
+
+-- doorBreachedのStateBags変化を検知したら警察に通報し、Discordにログを送る(Tier5-03・Tier4-16参照)
+-- StateBagsはFiveMエンジン全体で共有される仕組みのため、どのresourceがsetしたかに関わらず検知できる
+AddStateBagChangeHandler('doorBreached', '', function(bagName, key, value)
+    if value ~= true then return end
+
+    -- StateBagのbagNameは "player:<serverId>" の形式なので、そこからサーバーIDを取り出す
+    local serverId = tonumber(bagName:match('player:(%d+)'))
+    if not serverId then return end
+
+    local ped = GetPlayerPed(serverId)
+    local coords = GetEntityCoords(ped)
+
+    TriggerEvent('cd_dispatch:AddNotification', {
+        job_table = { 'police' },
+        coords = coords,
+        title = '10-90 - 強盗事件',
+        message = '金庫室のドアが破られました',
+        flash = 0,
+        unique_id = tostring(math.random(0, 100000)),
+    })
+
+    logToDiscord('強盗が開始されました', ('プレイヤー: %s\n座標: %s'):format(GetPlayerName(serverId), tostring(coords)))
+end)</code></pre>
+      </div>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>実際のリソースファイルは<a href="ex07-heist-core/">samples/ex07-heist-core/</a>・<a href="ex07-heist-door/">samples/ex07-heist-door/</a>・<a href="ex07-heist-dispatch/">samples/ex07-heist-dispatch/</a>に置いてあります。3つのresourceは<code>dependency</code>で起動順序が保証されており、<code>ex07-heist-door</code>と<code>ex07-heist-dispatch</code>は直接お互いを知らなくても、StateBagsという共通の仕組みを介して連携しています。デモのため<code>/heiststart</code>は実行者1人だけを参加者にしていますが、実際には複数プレイヤーのグループを渡せます。</p>
+    </section>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../assets/js/lessons-data.js"></script>
+  <script src="../assets/js/exercises-data.js"></script>
+  <script src="../assets/js/samples-data.js"></script>
+  <script src="../assets/js/progress.js"></script>
+  <script src="../assets/js/nav.js"></script>
+  <script src="../assets/vendor/prism/prism.js"></script>
+  <script src="../assets/js/code-copy.js"></script>
+</body>
+</html>

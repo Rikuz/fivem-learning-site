@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>麻薬密売シンジケート(サンプルコード) | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+  <link rel="stylesheet" href="../assets/css/lesson.css">
+  <link rel="stylesheet" href="../assets/vendor/prism/prism.css">
+</head>
+<body data-sample-id="ex-11-drug-syndicate-capstone">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta exercise-difficulty">
+      <span class="badge tier-badge" data-tier="5">⚫ 難易度: 上級</span>
+    </div>
+
+    <h1>【犯罪トラック集大成】麻薬密売シンジケート(サンプルコード)</h1>
+
+    <section class="conclusion">
+      <h2>概要</h2>
+      <p>犯罪側(生産・販売・指名手配度)と警察側(MDT・逮捕・投獄・証拠品管理)を3つのresourceに分けて統合したサンプルです。演習の仕様は<a href="../practice/11-drug-syndicate-capstone.html">麻薬密売シンジケート(演習ページ)</a>を参照してください。</p>
+    </section>
+
+    <section class="directory-structure">
+      <h2>ディレクトリ構造</h2>
+      <pre class="directory-tree">ex11-syndicate-core/         -- 進行管理・指名手配度の中心resource
+├── fxmanifest.lua
+├── client.lua
+└── server.lua
+
+ex11-syndicate-crime/        -- 生産・販売(ex-10の発展)
+├── fxmanifest.lua           -- dependency 'ex11-syndicate-core'
+├── client.lua
+└── server.lua
+
+ex11-syndicate-police/       -- MDT・逮捕・投獄・証拠品管理
+├── fxmanifest.lua           -- dependency 'ex11-syndicate-core'
+├── client.lua
+└── server.lua</pre>
+    </section>
+
+    <section class="code-example">
+      <h2>コード: ex11-syndicate-core(指名手配度の一元管理)</h2>
+
+      <h3>ex11-syndicate-core/fxmanifest.lua</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">fx_version 'cerulean'
+game 'gta5'
+
+author 'FiveM学習サイト サンプル'
+description 'ex-11: 麻薬密売シンジケート(コア)'
+version '1.0.0'
+
+client_script 'client.lua'
+server_script 'server.lua'</code></pre>
+      </div>
+
+      <h3>ex11-syndicate-core/server.lua</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local wantedLevels = {} -- playerId -> スコア
+local MAX_WANTED = 100
+
+local function addWantedLevel(playerId, amount)
+    wantedLevels[playerId] = math.min(MAX_WANTED, (wantedLevels[playerId] or 0) + amount)
+    TriggerClientEvent('ex11core:wantedUpdated', playerId, wantedLevels[playerId])
+    return wantedLevels[playerId]
+end
+
+local function getWantedLevel(playerId)
+    return wantedLevels[playerId] or 0
+end
+
+local function resetWantedLevel(playerId)
+    wantedLevels[playerId] = 0
+    TriggerClientEvent('ex11core:wantedUpdated', playerId, 0)
+end
+
+local function getAllWantedPlayers()
+    local result = {}
+    for playerId, level in pairs(wantedLevels) do
+        if level > 0 then
+            table.insert(result, { id = playerId, name = GetPlayerName(playerId), level = level })
+        end
+    end
+    return result
+end
+
+-- 他resourceから呼び出せるようexportsで公開する(Tier3-06参照)
+exports('AddWantedLevel', addWantedLevel)
+exports('GetWantedLevel', getWantedLevel)
+exports('ResetWantedLevel', resetWantedLevel)
+exports('GetAllWantedPlayers', getAllWantedPlayers)</code></pre>
+      </div>
+
+      <h3>ex11-syndicate-core/client.lua</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">RegisterNetEvent('ex11core:wantedUpdated')
+AddEventHandler('ex11core:wantedUpdated', function(level)
+    TriggerEvent('chat:addMessage', { args = { '[指名手配]', ('指名手配度: %d'):format(level) } })
+end)</code></pre>
+      </div>
+    </section>
+
+    <section class="code-example">
+      <h2>コード: ex11-syndicate-crime(生産・販売)</h2>
+
+      <h3>ex11-syndicate-crime/fxmanifest.lua</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">fx_version 'cerulean'
+game 'gta5'
+
+author 'FiveM学習サイト サンプル'
+description 'ex-11: 麻薬密売シンジケート(犯罪側)'
+version '1.0.0'
+
+dependency 'ex11-syndicate-core'
+dependency 'ox_lib'
+dependency 'ox_inventory'
+
+client_script 'client.lua'
+server_script 'server.lua'</code></pre>
+      </div>
+
+      <h3>ex11-syndicate-crime/server.lua</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local COOLDOWN_MS = 15000 -- Tier5-04のクールダウンの考え方
+local playerCooldown = {}
+local RAW_ITEM = 'ex11_raw_material'
+local PRODUCT_ITEM = 'ex11_processed_drugs'
+
+local function isOnCooldown(playerId)
+    return playerCooldown[playerId] and GetGameTimer() < playerCooldown[playerId]
+end
+
+local function setCooldown(playerId)
+    playerCooldown[playerId] = GetGameTimer() + COOLDOWN_MS
+end
+
+RegisterNetEvent('ex11crime:grow')
+AddEventHandler('ex11crime:grow', function()
+    local playerId = source
+    if isOnCooldown(playerId) then return end
+    setCooldown(playerId)
+
+    -- ex-10と同じ栽培工程(70%成功)
+    if math.random() > 0.7 then
+        TriggerClientEvent('ex11crime:notify', playerId, '栽培に失敗しました')
+        return
+    end
+
+    exports.ox_inventory:AddItem(playerId, RAW_ITEM, 1)
+    -- 生産行為も指名手配度を上げる(コアのexport経由、Tier4-24参照)
+    exports['ex11-syndicate-core']:AddWantedLevel(playerId, 5)
+
+    TriggerClientEvent('ex11crime:notify', playerId, '生の原料を1個入手しました')
+end)
+
+RegisterNetEvent('ex11crime:refine')
+AddEventHandler('ex11crime:refine', function()
+    local playerId = source
+    if isOnCooldown(playerId) then return end
+
+    local RAW_REQUIRED = 3
+    local count = exports.ox_inventory:GetItemCount(playerId, RAW_ITEM)
+    if count < RAW_REQUIRED then
+        TriggerClientEvent('ex11crime:notify', playerId, ('生の原料が足りません(必要: %d個)'):format(RAW_REQUIRED))
+        return
+    end
+    setCooldown(playerId)
+
+    exports.ox_inventory:RemoveItem(playerId, RAW_ITEM, RAW_REQUIRED)
+
+    if math.random() > 0.8 then
+        TriggerClientEvent('ex11crime:notify', playerId, '精製に失敗し、原料を失いました')
+        return
+    end
+
+    exports.ox_inventory:AddItem(playerId, PRODUCT_ITEM, 1)
+    exports['ex11-syndicate-core']:AddWantedLevel(playerId, 10)
+
+    TriggerClientEvent('ex11crime:notify', playerId, '完成品を1個精製しました')
+end)
+
+RegisterNetEvent('ex11crime:sell')
+AddEventHandler('ex11crime:sell', function()
+    local playerId = source
+    local count = exports.ox_inventory:GetItemCount(playerId, PRODUCT_ITEM)
+
+    if count < 1 then
+        TriggerClientEvent('ex11crime:notify', playerId, '売却できる完成品がありません')
+        return
+    end
+
+    exports.ox_inventory:RemoveItem(playerId, PRODUCT_ITEM, 1)
+    exports['ex11-syndicate-core']:AddWantedLevel(playerId, 15) -- 売却は最も指名手配度が上がる
+
+    TriggerClientEvent('ex11crime:notify', playerId, '完成品を$300で売却しました')
+end)</code></pre>
+      </div>
+
+      <h3>ex11-syndicate-crime/client.lua</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">RegisterCommand('syndicate_grow', function()
+    local success = lib.progressBar({
+        duration = 4000,
+        label = '栽培しています...',
+        canCancel = true,
+        disable = { move = true, car = true },
+    })
+
+    if success then
+        TriggerServerEvent('ex11crime:grow')
+    end
+end, false)
+
+RegisterCommand('syndicate_refine', function()
+    local success = lib.progressBar({
+        duration = 5000,
+        label = '精製しています...',
+        canCancel = true,
+        disable = { move = true, car = true },
+    })
+
+    if success then
+        TriggerServerEvent('ex11crime:refine')
+    end
+end, false)
+
+RegisterCommand('syndicate_sell', function()
+    TriggerServerEvent('ex11crime:sell')
+end, false)
+
+RegisterNetEvent('ex11crime:notify')
+AddEventHandler('ex11crime:notify', function(message)
+    TriggerEvent('chat:addMessage', { args = { '[シンジケート]', message } })
+end)</code></pre>
+      </div>
+    </section>
+
+    <section class="code-example">
+      <h2>コード: ex11-syndicate-police(MDT・逮捕・投獄・証拠品管理)</h2>
+
+      <h3>ex11-syndicate-police/fxmanifest.lua</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">fx_version 'cerulean'
+game 'gta5'
+
+author 'FiveM学習サイト サンプル'
+description 'ex-11: 麻薬密売シンジケート(警察側)'
+version '1.0.0'
+
+dependency 'ex11-syndicate-core'
+dependency 'ox_inventory'
+
+client_script 'client.lua'
+server_script 'server.lua'</code></pre>
+      </div>
+
+      <h3>ex11-syndicate-police/server.lua</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local jailedPlayers = {} -- playerId -> releaseAt(GetGameTimer基準)
+
+-- 証拠品保管庫を登録する(Tier3-37・Tier4-31参照)
+CreateThread(function()
+    exports.ox_inventory:RegisterStash('ex11_evidence_bag', '証拠品保管庫', 100, 500000, false, { police = 0 })
+end)
+
+-- MDT(簡易版): コアから指名手配度が高いプレイヤーの一覧を取得して表示する(Tier4-28参照)
+RegisterCommand('mdtcheck', function(source)
+    local playerId = source
+    local wantedPlayers = exports['ex11-syndicate-core']:GetAllWantedPlayers()
+
+    if #wantedPlayers == 0 then
+        TriggerClientEvent('ex11police:notify', playerId, '現在指名手配中のプレイヤーはいません')
+        return
+    end
+
+    for _, p in ipairs(wantedPlayers) do
+        TriggerClientEvent('ex11police:notify', playerId, ('[%d] %s — 指名手配度: %d'):format(p.id, p.name, p.level))
+    end
+end, false)
+
+RegisterCommand('arrest', function(source, args)
+    local officerId = source
+    local targetId = tonumber(args[1])
+    if not targetId then return end
+
+    local officerPed = GetPlayerPed(officerId)
+    local targetPed = GetPlayerPed(targetId)
+    if targetPed == 0 then return end
+
+    local distance = #(GetEntityCoords(officerPed) - GetEntityCoords(targetPed))
+    if distance > 3.0 then
+        TriggerClientEvent('ex11police:notify', officerId, '対象に近づいてください')
+        return
+    end
+
+    -- 押収: 所持している薬物をevidence bagに移す(Tier4-31参照)
+    -- ※スタッシュへの直接AddItemはox_inventoryのバージョンによって挙動が変わる可能性があるため、
+    --   導入時は必ず動作確認と公式ドキュメントの確認を行うこと
+    local drugCount = exports.ox_inventory:GetItemCount(targetId, 'ex11_processed_drugs')
+    if drugCount > 0 then
+        exports.ox_inventory:RemoveItem(targetId, 'ex11_processed_drugs', drugCount)
+        exports.ox_inventory:AddItem('ex11_evidence_bag', 'ex11_processed_drugs', drugCount)
+    end
+
+    -- 拘束状態をStateBagsで同期する(Tier5-03・Tier4-29参照)
+    Player(targetId).state:set('isHandcuffed', true, true)
+    TriggerClientEvent('ex11police:onHandcuffed', targetId, true)
+
+    -- 投獄する(Tier4-30参照): 5分後に自動釈放する
+    local releaseAt = GetGameTimer() + (5 * 60 * 1000)
+    jailedPlayers[targetId] = releaseAt
+
+    TriggerClientEvent('ex11police:jailed', targetId, 5)
+    TriggerClientEvent('ex11police:notify', officerId, ('%sを逮捕し、押収品%d個を確保しました'):format(GetPlayerName(targetId), drugCount))
+end, false)
+
+-- 投獄完了(時間経過での自動釈放)を定期的にチェックする(Tier4-30参照)
+CreateThread(function()
+    while true do
+        Wait(30000)
+
+        for playerId, releaseAt in pairs(jailedPlayers) do
+            if GetGameTimer() >= releaseAt then
+                jailedPlayers[playerId] = nil
+                Player(playerId).state:set('isHandcuffed', false, true)
+                TriggerClientEvent('ex11police:onHandcuffed', playerId, false)
+
+                -- 投獄完了で指名手配度をリセットする(コアのexport経由)
+                exports['ex11-syndicate-core']:ResetWantedLevel(playerId)
+                TriggerClientEvent('ex11police:notify', playerId, '釈放されました。指名手配度がリセットされました')
+            end
+        end
+    end
+end)</code></pre>
+      </div>
+
+      <h3>ex11-syndicate-police/client.lua</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local isHandcuffed = false
+
+RegisterNetEvent('ex11police:onHandcuffed')
+AddEventHandler('ex11police:onHandcuffed', function(handcuffed)
+    isHandcuffed = handcuffed
+    local ped = PlayerPedId()
+
+    if handcuffed then
+        DisablePlayerFiring(ped, true)
+    else
+        DisablePlayerFiring(ped, false)
+    end
+end)
+
+-- 拘束中は攻撃・狙う操作を無効化する(Tier4-29参照)
+CreateThread(function()
+    while true do
+        Wait(0)
+        if isHandcuffed then
+            DisableControlAction(0, 24, true)
+            DisableControlAction(0, 25, true)
+        end
+    end
+end)
+
+RegisterNetEvent('ex11police:jailed')
+AddEventHandler('ex11police:jailed', function(minutes)
+    TriggerEvent('chat:addMessage', { args = { '[警察]', ('投獄されました(%d分)'):format(minutes) } })
+end)
+
+RegisterNetEvent('ex11police:notify')
+AddEventHandler('ex11police:notify', function(message)
+    TriggerEvent('chat:addMessage', { args = { '[警察]', message } })
+end)</code></pre>
+      </div>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p class="version-note">実際のリソースファイルは<a href="ex11-syndicate-core/">samples/ex11-syndicate-core/</a>・<a href="ex11-syndicate-crime/">samples/ex11-syndicate-crime/</a>・<a href="ex11-syndicate-police/">samples/ex11-syndicate-police/</a>に置いてあります。犯罪側・警察側はどちらも直接お互いを知らず、共通の<code>ex11-syndicate-core</code>のexports経由でのみやり取りします。MDTは演習の仕様通りチャットメッセージによる簡易表示にしています(NUI画面が必要な場合はTier4-28を参照して発展させてください)。</p>
+    </section>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../assets/js/lessons-data.js"></script>
+  <script src="../assets/js/exercises-data.js"></script>
+  <script src="../assets/js/samples-data.js"></script>
+  <script src="../assets/js/progress.js"></script>
+  <script src="../assets/js/nav.js"></script>
+  <script src="../assets/vendor/prism/prism.js"></script>
+  <script src="../assets/js/code-copy.js"></script>
+</body>
+</html>
