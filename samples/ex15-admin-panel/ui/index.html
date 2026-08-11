@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="panel" class="hidden">
+    <div class="panel__header">
+      <h1>管理者パネル</h1>
+      <button id="close-btn">閉じる</button>
+    </div>
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="players">プレイヤー</button>
+      <button class="tab-btn" data-tab="reports">通報</button>
+    </div>
+    <div id="tab-players" class="tab-content">
+      <ul id="player-list"></ul>
+    </div>
+    <div id="tab-reports" class="tab-content hidden">
+      <ul id="report-list"></ul>
+    </div>
+  </div>
+  <script src="script.js"></script>
+</body>
+</html>

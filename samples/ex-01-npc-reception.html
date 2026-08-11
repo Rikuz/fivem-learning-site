@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NPC受付システム(サンプルコード) | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+  <link rel="stylesheet" href="../assets/css/lesson.css">
+  <link rel="stylesheet" href="../assets/vendor/prism/prism.css">
+</head>
+<body data-sample-id="ex-01-npc-reception">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta exercise-difficulty">
+      <span class="badge tier-badge" data-tier="1">🟢 難易度: 入門</span>
+    </div>
+
+    <h1>NPC受付システム(サンプルコード)</h1>
+
+    <section class="conclusion">
+      <h2>概要</h2>
+      <p>特定座標にNPCとBlipを配置し、近くで<code>/reception</code>コマンドを実行すると案内メッセージが出るサンプルです。演習の仕様は<a href="../practice/01-npc-reception.html">NPC受付システム(演習ページ)</a>を参照してください。</p>
+    </section>
+
+    <section class="directory-structure">
+      <h2>ディレクトリ構造</h2>
+      <pre class="directory-tree">ex01-reception/
+├── fxmanifest.lua
+└── client.lua</pre>
+    </section>
+
+    <section class="code-example">
+      <h2>コード</h2>
+
+      <h3>fxmanifest.lua</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">fx_version 'cerulean'
+game 'gta5'
+
+author 'FiveM学習サイト サンプル'
+description 'ex-01: NPC受付システム'
+version '1.0.0'
+
+client_script 'client.lua'</code></pre>
+      </div>
+
+      <h3>client.lua</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local RECEPTION_COORDS = vec3(100.0, 200.0, 30.0)
+local RECEPTION_HEADING = 90.0
+local INTERACT_DISTANCE = 3.0
+
+local receptionPed = nil
+local receptionBlip = nil
+
+local function spawnReception()
+    local model = `a_m_m_business_01`
+
+    RequestModel(model)
+    while not HasModelLoaded(model) do
+        Wait(0)
+    end
+
+    receptionPed = CreatePed(4, model, RECEPTION_COORDS.x, RECEPTION_COORDS.y, RECEPTION_COORDS.z, RECEPTION_HEADING, false, false)
+
+    FreezeEntityPosition(receptionPed, true)
+    SetEntityInvincible(receptionPed, true)
+    SetBlockingOfNonTemporaryEvents(receptionPed, true)
+
+    SetModelAsNoLongerNeeded(model)
+
+    receptionBlip = AddBlipForCoord(RECEPTION_COORDS.x, RECEPTION_COORDS.y, RECEPTION_COORDS.z)
+    SetBlipSprite(receptionBlip, 280)
+    SetBlipColour(receptionBlip, 2)
+    SetBlipScale(receptionBlip, 0.8)
+    SetBlipAsShortRange(receptionBlip, true)
+
+    BeginTextCommandSetBlipName('STRING')
+    AddTextComponentString('受付')
+    EndTextCommandSetBlipName(receptionBlip)
+end
+
+-- resource起動時に1度だけ生成する(restartしても重複生成されないよう、生成処理はここだけに置く)
+CreateThread(function()
+    spawnReception()
+end)
+
+RegisterCommand('reception', function()
+    if not receptionPed or not DoesEntityExist(receptionPed) then return end
+
+    local playerCoords = GetEntityCoords(PlayerPedId())
+    local distance = #(playerCoords - RECEPTION_COORDS)
+
+    if distance <= INTERACT_DISTANCE then
+        TriggerEvent('chat:addMessage', { args = { '[受付]', 'いらっしゃいませ!ご用件はチャットでお知らせください。' } })
+    else
+        TriggerEvent('chat:addMessage', { args = { '[受付]', '受付に近づいてください。' } })
+    end
+end, false)
+
+-- resource停止時にNPC・Blipを確実に削除する
+AddEventHandler('onResourceStop', function(resourceName)
+    if GetCurrentResourceName() ~= resourceName then return end
+
+    if receptionPed and DoesEntityExist(receptionPed) then
+        SetEntityAsMissionEntity(receptionPed, true, true)
+        DeletePed(receptionPed)
+    end
+
+    if receptionBlip then
+        RemoveBlip(receptionBlip)
+    end
+end)</code></pre>
+      </div>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>実際のリソースファイルは<a href="ex01-reception/">samples/ex01-reception/</a>にそのまま置いてあります。この2ファイルをresourcesフォルダにコピーし、<code>server.cfg</code>に<code>ensure ex01-reception</code>を追加すればそのまま動作します。</p>
+    </section>
+
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../assets/js/lessons-data.js"></script>
+  <script src="../assets/js/exercises-data.js"></script>
+  <script src="../assets/js/samples-data.js"></script>
+  <script src="../assets/js/progress.js"></script>
+  <script src="../assets/js/nav.js"></script>
+  <script src="../assets/vendor/prism/prism.js"></script>
+  <script src="../assets/js/code-copy.js"></script>
+</body>
+</html>

@@ -1,0 +1,89 @@
+/* lb-phoneアプリの画面は320x560程度の縦長サイズを前提にする(Tier4-21参照) */
+html, body {
+  margin: 0;
+  width: 320px;
+  height: 560px;
+  background: #101014;
+  color: #fff;
+  font-family: sans-serif;
+  overflow: hidden;
+}
+
+.hidden {
+  display: none;
+}
+
+.screen {
+  padding: 12px;
+  box-sizing: border-box;
+}
+
+h1 {
+  font-size: 18px;
+  margin: 0 0 12px;
+}
+
+#message-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 12px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+#message-list li {
+  padding: 8px;
+  border-bottom: 1px solid #2a2a30;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.compose {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.compose input,
+.compose textarea {
+  background: #1c1c22;
+  border: 1px solid #333;
+  border-radius: 4px;
+  color: #fff;
+  padding: 6px;
+  font-size: 13px;
+}
+
+.compose textarea {
+  height: 60px;
+  resize: none;
+}
+
+.compose button {
+  background: #4c7dff;
+  border: none;
+  border-radius: 4px;
+  color: #fff;
+  padding: 8px;
+  cursor: pointer;
+}
+
+#feedback {
+  font-size: 12px;
+  color: #7CFC98;
+  min-height: 1.2em;
+}
+
+#back-btn {
+  background: none;
+  border: none;
+  color: #4c7dff;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0 0 12px;
+}
+
+#detail-sender {
+  font-weight: bold;
+  margin-bottom: 8px;
+}

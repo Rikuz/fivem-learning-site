@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="hud">
+    <div id="speedometer" style="display:none"></div>
+    <div class="status-bars">
+      <div class="status-bar">
+        <span class="status-bar__label">体力</span>
+        <div class="status-bar__track"><div id="health-bar" class="status-bar__fill status-bar__fill--health"></div></div>
+      </div>
+      <div class="status-bar">
+        <span class="status-bar__label">満腹度</span>
+        <div class="status-bar__track"><div id="hunger-bar" class="status-bar__fill status-bar__fill--hunger"></div></div>
+      </div>
+      <div class="status-bar">
+        <span class="status-bar__label">喉の渇き</span>
+        <div class="status-bar__track"><div id="thirst-bar" class="status-bar__fill status-bar__fill--thirst"></div></div>
+      </div>
+    </div>
+  </div>
+  <script src="script.js"></script>
+</body>
+</html>

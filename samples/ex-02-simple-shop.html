@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>シンプルショップ(サンプルコード) | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+  <link rel="stylesheet" href="../assets/css/lesson.css">
+  <link rel="stylesheet" href="../assets/vendor/prism/prism.css">
+</head>
+<body data-sample-id="ex-02-simple-shop">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta exercise-difficulty">
+      <span class="badge tier-badge" data-tier="2">🟡 難易度: 初級</span>
+    </div>
+
+    <h1>シンプルショップ(NUI+イベント)(サンプルコード)</h1>
+
+    <section class="conclusion">
+      <h2>概要</h2>
+      <p>NUIで商品一覧を表示し、購入ボタンを押すとserver側で所持金を確認して購入処理を行うサンプルです。演習の仕様は<a href="../practice/02-simple-shop.html">シンプルショップ(演習ページ)</a>を参照してください。</p>
+    </section>
+
+    <section class="directory-structure">
+      <h2>ディレクトリ構造</h2>
+      <pre class="directory-tree">ex02-shop/
+├── fxmanifest.lua
+├── client.lua
+├── server.lua
+└── ui/
+    ├── index.html
+    ├── style.css
+    └── script.js</pre>
+    </section>
+
+    <section class="code-example">
+      <h2>コード</h2>
+
+      <h3>fxmanifest.lua</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">fx_version 'cerulean'
+game 'gta5'
+
+author 'FiveM学習サイト サンプル'
+description 'ex-02: シンプルショップ(NUI+イベント)'
+version '1.0.0'
+
+ui_page 'ui/index.html'
+
+files {
+    'ui/index.html',
+    'ui/style.css',
+    'ui/script.js'
+}
+
+client_script 'client.lua'
+server_script 'server.lua'</code></pre>
+      </div>
+
+      <h3>server.lua</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local SHOP_ITEMS = {
+    { name = 'water', label = 'ミネラルウォーター', price = 10 },
+    { name = 'bread', label = 'パン', price = 25 },
+    { name = 'phone', label = '携帯電話', price = 500 },
+}
+
+local playerMoney = {} -- playerId -> 所持金(メモリ上の簡易管理。DB連携はTier3-03以降で扱う)
+
+local function getMoney(playerId)
+    if not playerMoney[playerId] then
+        playerMoney[playerId] = 1000 -- 初期所持金
+    end
+    return playerMoney[playerId]
+end
+
+local function findItem(name)
+    for _, item in ipairs(SHOP_ITEMS) do
+        if item.name == name then return item end
+    end
+    return nil
+end
+
+RegisterNetEvent('ex02shop:requestOpen')
+AddEventHandler('ex02shop:requestOpen', function()
+    local playerId = source
+    TriggerClientEvent('ex02shop:open', playerId, SHOP_ITEMS, getMoney(playerId))
+end)
+
+RegisterNetEvent('ex02shop:purchase')
+AddEventHandler('ex02shop:purchase', function(itemName)
+    local playerId = source
+    local item = findItem(itemName)
+
+    if not item then
+        TriggerClientEvent('ex02shop:purchaseResult', playerId, false, '存在しない商品です', getMoney(playerId))
+        return
+    end
+
+    local money = getMoney(playerId)
+    if money < item.price then
+        TriggerClientEvent('ex02shop:purchaseResult', playerId, false, '所持金が足りません', money)
+        return
+    end
+
+    playerMoney[playerId] = money - item.price
+    TriggerClientEvent('ex02shop:purchaseResult', playerId, true, ('%sを購入しました'):format(item.label), playerMoney[playerId])
+end)</code></pre>
+      </div>
+
+      <h3>client.lua</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">RegisterCommand('shop', function()
+    TriggerServerEvent('ex02shop:requestOpen')
+end, false)
+
+RegisterNetEvent('ex02shop:open')
+AddEventHandler('ex02shop:open', function(items, money)
+    SetNuiFocus(true, true)
+    SendNUIMessage({ action = 'openShop', items = items, money = money })
+end)
+
+RegisterNetEvent('ex02shop:purchaseResult')
+AddEventHandler('ex02shop:purchaseResult', function(success, message, money)
+    SendNUIMessage({ action = 'purchaseResult', success = success, message = message, money = money })
+end)
+
+RegisterNUICallback('purchase', function(data, cb)
+    TriggerServerEvent('ex02shop:purchase', data.itemName)
+    cb('ok')
+end)
+
+RegisterNUICallback('closeShop', function(data, cb)
+    SetNuiFocus(false, false)
+    cb('ok')
+end)</code></pre>
+      </div>
+
+      <h3>ui/index.html</h3>
+      <div class="code-block">
+        <pre><code class="language-markup">&lt;!doctype html&gt;
+&lt;html lang="ja"&gt;
+&lt;head&gt;
+  &lt;meta charset="utf-8"&gt;
+  &lt;link rel="stylesheet" href="style.css"&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;div id="shop" class="hidden"&gt;
+    &lt;div class="shop__header"&gt;
+      &lt;h1&gt;ショップ&lt;/h1&gt;
+      &lt;span id="money"&gt;&lt;/span&gt;
+      &lt;button id="close-btn"&gt;閉じる&lt;/button&gt;
+    &lt;/div&gt;
+    &lt;ul id="item-list"&gt;&lt;/ul&gt;
+    &lt;p id="feedback"&gt;&lt;/p&gt;
+  &lt;/div&gt;
+  &lt;script src="script.js"&gt;&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;</code></pre>
+      </div>
+
+      <h3>ui/style.css</h3>
+      <div class="code-block">
+        <pre><code class="language-css">html, body {
+  background: transparent;
+  margin: 0;
+  font-family: sans-serif;
+}
+
+.hidden {
+  display: none;
+}
+
+#shop {
+  position: fixed;
+  top: 20%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 360px;
+  background: #1e1e1e;
+  color: #fff;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.shop__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+#item-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+#item-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #333;
+}
+
+#feedback {
+  min-height: 1.2em;
+  color: #7CFC98;
+}</code></pre>
+      </div>
+
+      <h3>ui/script.js</h3>
+      <div class="code-block">
+        <pre><code class="language-javascript">function post(name, body) {
+  return fetch(`https://${GetParentResourceName()}/${name}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json; charset=UTF-8' },
+    body: JSON.stringify(body || {}),
+  });
+}
+
+function renderItems(items) {
+  const list = document.getElementById('item-list');
+  list.innerHTML = '';
+
+  items.forEach((item) => {
+    const li = document.createElement('li');
+    li.innerHTML = `${item.label}($${item.price})`;
+
+    const buyButton = document.createElement('button');
+    buyButton.textContent = '購入';
+    buyButton.addEventListener('click', () => {
+      post('purchase', { itemName: item.name });
+    });
+
+    li.appendChild(buyButton);
+    list.appendChild(li);
+  });
+}
+
+window.addEventListener('message', (event) => {
+  const data = event.data;
+
+  if (data.action === 'openShop') {
+    document.getElementById('shop').classList.remove('hidden');
+    document.getElementById('money').textContent = `所持金: $${data.money}`;
+    document.getElementById('feedback').textContent = '';
+    renderItems(data.items);
+  }
+
+  if (data.action === 'purchaseResult') {
+    document.getElementById('money').textContent = `所持金: $${data.money}`;
+    const feedback = document.getElementById('feedback');
+    feedback.textContent = data.message;
+    feedback.style.color = data.success ? '#7CFC98' : '#FF6B6B';
+  }
+});
+
+document.getElementById('close-btn').addEventListener('click', () => {
+  document.getElementById('shop').classList.add('hidden');
+  post('closeShop');
+});</code></pre>
+      </div>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>実際のリソースファイルは<a href="ex02-shop/">samples/ex02-shop/</a>に置いてあります。<code>ui/script.js</code>内の<code>fetch</code>はFiveMのNUI環境(実際のゲームクライアント)でのみ正常に動作します。ブラウザで<code>ui/index.html</code>を単体で開いても、<code>GetParentResourceName</code>が存在せずエラーになりますが、これはFiveM実機外での想定通りの挙動です(Tier3-02参照)。</p>
+    </section>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../assets/js/lessons-data.js"></script>
+  <script src="../assets/js/exercises-data.js"></script>
+  <script src="../assets/js/samples-data.js"></script>
+  <script src="../assets/js/progress.js"></script>
+  <script src="../assets/js/nav.js"></script>
+  <script src="../assets/vendor/prism/prism.js"></script>
+  <script src="../assets/js/code-copy.js"></script>
+</body>
+</html>

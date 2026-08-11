@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>共有倉庫(スタッシュ)システム(サンプルコード) | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+  <link rel="stylesheet" href="../assets/css/lesson.css">
+  <link rel="stylesheet" href="../assets/vendor/prism/prism.css">
+</head>
+<body data-sample-id="ex-04-shared-stash">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta exercise-difficulty">
+      <span class="badge tier-badge" data-tier="3">🟠 難易度: 中級</span>
+    </div>
+
+    <h1>共有倉庫(スタッシュ)システム(サンプルコード)</h1>
+
+    <section class="conclusion">
+      <h2>概要</h2>
+      <p>ox_targetでインタラクション可能な倉庫を設置し、DBに永続化されたアイテムを預け入れ・引き出しできるサンプルです。演習の仕様は<a href="../practice/04-shared-stash.html">共有倉庫(スタッシュ)システム(演習ページ)</a>を参照してください。</p>
+    </section>
+
+    <section class="directory-structure">
+      <h2>ディレクトリ構造</h2>
+      <pre class="directory-tree">ex04-stash/
+├── fxmanifest.lua
+├── client.lua
+├── server.lua
+└── stash.sql</pre>
+    </section>
+
+    <section class="code-example">
+      <h2>コード</h2>
+
+      <h3>stash.sql</h3>
+      <div class="code-block">
+        <pre><code class="language-sql">CREATE TABLE IF NOT EXISTS `ex04_stash_items` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `stash_id` VARCHAR(50) NOT NULL,
+  `item_name` VARCHAR(50) NOT NULL,
+  `amount` INT NOT NULL,
+  UNIQUE KEY `stash_item` (`stash_id`, `item_name`)
+);
+
+-- スタッシュID・アイテム名・個数の組(リレーショナル設計)を採用した。
+-- JSON列にまとめる設計(Tier3-17参照)は、1アイテムだけを増減する更新が多いこのユースケースでは
+-- 「JSON全体を読み込んで書き換えて保存し直す」処理になり非効率なため、更新頻度の高いデータは
+-- 列として持つリレーショナル設計の方が適していると判断した。</code></pre>
+      </div>
+
+      <h3>fxmanifest.lua</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">fx_version 'cerulean'
+game 'gta5'
+
+author 'FiveM学習サイト サンプル'
+description 'ex-04: 共有倉庫(スタッシュ)システム'
+version '1.0.0'
+
+dependency 'ox_target'
+dependency 'oxmysql'
+
+client_script 'client.lua'
+server_script 'server.lua'</code></pre>
+      </div>
+
+      <h3>client.lua</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local STASH_ID = 'shared_warehouse_01'
+local STASH_COORDS = vec3(150.0, 250.0, 30.0)
+
+exports.ox_target:addBoxZone({
+    coords = STASH_COORDS,
+    size = vec3(2.0, 2.0, 2.0),
+    options = {
+        {
+            name = 'open_stash',
+            icon = 'fa-solid fa-box-open',
+            label = '倉庫を開ける',
+            onSelect = function()
+                TriggerServerEvent('ex04stash:requestOpen', STASH_ID)
+            end,
+        },
+    }
+})
+
+RegisterNetEvent('ex04stash:showContents')
+AddEventHandler('ex04stash:showContents', function(items)
+    if #items == 0 then
+        TriggerEvent('chat:addMessage', { args = { '[倉庫]', '中身は空です' } })
+        return
+    end
+
+    for _, item in ipairs(items) do
+        TriggerEvent('chat:addMessage', { args = { '[倉庫]', ('%s x%d'):format(item.item_name, item.amount) } })
+    end
+end)
+
+RegisterCommand('stashdeposit', function(source, args)
+    local itemName = args[1]
+    local amount = tonumber(args[2])
+    if not itemName or not amount then
+        TriggerEvent('chat:addMessage', { args = { '[倉庫]', '使い方: /stashdeposit [アイテム名] [個数]' } })
+        return
+    end
+    TriggerServerEvent('ex04stash:deposit', STASH_ID, itemName, amount)
+end, false)
+
+RegisterCommand('stashwithdraw', function(source, args)
+    local itemName = args[1]
+    local amount = tonumber(args[2])
+    if not itemName or not amount then
+        TriggerEvent('chat:addMessage', { args = { '[倉庫]', '使い方: /stashwithdraw [アイテム名] [個数]' } })
+        return
+    end
+    TriggerServerEvent('ex04stash:withdraw', STASH_ID, itemName, amount)
+end, false)
+
+-- デバッグ用: 所持アイテムを追加する(ox_inventory等が無い環境での動作確認用)
+RegisterCommand('stashgiveitem', function(source, args)
+    TriggerServerEvent('ex04stash:debugGiveItem', args[1], tonumber(args[2]))
+end, false)</code></pre>
+      </div>
+
+      <h3>server.lua</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">-- プレイヤーの所持数は簡易的にメモリ上のテーブルで管理する(実運用ではox_inventory等と連携する、Tier3-04参照)
+local playerInventory = {} -- playerId -> { [itemName] = amount }
+
+local function getPlayerItemCount(playerId, itemName)
+    return (playerInventory[playerId] and playerInventory[playerId][itemName]) or 0
+end
+
+local function addPlayerItem(playerId, itemName, amount)
+    playerInventory[playerId] = playerInventory[playerId] or {}
+    playerInventory[playerId][itemName] = getPlayerItemCount(playerId, itemName) + amount
+end
+
+local function removePlayerItem(playerId, itemName, amount)
+    playerInventory[playerId][itemName] = getPlayerItemCount(playerId, itemName) - amount
+end
+
+RegisterNetEvent('ex04stash:requestOpen')
+AddEventHandler('ex04stash:requestOpen', function(stashId)
+    local playerId = source
+    local items = MySQL.query.await('SELECT item_name, amount FROM ex04_stash_items WHERE stash_id = ?', { stashId })
+    TriggerClientEvent('ex04stash:showContents', playerId, items or {})
+end)
+
+RegisterNetEvent('ex04stash:deposit')
+AddEventHandler('ex04stash:deposit', function(stashId, itemName, amount)
+    local playerId = source
+
+    if not itemName or not amount or amount < 1 or getPlayerItemCount(playerId, itemName) < amount then
+        TriggerClientEvent('chat:addMessage', playerId, { args = { '[倉庫]', '所持数が足りません' } })
+        return
+    end
+
+    removePlayerItem(playerId, itemName, amount)
+
+    MySQL.query([[
+        INSERT INTO ex04_stash_items (stash_id, item_name, amount) VALUES (?, ?, ?)
+        ON DUPLICATE KEY UPDATE amount = amount + VALUES(amount)
+    ]], { stashId, itemName, amount })
+
+    TriggerClientEvent('chat:addMessage', playerId, { args = { '[倉庫]', ('%sを%d個預けました'):format(itemName, amount) } })
+end)
+
+RegisterNetEvent('ex04stash:withdraw')
+AddEventHandler('ex04stash:withdraw', function(stashId, itemName, amount)
+    local playerId = source
+
+    if not itemName or not amount or amount < 1 then return end
+
+    local current = MySQL.scalar.await('SELECT amount FROM ex04_stash_items WHERE stash_id = ? AND item_name = ?', { stashId, itemName })
+    if not current or current < amount then
+        TriggerClientEvent('chat:addMessage', playerId, { args = { '[倉庫]', '倉庫の在庫が足りません' } })
+        return
+    end
+
+    MySQL.query('UPDATE ex04_stash_items SET amount = amount - ? WHERE stash_id = ? AND item_name = ?', { amount, stashId, itemName })
+    addPlayerItem(playerId, itemName, amount)
+
+    TriggerClientEvent('chat:addMessage', playerId, { args = { '[倉庫]', ('%sを%d個引き出しました'):format(itemName, amount) } })
+end)
+
+-- デバッグ用: ox_inventory等が無い環境でも預け入れを試せるよう、所持アイテムを直接付与する
+RegisterNetEvent('ex04stash:debugGiveItem')
+AddEventHandler('ex04stash:debugGiveItem', function(itemName, amount)
+    local playerId = source
+    if not itemName or not amount then return end
+
+    addPlayerItem(playerId, itemName, amount)
+    TriggerClientEvent('chat:addMessage', playerId, { args = { '[倉庫]', ('%sを%d個所持しました(デバッグ)'):format(itemName, amount) } })
+end)</code></pre>
+      </div>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>実際のリソースファイルは<a href="ex04-stash/">samples/ex04-stash/</a>に置いてあります。<code>/stashgiveitem [アイテム名] [個数]</code>はox_inventory等を導入していない環境でも動作確認できるようにしたデバッグ用コマンドです。本番導入時はox_inventoryのAddItem/RemoveItem(Tier3-30/31参照)に置き換えてください。</p>
+    </section>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../assets/js/lessons-data.js"></script>
+  <script src="../assets/js/exercises-data.js"></script>
+  <script src="../assets/js/samples-data.js"></script>
+  <script src="../assets/js/progress.js"></script>
+  <script src="../assets/js/nav.js"></script>
+  <script src="../assets/vendor/prism/prism.js"></script>
+  <script src="../assets/js/code-copy.js"></script>
+</body>
+</html>

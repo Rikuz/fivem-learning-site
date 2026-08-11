@@ -1,11 +1,12 @@
 // assets/js/nav.js — 共通ヘッダー/パンくず/前後レッスンリンクの描画
 
-// lessons/tierX/*.html・tracks/*.html は2階層/1階層下、practice/*.html は1階層下にあるため、ルートへの相対パスを判定する
+// lessons/tierX/*.html・tracks/*.html・samples/*.html は2階層/1階層下、practice/*.html は1階層下にあるため、ルートへの相対パスを判定する
 function computeSiteRoot() {
   const path = window.location.pathname;
   if (/\/lessons\//.test(path)) return "../../";
   if (/\/practice\//.test(path)) return "../";
   if (/\/tracks\//.test(path)) return "../";
+  if (/\/samples\//.test(path)) return "../";
   return "";
 }
 
@@ -21,6 +22,10 @@ function findTrackById(id) {
   return (window.TRACKS || []).find((t) => t.id === id);
 }
 
+function findSampleById(id) {
+  return (window.SAMPLES || []).find((s) => s.id === id);
+}
+
 function renderSiteHeader() {
   const el = document.getElementById("site-header");
   if (!el) return;
@@ -34,6 +39,7 @@ function renderSiteHeader() {
         <a href="${root}category.html">カテゴリ別一覧</a>
         <a href="${root}practice.html">実践演習</a>
         <a href="${root}tracks.html">プロジェクトトラック</a>
+        <a href="${root}samples.html">サンプルコード</a>
       </nav>
     </div>
   `;
@@ -45,6 +51,23 @@ function renderBreadcrumb() {
   const root = computeSiteRoot();
   const lessonId = document.body.dataset.lessonId;
   const trackId = document.body.dataset.trackId;
+  const sampleId = document.body.dataset.sampleId;
+
+  if (sampleId) {
+    const sample = findSampleById(sampleId);
+    if (sample) {
+      const difficultyInfo = window.TIER_INFO[sample.difficulty];
+      el.className = "breadcrumb";
+      el.innerHTML = `
+        <a href="${root}index.html">トップ</a>
+        <span> / </span>
+        <a href="${root}samples.html">サンプルコード</a>
+        <span> / </span>
+        <span>${difficultyInfo.emoji} ${sample.title}</span>
+      `;
+      return;
+    }
+  }
 
   if (trackId) {
     const track = findTrackById(trackId);
@@ -101,9 +124,34 @@ function renderPrevNextNav() {
   const el = document.getElementById("prev-next-nav");
   if (!el) return;
   const lessonId = document.body.dataset.lessonId;
-  if (!lessonId) return;
-
+  const sampleId = document.body.dataset.sampleId;
   const root = computeSiteRoot();
+
+  if (sampleId) {
+    const samples = [...(window.SAMPLES || [])].sort((a, b) => a.difficulty - b.difficulty);
+    const sampleIndex = samples.findIndex((s) => s.id === sampleId);
+    if (sampleIndex === -1) return;
+
+    const prevSample = sampleIndex > 0 ? samples[sampleIndex - 1] : null;
+    const nextSample = sampleIndex < samples.length - 1 ? samples[sampleIndex + 1] : null;
+
+    el.className = "prev-next-nav";
+    el.innerHTML = `
+      ${
+        prevSample
+          ? `<a href="${root}${prevSample.path}"><span class="prev-next-nav__label">← 前のサンプル</span>${prevSample.title}</a>`
+          : `<span></span>`
+      }
+      ${
+        nextSample
+          ? `<a class="prev-next-nav__next" href="${root}${nextSample.path}"><span class="prev-next-nav__label">次のサンプル →</span>${nextSample.title}</a>`
+          : `<span></span>`
+      }
+    `;
+    return;
+  }
+
+  if (!lessonId) return;
   const lessons = window.LESSONS || [];
   const lessonIndex = lessons.findIndex((l) => l.id === lessonId);
 

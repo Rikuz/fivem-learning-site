@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>カスタムHUD(サンプルコード) | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+  <link rel="stylesheet" href="../assets/css/lesson.css">
+  <link rel="stylesheet" href="../assets/vendor/prism/prism.css">
+</head>
+<body data-sample-id="ex-14-custom-hud-capstone">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta exercise-difficulty">
+      <span class="badge tier-badge" data-tier="2">🟡 難易度: 初級</span>
+    </div>
+
+    <h1>【HUDトラック集大成】カスタムHUD(サンプルコード)</h1>
+
+    <section class="conclusion">
+      <h2>概要</h2>
+      <p>常駐表示・スピードメーター/ミニマップカスタマイズ・ステータスバーを1つのHUDリソースにまとめたサンプルです。演習の仕様は<a href="../practice/14-custom-hud-capstone.html">カスタムHUD(演習ページ)</a>を参照してください。</p>
+    </section>
+
+    <section class="directory-structure">
+      <h2>ディレクトリ構造</h2>
+      <pre class="directory-tree">ex14-custom-hud/
+├── fxmanifest.lua
+├── client.lua
+└── ui/
+    ├── index.html
+    ├── style.css
+    └── script.js</pre>
+    </section>
+
+    <section class="code-example">
+      <h2>コード</h2>
+
+      <h3>fxmanifest.lua</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">fx_version 'cerulean'
+game 'gta5'
+
+author 'FiveM学習サイト サンプル'
+description 'ex-14: カスタムHUD'
+version '1.0.0'
+
+ui_page 'ui/index.html'
+
+files {
+    'ui/index.html',
+    'ui/style.css',
+    'ui/script.js'
+}
+
+client_script 'client.lua'</code></pre>
+      </div>
+
+      <h3>client.lua</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">-- 常駐HUD: SetNuiFocusは一切呼ばず、resource起動時からずっと表示され続ける(Tier3-39参照)
+
+CreateThread(function()
+    -- ミニマップをHUDのレイアウトに合わせて調整する(Tier3-40参照)
+    SetMinimapComponentPosition('minimap', 'L', 'B', 0.0, -0.047, 0.1638, 0.183)
+    SetMinimapComponentPosition('minimap_mask', 'L', 'B', 0.020, 0.020, 0.128, 0.20)
+    SetMinimapComponentPosition('minimap_blur', 'L', 'B', -0.008, 0.010, 0.170, 0.240)
+end)
+
+-- 速度計は乗車中のみ表示・更新する(Tier3-40参照)
+CreateThread(function()
+    while true do
+        Wait(200)
+
+        local ped = PlayerPedId()
+        local vehicle = GetVehiclePedIsIn(ped, false)
+
+        if vehicle ~= 0 then
+            local speedKmh = math.floor(GetEntitySpeed(vehicle) * 3.6)
+            SendNUIMessage({ action = 'updateSpeed', visible = true, speed = speedKmh })
+        else
+            SendNUIMessage({ action = 'updateSpeed', visible = false })
+        end
+    end
+end)
+
+-- getHunger/ThirstValueは、導入しているフレームワークに合わせて実装する想定の関数(Tier4-01参照)
+-- ここでは概念を示すため、固定値を返すダミー実装にしている
+local function getHungerValue()
+    return 80
+end
+
+local function getThirstValue()
+    return 65
+end
+
+-- 体力は変化が早いため、上記の速度計より短くはないが十分な頻度で更新する(Tier3-41参照)
+CreateThread(function()
+    while true do
+        Wait(1000)
+
+        local ped = PlayerPedId()
+        SendNUIMessage({
+            action = 'updateStatusBars',
+            health = GetEntityHealth(ped) - 100, -- GetEntityHealthの最低値100を補正する
+            hunger = getHungerValue(),
+            thirst = getThirstValue(),
+        })
+    end
+end)</code></pre>
+      </div>
+
+      <h3>ui/index.html</h3>
+      <div class="code-block">
+        <pre><code class="language-markup">&lt;!doctype html&gt;
+&lt;html lang="ja"&gt;
+&lt;head&gt;
+  &lt;meta charset="utf-8"&gt;
+  &lt;link rel="stylesheet" href="style.css"&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;div id="hud"&gt;
+    &lt;div id="speedometer" style="display:none"&gt;&lt;/div&gt;
+    &lt;div class="status-bars"&gt;
+      &lt;div class="status-bar"&gt;
+        &lt;span class="status-bar__label"&gt;体力&lt;/span&gt;
+        &lt;div class="status-bar__track"&gt;&lt;div id="health-bar" class="status-bar__fill status-bar__fill--health"&gt;&lt;/div&gt;&lt;/div&gt;
+      &lt;/div&gt;
+      &lt;div class="status-bar"&gt;
+        &lt;span class="status-bar__label"&gt;満腹度&lt;/span&gt;
+        &lt;div class="status-bar__track"&gt;&lt;div id="hunger-bar" class="status-bar__fill status-bar__fill--hunger"&gt;&lt;/div&gt;&lt;/div&gt;
+      &lt;/div&gt;
+      &lt;div class="status-bar"&gt;
+        &lt;span class="status-bar__label"&gt;喉の渇き&lt;/span&gt;
+        &lt;div class="status-bar__track"&gt;&lt;div id="thirst-bar" class="status-bar__fill status-bar__fill--thirst"&gt;&lt;/div&gt;&lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+  &lt;script src="script.js"&gt;&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;</code></pre>
+      </div>
+
+      <h3>ui/style.css</h3>
+      <div class="code-block">
+        <pre><code class="language-css">html, body {
+  background: transparent;
+  margin: 0;
+  pointer-events: none; /* HUDはゲームの操作を妨げない */
+  font-family: sans-serif;
+  color: #fff;
+}
+
+#hud {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.8);
+}
+
+#speedometer {
+  font-size: 28px;
+  font-weight: bold;
+  margin-bottom: 8px;
+}
+
+.status-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 160px;
+}
+
+.status-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.status-bar__label {
+  width: 56px;
+}
+
+.status-bar__track {
+  flex: 1;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.status-bar__fill {
+  height: 100%;
+  width: 100%;
+  transition: width 0.3s ease;
+}
+
+.status-bar__fill--health { background: #e63946; }
+.status-bar__fill--hunger { background: #f4a261; }
+.status-bar__fill--thirst { background: #457b9d; }</code></pre>
+      </div>
+
+      <h3>ui/script.js</h3>
+      <div class="code-block">
+        <pre><code class="language-javascript">window.addEventListener('message', (event) => {
+  const data = event.data;
+
+  if (data.action === 'updateSpeed') {
+    const speedo = document.getElementById('speedometer');
+    speedo.style.display = data.visible ? 'block' : 'none';
+    if (data.visible) {
+      speedo.textContent = `${data.speed} km/h`;
+    }
+  }
+
+  if (data.action === 'updateStatusBars') {
+    document.getElementById('health-bar').style.width = `${Math.max(0, data.health)}%`;
+    document.getElementById('hunger-bar').style.width = `${data.hunger}%`;
+    document.getElementById('thirst-bar').style.width = `${data.thirst}%`;
+  }
+});</code></pre>
+      </div>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>実際のリソースファイルは<a href="ex14-custom-hud/">samples/ex14-custom-hud/</a>に置いてあります。<code>ui/index.html</code>はブラウザで直接開いてもレイアウト自体は確認できますが、速度・体力の値はFiveMのゲームクライアントから<code>SendNUIMessage</code>で送られてきたものなので、実機なしでは更新されません。</p>
+    </section>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../assets/js/lessons-data.js"></script>
+  <script src="../assets/js/exercises-data.js"></script>
+  <script src="../assets/js/samples-data.js"></script>
+  <script src="../assets/js/progress.js"></script>
+  <script src="../assets/js/nav.js"></script>
+  <script src="../assets/vendor/prism/prism.js"></script>
+  <script src="../assets/js/code-copy.js"></script>
+</body>
+</html>

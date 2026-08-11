@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>lb-phoneメッセージ/掲示板アプリ(サンプルコード) | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+  <link rel="stylesheet" href="../assets/css/lesson.css">
+  <link rel="stylesheet" href="../assets/vendor/prism/prism.css">
+</head>
+<body data-sample-id="ex-08-lb-phone-messaging-app">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta exercise-difficulty">
+      <span class="badge tier-badge" data-tier="3">🟠 難易度: 中級</span>
+    </div>
+
+    <h1>【lb-phoneトラック】メッセージ/掲示板アプリ(サンプルコード)</h1>
+
+    <section class="conclusion">
+      <h2>概要</h2>
+      <p>lb-phoneのカスタムアプリとして、DB永続化されたメッセージを送り合える簡易メッセージ/掲示板アプリのサンプルです。演習の仕様は<a href="../practice/08-lb-phone-messaging-app.html">メッセージ/掲示板アプリ(演習ページ)</a>を参照してください。</p>
+    </section>
+
+    <section class="directory-structure">
+      <h2>ディレクトリ構造</h2>
+      <pre class="directory-tree">ex08-messenger/
+├── fxmanifest.lua
+├── client.lua
+├── server.lua
+├── messenger.sql
+└── ui/
+    ├── index.html
+    ├── style.css
+    └── script.js</pre>
+    </section>
+
+    <section class="code-example">
+      <h2>コード</h2>
+
+      <h3>messenger.sql</h3>
+      <div class="code-block">
+        <pre><code class="language-sql">CREATE TABLE IF NOT EXISTS `ex08_messages` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `sender_identifier` VARCHAR(64) NOT NULL,
+  `sender_name` VARCHAR(100) NOT NULL,
+  `receiver_identifier` VARCHAR(64) NOT NULL,
+  `body` TEXT NOT NULL,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP
+);</code></pre>
+      </div>
+
+      <h3>fxmanifest.lua</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">fx_version 'cerulean'
+game 'gta5'
+
+author 'FiveM学習サイト サンプル'
+description 'ex-08: lb-phoneメッセージ/掲示板アプリ'
+version '1.0.0'
+
+dependency 'lb-phone'
+dependency 'oxmysql'
+
+ui_page 'ui/index.html'
+
+files {
+    'ui/index.html',
+    'ui/style.css',
+    'ui/script.js'
+}
+
+client_script 'client.lua'
+server_script 'server.lua'</code></pre>
+      </div>
+
+      <h3>lb-phone/config/config.lua への追記(Tier4-04参照)</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">Config.CustomApps = {
+    ["ex08_messenger"] = {
+        name = "メッセージ",
+        description = "サンプル: プレイヤー間メッセージアプリ",
+        developer = "FiveM学習サイト サンプル",
+        defaultApp = true,
+        ui = "ex08-messenger/ui/index.html",
+    },
+}</code></pre>
+      </div>
+
+      <h3>client.lua</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local APP_ID = 'ex08_messenger'
+
+-- アプリを開いたら、自分宛のメッセージ一覧をserverにリクエストする(Tier4-21のスターターテンプレート参照)
+RegisterNetEvent('ex08messenger:open')
+AddEventHandler('ex08messenger:open', function()
+    TriggerServerEvent('ex08messenger:requestMessages')
+end)
+
+RegisterNetEvent('ex08messenger:receiveMessages')
+AddEventHandler('ex08messenger:receiveMessages', function(messages)
+    exports['lb-phone']:SendCustomAppMessage(APP_ID, {
+        action = 'showList',
+        messages = messages,
+    })
+end)
+
+-- JS側から送信リクエストを受け取る(Tier3-02のNUIコールバックと同じ仕組み)
+RegisterNUICallback('sendMessage', function(data, cb)
+    TriggerServerEvent('ex08messenger:send', data.receiverId, data.body)
+    cb('ok')
+end)
+
+RegisterNetEvent('ex08messenger:sendResult')
+AddEventHandler('ex08messenger:sendResult', function(success, message)
+    exports['lb-phone']:SendCustomAppMessage(APP_ID, { action = 'sendResult', success = success, message = message })
+end)
+
+-- 新着メッセージバッジ(Tier4-23参照): 受信者がオンラインならアプリを開いていなくても表示される
+RegisterNetEvent('ex08messenger:newMessageBadge')
+AddEventHandler('ex08messenger:newMessageBadge', function(unreadCount)
+    exports['lb-phone']:SendCustomAppMessage(APP_ID, { action = 'updateBadge', count = unreadCount })
+end)</code></pre>
+      </div>
+
+      <h3>server.lua</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local function getPlayerIdentifier(playerId)
+    return GetPlayerIdentifierByType(playerId, 'license')
+end
+
+RegisterNetEvent('ex08messenger:requestMessages')
+AddEventHandler('ex08messenger:requestMessages', function()
+    local playerId = source
+    local identifier = getPlayerIdentifier(playerId)
+
+    local messages = MySQL.query.await(
+        'SELECT id, sender_name, body, created_at FROM ex08_messages WHERE receiver_identifier = ? ORDER BY created_at DESC',
+        { identifier }
+    )
+
+    TriggerClientEvent('ex08messenger:receiveMessages', playerId, messages or {})
+end)
+
+RegisterNetEvent('ex08messenger:send')
+AddEventHandler('ex08messenger:send', function(receiverServerId, body)
+    local senderId = source
+
+    if not body or body == '' or not receiverServerId then
+        TriggerClientEvent('ex08messenger:sendResult', senderId, false, '宛先と本文を入力してください')
+        return
+    end
+
+    local receiverId = tonumber(receiverServerId)
+    local receiverPed = receiverId and GetPlayerPed(receiverId)
+    if not receiverPed or receiverPed == 0 then
+        TriggerClientEvent('ex08messenger:sendResult', senderId, false, '相手が見つかりません')
+        return
+    end
+
+    local senderIdentifier = getPlayerIdentifier(senderId)
+    local senderName = GetPlayerName(senderId)
+    local receiverIdentifier = getPlayerIdentifier(receiverId)
+
+    MySQL.insert('INSERT INTO ex08_messages (sender_identifier, sender_name, receiver_identifier, body) VALUES (?, ?, ?, ?)', {
+        senderIdentifier, senderName, receiverIdentifier, body
+    })
+
+    TriggerClientEvent('ex08messenger:sendResult', senderId, true, '送信しました')
+
+    -- 受信者がオンラインなら、アプリを開いていなくても未読バッジを表示する(Tier4-23参照)
+    local unreadCount = MySQL.scalar.await('SELECT COUNT(*) FROM ex08_messages WHERE receiver_identifier = ?', { receiverIdentifier })
+    TriggerClientEvent('ex08messenger:newMessageBadge', receiverId, unreadCount)
+end)</code></pre>
+      </div>
+
+      <h3>ui/index.html</h3>
+      <div class="code-block">
+        <pre><code class="language-markup">&lt;!doctype html&gt;
+&lt;html lang="ja"&gt;
+&lt;head&gt;
+  &lt;meta charset="utf-8"&gt;
+  &lt;link rel="stylesheet" href="style.css"&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;div id="app"&gt;
+    &lt;div id="screen-list" class="screen"&gt;
+      &lt;h1&gt;メッセージ&lt;/h1&gt;
+      &lt;ul id="message-list"&gt;&lt;/ul&gt;
+      &lt;div class="compose"&gt;
+        &lt;input id="receiver-input" type="text" placeholder="宛先(プレイヤーID)"&gt;
+        &lt;textarea id="body-input" placeholder="本文"&gt;&lt;/textarea&gt;
+        &lt;button id="send-btn"&gt;送信&lt;/button&gt;
+      &lt;/div&gt;
+      &lt;p id="feedback"&gt;&lt;/p&gt;
+    &lt;/div&gt;
+    &lt;div id="screen-detail" class="screen hidden"&gt;
+      &lt;button id="back-btn"&gt;← 戻る&lt;/button&gt;
+      &lt;p id="detail-sender"&gt;&lt;/p&gt;
+      &lt;p id="detail-body"&gt;&lt;/p&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+  &lt;script src="script.js"&gt;&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;</code></pre>
+      </div>
+
+      <h3>ui/style.css</h3>
+      <div class="code-block">
+        <pre><code class="language-css">/* lb-phoneアプリの画面は320x560程度の縦長サイズを前提にする(Tier4-21参照) */
+html, body {
+  margin: 0;
+  width: 320px;
+  height: 560px;
+  background: #101014;
+  color: #fff;
+  font-family: sans-serif;
+  overflow: hidden;
+}
+
+.hidden {
+  display: none;
+}
+
+.screen {
+  padding: 12px;
+  box-sizing: border-box;
+}
+
+h1 {
+  font-size: 18px;
+  margin: 0 0 12px;
+}
+
+#message-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 12px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+#message-list li {
+  padding: 8px;
+  border-bottom: 1px solid #2a2a30;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.compose {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.compose input,
+.compose textarea {
+  background: #1c1c22;
+  border: 1px solid #333;
+  border-radius: 4px;
+  color: #fff;
+  padding: 6px;
+  font-size: 13px;
+}
+
+.compose textarea {
+  height: 60px;
+  resize: none;
+}
+
+.compose button {
+  background: #4c7dff;
+  border: none;
+  border-radius: 4px;
+  color: #fff;
+  padding: 8px;
+  cursor: pointer;
+}
+
+#feedback {
+  font-size: 12px;
+  color: #7CFC98;
+  min-height: 1.2em;
+}
+
+#back-btn {
+  background: none;
+  border: none;
+  color: #4c7dff;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0 0 12px;
+}
+
+#detail-sender {
+  font-weight: bold;
+  margin-bottom: 8px;
+}</code></pre>
+      </div>
+
+      <h3>ui/script.js</h3>
+      <div class="code-block">
+        <pre><code class="language-javascript">let messages = [];
+
+function post(name, body) {
+  return fetch(`https://${GetParentResourceName()}/${name}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json; charset=UTF-8' },
+    body: JSON.stringify(body || {}),
+  });
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach((el) => el.classList.add('hidden'));
+  document.getElementById(id).classList.remove('hidden');
+}
+
+function renderList() {
+  const list = document.getElementById('message-list');
+  list.innerHTML = '';
+
+  messages.forEach((msg) => {
+    const li = document.createElement('li');
+    li.textContent = `${msg.sender_name}: ${msg.body.slice(0, 20)}`;
+    li.addEventListener('click', () => {
+      document.getElementById('detail-sender').textContent = `送信者: ${msg.sender_name}`;
+      document.getElementById('detail-body').textContent = msg.body;
+      showScreen('screen-detail');
+    });
+    list.appendChild(li);
+  });
+}
+
+// lb-phoneアプリはSendCustomAppMessageで送られたデータをwindow.messageで受け取る(Tier4-05参照)
+window.addEventListener('message', (event) => {
+  const data = event.data;
+
+  if (data.action === 'showList') {
+    messages = data.messages;
+    showScreen('screen-list');
+    renderList();
+  }
+
+  if (data.action === 'sendResult') {
+    document.getElementById('feedback').textContent = data.message;
+  }
+});
+
+document.getElementById('back-btn').addEventListener('click', () => {
+  showScreen('screen-list');
+});
+
+document.getElementById('send-btn').addEventListener('click', () => {
+  const receiverId = document.getElementById('receiver-input').value;
+  const body = document.getElementById('body-input').value;
+  post('sendMessage', { receiverId, body });
+});</code></pre>
+      </div>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>実際のリソースファイルは<a href="ex08-messenger/">samples/ex08-messenger/</a>に置いてあります。<code>Config.CustomApps</code>への登録はlb-phone本体側の設定ファイルを編集する必要があるため、この1点だけは<code>samples/</code>以下のファイルに含めず、上記のコード例として示しています。</p>
+    </section>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../assets/js/lessons-data.js"></script>
+  <script src="../assets/js/exercises-data.js"></script>
+  <script src="../assets/js/samples-data.js"></script>
+  <script src="../assets/js/progress.js"></script>
+  <script src="../assets/js/nav.js"></script>
+  <script src="../assets/vendor/prism/prism.js"></script>
+  <script src="../assets/js/code-copy.js"></script>
+</body>
+</html>

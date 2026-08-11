@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>車両ディーラー(サンプルコード) | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+  <link rel="stylesheet" href="../assets/css/lesson.css">
+  <link rel="stylesheet" href="../assets/vendor/prism/prism.css">
+</head>
+<body data-sample-id="ex-16-dealership-capstone">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta exercise-difficulty">
+      <span class="badge tier-badge" data-tier="3">🟠 難易度: 中級</span>
+    </div>
+
+    <h1>【車両ディーラートラック集大成】車両ディーラー(サンプルコード)</h1>
+
+    <section class="conclusion">
+      <h2>概要</h2>
+      <p>在庫表示・試乗・購入・分割払いを1つのディーラーresourceに統合したサンプルです。演習の仕様は<a href="../practice/16-dealership-capstone.html">車両ディーラー(演習ページ)</a>を参照してください。</p>
+    </section>
+
+    <section class="directory-structure">
+      <h2>ディレクトリ構造</h2>
+      <pre class="directory-tree">ex16-dealership/
+├── fxmanifest.lua
+├── client.lua
+└── server.lua</pre>
+    </section>
+
+    <section class="code-example">
+      <h2>コード</h2>
+
+      <h3>fxmanifest.lua</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">fx_version 'cerulean'
+game 'gta5'
+
+author 'FiveM学習サイト サンプル'
+description 'ex-16: 車両ディーラー'
+version '1.0.0'
+
+client_script 'client.lua'
+server_script 'server.lua'</code></pre>
+      </div>
+
+      <h3>server.lua</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local INVENTORY = {
+    { model = 'sultan', label = 'Sultan', price = 15000 },
+    { model = 'blista', label = 'Blista', price = 9000 },
+    { model = 'sentinel', label = 'Sentinel', price = 22000 },
+}
+
+local DOWN_PAYMENT_RATE = 0.2
+local INSTALLMENT_COUNT_MAX = 24
+
+local playerMoney = {} -- playerId -> 所持金(デモ用の簡易管理)
+local loans = {} -- id -> { owner, remaining, installmentAmount }
+local nextLoanId = 1
+
+local function getMoney(playerId)
+    playerMoney[playerId] = playerMoney[playerId] or 5000
+    return playerMoney[playerId]
+end
+
+local function findVehicle(model)
+    for _, v in ipairs(INVENTORY) do
+        if v.model == model then return v end
+    end
+    return nil
+end
+
+RegisterNetEvent('ex16dealership:requestInventory')
+AddEventHandler('ex16dealership:requestInventory', function()
+    TriggerClientEvent('ex16dealership:showInventory', source, INVENTORY)
+end)
+
+RegisterNetEvent('ex16dealership:purchaseFull')
+AddEventHandler('ex16dealership:purchaseFull', function(model)
+    local playerId = source
+    local vehicle = findVehicle(model)
+    if not vehicle then return end
+
+    if getMoney(playerId) < vehicle.price then
+        TriggerClientEvent('ex16dealership:notify', playerId, '所持金が足りません')
+        return
+    end
+
+    playerMoney[playerId] = getMoney(playerId) - vehicle.price
+    TriggerClientEvent('ex16dealership:deliverVehicle', playerId, model)
+    TriggerClientEvent('ex16dealership:notify', playerId, ('%sを一括購入しました'):format(vehicle.label))
+end)
+
+RegisterNetEvent('ex16dealership:purchaseLoan')
+AddEventHandler('ex16dealership:purchaseLoan', function(model, installmentCount)
+    local playerId = source
+    local vehicle = findVehicle(model)
+
+    if not vehicle or not installmentCount or installmentCount < 2 or installmentCount > INSTALLMENT_COUNT_MAX then
+        TriggerClientEvent('ex16dealership:notify', playerId, '分割回数は2〜24回で指定してください')
+        return
+    end
+
+    local downPayment = math.floor(vehicle.price * DOWN_PAYMENT_RATE)
+    if getMoney(playerId) < downPayment then
+        TriggerClientEvent('ex16dealership:notify', playerId, '頭金分の所持金が足りません')
+        return
+    end
+
+    playerMoney[playerId] = getMoney(playerId) - downPayment
+
+    local remaining = vehicle.price - downPayment
+    local installmentAmount = math.ceil(remaining / installmentCount)
+
+    loans[nextLoanId] = { owner = playerId, remaining = remaining, installmentAmount = installmentAmount }
+    nextLoanId = nextLoanId + 1
+
+    TriggerClientEvent('ex16dealership:deliverVehicle', playerId, model)
+    TriggerClientEvent('ex16dealership:notify', playerId, ('頭金$%sで購入しました(残り$%sを%d回で分割払い)'):format(downPayment, remaining, installmentCount))
+end)
+
+-- 定期的に分割金を引き落とす(デモのため短い間隔にしている。実運用はTier4-38の24時間間隔を参照)
+CreateThread(function()
+    while true do
+        Wait(60000)
+
+        for id, loan in pairs(loans) do
+            if loan.remaining > 0 then
+                local amount = math.min(loan.installmentAmount, loan.remaining)
+                local money = getMoney(loan.owner)
+
+                if money >= amount then
+                    playerMoney[loan.owner] = money - amount
+                    loan.remaining = loan.remaining - amount
+                    TriggerClientEvent('ex16dealership:notify', loan.owner, ('ローンの分割金$%sが引き落とされました(残り$%s)'):format(amount, loan.remaining))
+                else
+                    TriggerClientEvent('ex16dealership:notify', loan.owner, '分割金の支払いに失敗しました(所持金不足)')
+                end
+            end
+        end
+    end
+end)</code></pre>
+      </div>
+
+      <h3>client.lua</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local DEALERSHIP_COORDS = vec3(-56.0, -1096.0, 26.0)
+local TEST_DRIVE_DURATION_MS = 3 * 60 * 1000 -- 3分間
+
+local testDriveVehicle = nil
+local testDriveEndsAt = nil
+
+RegisterCommand('dealershipopen', function()
+    TriggerServerEvent('ex16dealership:requestInventory')
+end, false)
+
+RegisterNetEvent('ex16dealership:showInventory')
+AddEventHandler('ex16dealership:showInventory', function(inventory)
+    for i, v in ipairs(inventory) do
+        TriggerEvent('chat:addMessage', { args = { '[ディーラー]', ('%d: %s ($%s)'):format(i, v.label, v.price) } })
+    end
+    TriggerEvent('chat:addMessage', { args = { '[ディーラー]', '/testdrive [車種] /buyfull [車種] /buyloan [車種] [分割回数]' } })
+end)
+
+RegisterCommand('testdrive', function(source, args)
+    local model = args[1]
+    if not model then return end
+
+    RequestModel(model)
+    while not HasModelLoaded(model) do Wait(0) end
+
+    testDriveVehicle = CreateVehicle(model, DEALERSHIP_COORDS.x, DEALERSHIP_COORDS.y, DEALERSHIP_COORDS.z, 0.0, true, false)
+    SetVehicleOnGroundProperly(testDriveVehicle)
+    SetModelAsNoLongerNeeded(model)
+
+    local ped = PlayerPedId()
+    TaskWarpPedIntoVehicle(ped, testDriveVehicle, -1)
+
+    testDriveEndsAt = GetGameTimer() + TEST_DRIVE_DURATION_MS
+    TriggerEvent('chat:addMessage', { args = { '[ディーラー]', '試乗開始(3分間)' } })
+end, false)
+
+local function endTestDrive(reason)
+    if not testDriveVehicle or not DoesEntityExist(testDriveVehicle) then return end
+
+    local ped = PlayerPedId()
+    if IsPedInVehicle(ped, testDriveVehicle, false) then
+        TaskLeaveVehicle(ped, testDriveVehicle, 0)
+    end
+
+    SetEntityAsMissionEntity(testDriveVehicle, true, true)
+    DeleteEntity(testDriveVehicle)
+    testDriveVehicle = nil
+    testDriveEndsAt = nil
+
+    TriggerEvent('chat:addMessage', { args = { '[ディーラー]', ('試乗を終了しました(%s)'):format(reason) } })
+end
+
+CreateThread(function()
+    while true do
+        Wait(1000)
+
+        if testDriveEndsAt then
+            if GetGameTimer() >= testDriveEndsAt then
+                endTestDrive('時間切れ')
+            elseif testDriveVehicle and DoesEntityExist(testDriveVehicle) then
+                local distance = #(GetEntityCoords(testDriveVehicle) - DEALERSHIP_COORDS)
+                if distance > 500.0 then -- 販売店から離れすぎたら強制終了する
+                    endTestDrive('エリア外')
+                end
+            end
+        end
+    end
+end)
+
+RegisterCommand('buyfull', function(source, args)
+    TriggerServerEvent('ex16dealership:purchaseFull', args[1])
+end, false)
+
+RegisterCommand('buyloan', function(source, args)
+    TriggerServerEvent('ex16dealership:purchaseLoan', args[1], tonumber(args[2]))
+end, false)
+
+RegisterNetEvent('ex16dealership:deliverVehicle')
+AddEventHandler('ex16dealership:deliverVehicle', function(model)
+    RequestModel(model)
+    while not HasModelLoaded(model) do Wait(0) end
+
+    local vehicle = CreateVehicle(model, DEALERSHIP_COORDS.x, DEALERSHIP_COORDS.y, DEALERSHIP_COORDS.z, 0.0, true, false)
+    SetVehicleOnGroundProperly(vehicle)
+    SetModelAsNoLongerNeeded(model)
+
+    -- 納車時、ダメージ状態を初期化してから引き渡す(Tier2-14参照)
+    SetVehicleFixed(vehicle)
+    SetVehicleDeformationFixed(vehicle)
+    SetVehicleDirtLevel(vehicle, 0.0)
+
+    TaskWarpPedIntoVehicle(PlayerPedId(), vehicle, -1)
+end)
+
+RegisterNetEvent('ex16dealership:notify')
+AddEventHandler('ex16dealership:notify', function(message)
+    TriggerEvent('chat:addMessage', { args = { '[ディーラー]', message } })
+end)</code></pre>
+      </div>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>実際のリソースファイルは<a href="ex16-dealership/">samples/ex16-dealership/</a>に置いてあります。所持金・ローンの管理はデモ用にメモリ上のテーブルで行っています。本番導入時はTier4-01のフレームワーク連携・oxmysqlでの永続化に置き換えてください。</p>
+    </section>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../assets/js/lessons-data.js"></script>
+  <script src="../assets/js/exercises-data.js"></script>
+  <script src="../assets/js/samples-data.js"></script>
+  <script src="../assets/js/progress.js"></script>
+  <script src="../assets/js/nav.js"></script>
+  <script src="../assets/vendor/prism/prism.js"></script>
+  <script src="../assets/js/code-copy.js"></script>
+</body>
+</html>
