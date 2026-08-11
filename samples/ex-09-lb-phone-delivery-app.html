@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>lb-phone配車/デリバリー依頼アプリ(サンプルコード) | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+  <link rel="stylesheet" href="../assets/css/lesson.css">
+  <link rel="stylesheet" href="../assets/vendor/prism/prism.css">
+</head>
+<body data-sample-id="ex-09-lb-phone-delivery-app">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta exercise-difficulty">
+      <span class="badge tier-badge" data-tier="4">🔴 難易度: 中上級</span>
+    </div>
+
+    <h1>【lb-phoneトラック】配車/デリバリー依頼アプリ(サンプルコード)</h1>
+
+    <section class="conclusion">
+      <h2>概要</h2>
+      <p>配車依頼を送るとドライバー役に通知とBlipが表示される、ゲーム内イベント連携型アプリのサンプルです。演習の仕様は<a href="../practice/09-lb-phone-delivery-app.html">配車/デリバリー依頼アプリ(演習ページ)</a>を参照してください。</p>
+    </section>
+
+    <section class="directory-structure">
+      <h2>ディレクトリ構造</h2>
+      <pre class="directory-tree">ex09-delivery/
+├── fxmanifest.lua
+├── client.lua
+├── server.lua
+└── ui/
+    ├── index.html
+    ├── style.css
+    └── script.js</pre>
+    </section>
+
+    <section class="code-example">
+      <h2>コード</h2>
+
+      <h3>fxmanifest.lua</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">fx_version 'cerulean'
+game 'gta5'
+
+author 'FiveM学習サイト サンプル'
+description 'ex-09: lb-phone配車/デリバリー依頼アプリ'
+version '1.0.0'
+
+dependency 'lb-phone'
+
+ui_page 'ui/index.html'
+
+files {
+    'ui/index.html',
+    'ui/style.css',
+    'ui/script.js'
+}
+
+client_script 'client.lua'
+server_script 'server.lua'</code></pre>
+      </div>
+
+      <h3>lb-phone/config/config.lua への追記(Tier4-04参照)</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">Config.CustomApps = {
+    ["ex09_delivery"] = {
+        name = "配車依頼",
+        description = "サンプル: 配車/デリバリー依頼アプリ",
+        developer = "FiveM学習サイト サンプル",
+        defaultApp = true,
+        ui = "ex09-delivery/ui/index.html",
+    },
+}</code></pre>
+      </div>
+
+      <h3>client.lua</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local APP_ID = 'ex09_delivery'
+
+RegisterNetEvent('ex09delivery:open')
+AddEventHandler('ex09delivery:open', function()
+    exports['lb-phone']:SendCustomAppMessage(APP_ID, { action = 'showForm' })
+end)
+
+RegisterNUICallback('requestDelivery', function(data, cb)
+    local coords = GetEntityCoords(PlayerPedId())
+    TriggerServerEvent('ex09delivery:request', coords.x, coords.y, coords.z)
+    cb('ok')
+end)
+
+RegisterNetEvent('ex09delivery:incomingRequest')
+AddEventHandler('ex09delivery:incomingRequest', function(requestId, requesterName, coords)
+    -- ドライバー側の画面に依頼内容を表示し、Blipで依頼者の位置を示す(Tier2-03参照)
+    local blip = AddBlipForCoord(coords.x, coords.y, coords.z)
+    SetBlipSprite(blip, 280)
+    SetBlipColour(blip, 5)
+    SetBlipRoute(blip, true)
+
+    exports['lb-phone']:SendCustomAppMessage(APP_ID, {
+        action = 'newRequest',
+        requestId = requestId,
+        requesterName = requesterName,
+    })
+end)
+
+RegisterNUICallback('acceptDelivery', function(data, cb)
+    TriggerServerEvent('ex09delivery:accept', data.requestId)
+    cb('ok')
+end)
+
+RegisterNUICallback('completeDelivery', function(data, cb)
+    TriggerServerEvent('ex09delivery:complete', data.requestId)
+    cb('ok')
+end)
+
+RegisterNetEvent('ex09delivery:statusUpdate')
+AddEventHandler('ex09delivery:statusUpdate', function(status, message, requestId)
+    exports['lb-phone']:SendCustomAppMessage(APP_ID, { action = 'statusUpdate', status = status, message = message, requestId = requestId })
+end)</code></pre>
+      </div>
+
+      <h3>server.lua</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local activeRequests = {} -- requestId -> { requesterId, driverId, status, coords }
+local nextRequestId = 1
+
+RegisterNetEvent('ex09delivery:request')
+AddEventHandler('ex09delivery:request', function(x, y, z)
+    local playerId = source
+    local requestId = nextRequestId
+    nextRequestId = nextRequestId + 1
+
+    activeRequests[requestId] = { requesterId = playerId, status = 'waiting', coords = vec3(x, y, z) }
+
+    -- 対応可能な全プレイヤーに通知する(実際にはJob確認等でドライバー役に絞る、Tier4-02参照)
+    for _, targetId in ipairs(GetPlayers()) do
+        local targetIdNum = tonumber(targetId)
+        if targetIdNum ~= playerId then
+            TriggerClientEvent('ex09delivery:incomingRequest', targetIdNum, requestId, GetPlayerName(playerId), activeRequests[requestId].coords)
+        end
+    end
+
+    TriggerClientEvent('ex09delivery:statusUpdate', playerId, 'waiting', '依頼を送信しました。ドライバーを待っています...', requestId)
+end)
+
+RegisterNetEvent('ex09delivery:accept')
+AddEventHandler('ex09delivery:accept', function(requestId)
+    local driverId = source
+    local request = activeRequests[requestId]
+
+    -- 1件の依頼を複数のドライバーが同時に受注しようとしても、最初の1人だけが受注できる
+    if not request or request.status ~= 'waiting' then
+        TriggerClientEvent('ex09delivery:statusUpdate', driverId, 'error', 'この依頼は既に受注済みです', requestId)
+        return
+    end
+
+    request.status = 'accepted'
+    request.driverId = driverId
+
+    TriggerClientEvent('ex09delivery:statusUpdate', request.requesterId, 'accepted', ('%sが向かっています'):format(GetPlayerName(driverId)), requestId)
+    TriggerClientEvent('ex09delivery:statusUpdate', driverId, 'accepted', '受注しました。依頼者の元へ向かってください', requestId)
+end)
+
+RegisterNetEvent('ex09delivery:complete')
+AddEventHandler('ex09delivery:complete', function(requestId)
+    local driverId = source
+    local request = activeRequests[requestId]
+
+    if not request or request.driverId ~= driverId then return end
+
+    request.status = 'completed'
+    TriggerClientEvent('ex09delivery:statusUpdate', request.requesterId, 'completed', '依頼が完了しました', requestId)
+    TriggerClientEvent('ex09delivery:statusUpdate', driverId, 'completed', '依頼を完了しました', requestId)
+
+    activeRequests[requestId] = nil
+end)</code></pre>
+      </div>
+
+      <h3>ui/index.html</h3>
+      <div class="code-block">
+        <pre><code class="language-markup">&lt;!doctype html&gt;
+&lt;html lang="ja"&gt;
+&lt;head&gt;
+  &lt;meta charset="utf-8"&gt;
+  &lt;link rel="stylesheet" href="style.css"&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;div id="app"&gt;
+    &lt;h1&gt;配車依頼&lt;/h1&gt;
+
+    &lt;div id="section-form"&gt;
+      &lt;button id="request-btn"&gt;配車を依頼する&lt;/button&gt;
+    &lt;/div&gt;
+
+    &lt;div id="section-requests"&gt;
+      &lt;h2&gt;依頼一覧(ドライバー用)&lt;/h2&gt;
+      &lt;ul id="request-list"&gt;&lt;/ul&gt;
+    &lt;/div&gt;
+
+    &lt;p id="status"&gt;&lt;/p&gt;
+  &lt;/div&gt;
+  &lt;script src="script.js"&gt;&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;</code></pre>
+      </div>
+
+      <h3>ui/style.css</h3>
+      <div class="code-block">
+        <pre><code class="language-css">/* lb-phoneアプリの画面は320x560程度の縦長サイズを前提にする(Tier4-21参照) */
+html, body {
+  margin: 0;
+  width: 320px;
+  height: 560px;
+  background: #101014;
+  color: #fff;
+  font-family: sans-serif;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+#app {
+  padding: 12px;
+}
+
+h1 {
+  font-size: 18px;
+  margin: 0 0 12px;
+}
+
+h2 {
+  font-size: 14px;
+  margin: 16px 0 8px;
+  color: #aaa;
+}
+
+#request-btn {
+  width: 100%;
+  background: #4c7dff;
+  border: none;
+  border-radius: 4px;
+  color: #fff;
+  padding: 10px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+#request-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+#request-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px;
+  background: #1c1c22;
+  border-radius: 4px;
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+
+#request-list li button {
+  background: #4c7dff;
+  border: none;
+  border-radius: 4px;
+  color: #fff;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+#status {
+  margin-top: 16px;
+  font-size: 12px;
+  color: #7CFC98;
+}</code></pre>
+      </div>
+
+      <h3>ui/script.js</h3>
+      <div class="code-block">
+        <pre><code class="language-javascript">function post(name, body) {
+  return fetch(`https://${GetParentResourceName()}/${name}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json; charset=UTF-8' },
+    body: JSON.stringify(body || {}),
+  });
+}
+
+const requests = {};
+
+function renderRequests() {
+  const list = document.getElementById('request-list');
+  list.innerHTML = '';
+
+  Object.values(requests).forEach((req) => {
+    const li = document.createElement('li');
+    li.textContent = `${req.requesterName}からの依頼`;
+
+    const acceptBtn = document.createElement('button');
+    acceptBtn.textContent = '受注';
+    acceptBtn.addEventListener('click', () => {
+      post('acceptDelivery', { requestId: req.requestId });
+    });
+
+    li.appendChild(acceptBtn);
+    list.appendChild(li);
+  });
+}
+
+// lb-phoneアプリはSendCustomAppMessageで送られたデータをwindow.messageで受け取る(Tier4-05参照)
+window.addEventListener('message', (event) => {
+  const data = event.data;
+
+  if (data.action === 'newRequest') {
+    requests[data.requestId] = data;
+    renderRequests();
+  }
+
+  if (data.action === 'statusUpdate') {
+    document.getElementById('status').textContent = data.message;
+
+    // 依頼が受注されたら一覧から消す(他ドライバーへの二重受注防止の見た目上の反映)
+    if (data.status === 'accepted' || data.status === 'completed') {
+      delete requests[data.requestId];
+      renderRequests();
+    }
+  }
+});
+
+document.getElementById('request-btn').addEventListener('click', () => {
+  post('requestDelivery');
+});</code></pre>
+      </div>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>実際のリソースファイルは<a href="ex09-delivery/">samples/ex09-delivery/</a>に置いてあります。「依頼完了」を伝える<code>completeDelivery</code>コールバックはUI側に完了ボタンを追加すれば呼び出せますが、このサンプルではコード例を簡潔にするためUIへのボタン追加は省略しています。</p>
+    </section>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../assets/js/lessons-data.js"></script>
+  <script src="../assets/js/exercises-data.js"></script>
+  <script src="../assets/js/samples-data.js"></script>
+  <script src="../assets/js/progress.js"></script>
+  <script src="../assets/js/nav.js"></script>
+  <script src="../assets/vendor/prism/prism.js"></script>
+  <script src="../assets/js/code-copy.js"></script>
+</body>
+</html>

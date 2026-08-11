@@ -1,0 +1,11 @@
+CREATE TABLE IF NOT EXISTS `ex05_owned_vehicles` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `identifier` VARCHAR(64) NOT NULL,
+  `model` VARCHAR(50) NOT NULL,
+  `plate` VARCHAR(12) NOT NULL UNIQUE,
+  `garage` VARCHAR(50) NOT NULL,
+  `stored` TINYINT(1) NOT NULL DEFAULT 1,
+  `fuel` FLOAT NOT NULL DEFAULT 100.0,
+  `engine_health` FLOAT NOT NULL DEFAULT 1000.0,
+  `body_health` FLOAT NOT NULL DEFAULT 1000.0
+);

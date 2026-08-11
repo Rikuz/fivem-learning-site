@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>okok連携ATM(サンプルコード) | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+  <link rel="stylesheet" href="../assets/css/lesson.css">
+  <link rel="stylesheet" href="../assets/vendor/prism/prism.css">
+</head>
+<body data-sample-id="ex-06-okok-atm">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta exercise-difficulty">
+      <span class="badge tier-badge" data-tier="4">🔴 難易度: 中上級</span>
+    </div>
+
+    <h1>okok連携ATM(サンプルコード)</h1>
+
+    <section class="conclusion">
+      <h2>概要</h2>
+      <p>ATMにox_targetでインタラクションを追加し、okokBankingV2の口座に入出金してokokNotifyで通知するサンプルです。演習の仕様は<a href="../practice/06-okok-atm.html">okok連携ATM(演習ページ)</a>を参照してください。</p>
+    </section>
+
+    <section class="directory-structure">
+      <h2>ディレクトリ構造</h2>
+      <pre class="directory-tree">ex06-atm/
+├── fxmanifest.lua
+├── client.lua
+└── server.lua</pre>
+    </section>
+
+    <section class="code-example">
+      <h2>コード</h2>
+
+      <h3>fxmanifest.lua</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">fx_version 'cerulean'
+game 'gta5'
+
+author 'FiveM学習サイト サンプル'
+description 'ex-06: okok連携ATM'
+version '1.0.0'
+
+dependency 'ox_target'
+dependency 'okokNotify'
+dependency 'okokBanking'
+
+client_script 'client.lua'
+server_script 'server.lua'</code></pre>
+      </div>
+
+      <h3>client.lua</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local ATM_COORDS = vec3(150.0, -1040.0, 29.0)
+
+exports.ox_target:addBoxZone({
+    coords = ATM_COORDS,
+    size = vec3(1.0, 1.0, 2.0),
+    options = {
+        {
+            name = 'atm_deposit',
+            icon = 'fa-solid fa-money-bill-transfer',
+            label = '入金する($500)',
+            onSelect = function()
+                TriggerServerEvent('ex06atm:transaction', 'deposit', 500)
+            end,
+        },
+        {
+            name = 'atm_withdraw',
+            icon = 'fa-solid fa-money-bill-wave',
+            label = '出金する($500)',
+            onSelect = function()
+                TriggerServerEvent('ex06atm:transaction', 'withdraw', 500)
+            end,
+        },
+    }
+})</code></pre>
+      </div>
+
+      <h3>server.lua</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">-- フレームワークからプレイヤーの現金所持額を取得する処理はTier4-01参照。ここでは概念を示すダミー実装にしている。
+local playerCash = {} -- playerId -> 所持現金(デモ用の簡易管理)
+
+local function getCash(playerId)
+    playerCash[playerId] = playerCash[playerId] or 1000
+    return playerCash[playerId]
+end
+
+local function getSociety(playerId)
+    return GetPlayerIdentifierByType(playerId, 'license') -- 実際にはcitizenid等、導入環境に合わせる(Tier4-06参照)
+end
+
+RegisterNetEvent('ex06atm:transaction')
+AddEventHandler('ex06atm:transaction', function(txType, amount)
+    local playerId = source
+    local society = getSociety(playerId)
+
+    local account = exports['okokBanking']:GetAccount(society)
+    if not account then
+        TriggerClientEvent('okokNotify:Alert', playerId, 'ATM', '口座が見つかりません', 5000, 'error', true)
+        return
+    end
+
+    if txType == 'deposit' then
+        if getCash(playerId) < amount then
+            TriggerClientEvent('okokNotify:Alert', playerId, 'ATM', '所持金が足りません', 5000, 'error', true)
+            return
+        end
+
+        playerCash[playerId] = getCash(playerId) - amount
+        exports['okokBanking']:AddMoney(society, amount)
+        exports['okokBanking']:AddTransaction(society, { value = amount, type = 'deposit', reason = 'ATM入金' })
+
+        TriggerClientEvent('okokNotify:Alert', playerId, 'ATM', ('$%sを入金しました'):format(amount), 5000, 'success', true)
+    elseif txType == 'withdraw' then
+        -- account.moneyのような残高フィールド名は導入しているokokBankingのバージョンによって異なる可能性があるため、
+        -- 実際の導入時は公式ドキュメント・config.luaで正確なフィールド名を確認し、残高不足チェックを追加すること
+        exports['okokBanking']:RemoveMoney(society, amount)
+        playerCash[playerId] = getCash(playerId) + amount
+        exports['okokBanking']:AddTransaction(society, { value = amount, type = 'withdraw', reason = 'ATM出金' })
+
+        TriggerClientEvent('okokNotify:Alert', playerId, 'ATM', ('$%sを出金しました'):format(amount), 5000, 'success', true)
+    end
+end)</code></pre>
+      </div>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p class="version-note">実際のリソースファイルは<a href="ex06-atm/">samples/ex06-atm/</a>に置いてあります。<code>GetAccount</code>が返す口座オブジェクトの残高フィールド名(例: <code>account.money</code>)は本サイトのTier4-06レッスンでも明言されておらず、導入しているokokBankingのバージョンによって異なる可能性があります。出金時の残高不足チェックを実装する際は、必ず導入環境の公式ドキュメントで正確なフィールド名を確認してください。</p>
+    </section>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../assets/js/lessons-data.js"></script>
+  <script src="../assets/js/exercises-data.js"></script>
+  <script src="../assets/js/samples-data.js"></script>
+  <script src="../assets/js/progress.js"></script>
+  <script src="../assets/js/nav.js"></script>
+  <script src="../assets/vendor/prism/prism.js"></script>
+  <script src="../assets/js/code-copy.js"></script>
+</body>
+</html>

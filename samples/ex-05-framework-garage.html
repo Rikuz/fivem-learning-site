@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>フレームワーク連携ガレージ(サンプルコード) | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+  <link rel="stylesheet" href="../assets/css/lesson.css">
+  <link rel="stylesheet" href="../assets/vendor/prism/prism.css">
+</head>
+<body data-sample-id="ex-05-framework-garage">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta exercise-difficulty">
+      <span class="badge tier-badge" data-tier="4">🔴 難易度: 中上級</span>
+    </div>
+
+    <h1>フレームワーク連携ガレージ(サンプルコード)</h1>
+
+    <section class="conclusion">
+      <h2>概要</h2>
+      <p>ESX/QBCoreと連携し、所有車両をダメージ状態も含めてガレージで出し入れできるサンプルです。演習の仕様は<a href="../practice/05-framework-garage.html">フレームワーク連携ガレージ(演習ページ)</a>を参照してください。</p>
+    </section>
+
+    <section class="directory-structure">
+      <h2>ディレクトリ構造</h2>
+      <pre class="directory-tree">ex05-garage/
+├── fxmanifest.lua
+├── client.lua
+├── server.lua
+└── garage.sql</pre>
+    </section>
+
+    <section class="code-example">
+      <h2>コード</h2>
+
+      <h3>garage.sql</h3>
+      <div class="code-block">
+        <pre><code class="language-sql">CREATE TABLE IF NOT EXISTS `ex05_owned_vehicles` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `identifier` VARCHAR(64) NOT NULL,
+  `model` VARCHAR(50) NOT NULL,
+  `plate` VARCHAR(12) NOT NULL UNIQUE,
+  `garage` VARCHAR(50) NOT NULL,
+  `stored` TINYINT(1) NOT NULL DEFAULT 1,
+  `fuel` FLOAT NOT NULL DEFAULT 100.0,
+  `engine_health` FLOAT NOT NULL DEFAULT 1000.0,
+  `body_health` FLOAT NOT NULL DEFAULT 1000.0
+);</code></pre>
+      </div>
+
+      <h3>fxmanifest.lua</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">fx_version 'cerulean'
+game 'gta5'
+
+author 'FiveM学習サイト サンプル'
+description 'ex-05: フレームワーク連携ガレージ'
+version '1.0.0'
+
+dependency 'ox_target'
+dependency 'oxmysql'
+
+client_script 'client.lua'
+server_script 'server.lua'</code></pre>
+      </div>
+
+      <h3>server.lua</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">-- フレームワーク検知(Tier4-01参照)
+local function detectFramework()
+    if GetResourceState('es_extended') == 'started' then
+        return 'esx'
+    elseif GetResourceState('qbx_core') == 'started' then
+        return 'qbox'
+    elseif GetResourceState('qb-core') == 'started' then
+        return 'qbcore'
+    end
+    return nil
+end
+
+local FRAMEWORK = detectFramework()
+local ESX, QBCore
+
+CreateThread(function()
+    if FRAMEWORK == 'esx' then
+        ESX = exports['es_extended']:getSharedObject()
+    elseif FRAMEWORK == 'qbcore' then
+        QBCore = exports['qb-core']:GetCoreObject()
+    end
+end)
+
+local function getIdentifier(playerId)
+    if FRAMEWORK == 'esx' and ESX then
+        local xPlayer = ESX.GetPlayerFromId(playerId)
+        return xPlayer and xPlayer.identifier
+    elseif FRAMEWORK == 'qbcore' and QBCore then
+        local Player = QBCore.Functions.GetPlayer(playerId)
+        return Player and Player.PlayerData.citizenid
+    end
+    return GetPlayerIdentifierByType(playerId, 'license') -- フレームワーク未検出時のフォールバック
+end
+
+RegisterNetEvent('ex05garage:requestVehicles')
+AddEventHandler('ex05garage:requestVehicles', function(garageName)
+    local playerId = source
+    local identifier = getIdentifier(playerId)
+
+    local vehicles = MySQL.query.await(
+        'SELECT * FROM ex05_owned_vehicles WHERE identifier = ? AND garage = ? AND stored = 1',
+        { identifier, garageName }
+    )
+
+    TriggerClientEvent('ex05garage:showVehicles', playerId, vehicles or {})
+end)
+
+RegisterNetEvent('ex05garage:takeOut')
+AddEventHandler('ex05garage:takeOut', function(plate)
+    local playerId = source
+    local identifier = getIdentifier(playerId)
+
+    local vehicle = MySQL.single.await('SELECT * FROM ex05_owned_vehicles WHERE identifier = ? AND plate = ?', { identifier, plate })
+
+    -- 既に出庫中の車両を二重に出庫できないよう、storedフラグを必ず確認する
+    if not vehicle or vehicle.stored ~= 1 then
+        TriggerClientEvent('ex05garage:notify', playerId, 'この車両は出庫できません')
+        return
+    end
+
+    MySQL.update('UPDATE ex05_owned_vehicles SET stored = 0 WHERE id = ?', { vehicle.id })
+    TriggerClientEvent('ex05garage:spawnVehicle', playerId, vehicle)
+end)
+
+RegisterNetEvent('ex05garage:store')
+AddEventHandler('ex05garage:store', function(plate, fuel, engineHealth, bodyHealth)
+    local playerId = source
+    local identifier = getIdentifier(playerId)
+
+    MySQL.update(
+        'UPDATE ex05_owned_vehicles SET stored = 1, fuel = ?, engine_health = ?, body_health = ? WHERE identifier = ? AND plate = ?',
+        { fuel, engineHealth, bodyHealth, identifier, plate }
+    )
+
+    TriggerClientEvent('ex05garage:notify', playerId, '車両を格納しました')
+end)
+
+-- デバッグ用: オーナーシップ登録画面を作る代わりに、コマンドで所有車両を直接登録する
+RegisterNetEvent('ex05garage:debugRegisterVehicle')
+AddEventHandler('ex05garage:debugRegisterVehicle', function(model, plate, garageName)
+    local playerId = source
+    local identifier = getIdentifier(playerId)
+
+    MySQL.insert('INSERT INTO ex05_owned_vehicles (identifier, model, plate, garage) VALUES (?, ?, ?, ?)', {
+        identifier, model, plate, garageName
+    })
+
+    TriggerClientEvent('ex05garage:notify', playerId, ('%sを所有車両として登録しました'):format(plate))
+end)</code></pre>
+      </div>
+
+      <h3>client.lua</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local GARAGE_NAME = 'downtown'
+local GARAGE_COORDS = vec3(-200.0, -1300.0, 31.0)
+
+exports.ox_target:addBoxZone({
+    coords = GARAGE_COORDS,
+    size = vec3(4.0, 4.0, 3.0),
+    options = {
+        {
+            name = 'garage_take_out',
+            icon = 'fa-solid fa-car',
+            label = '車両を出庫する',
+            onSelect = function()
+                TriggerServerEvent('ex05garage:requestVehicles', GARAGE_NAME)
+            end,
+        },
+        {
+            name = 'garage_store',
+            icon = 'fa-solid fa-warehouse',
+            label = '車両を格納する',
+            onSelect = function()
+                local ped = PlayerPedId()
+                local vehicle = GetVehiclePedIsIn(ped, false)
+                if vehicle == 0 then
+                    TriggerEvent('chat:addMessage', { args = { '[ガレージ]', '車両に乗っていません' } })
+                    return
+                end
+
+                local plate = GetVehicleNumberPlateText(vehicle)
+                local fuel = GetVehicleFuelLevel(vehicle)
+                local engineHealth = GetVehicleEngineHealth(vehicle)
+                local bodyHealth = GetVehicleBodyHealth(vehicle)
+
+                SetEntityAsMissionEntity(vehicle, true, true)
+                DeleteEntity(vehicle)
+
+                TriggerServerEvent('ex05garage:store', plate, fuel, engineHealth, bodyHealth)
+            end,
+        },
+    }
+})
+
+RegisterNetEvent('ex05garage:showVehicles')
+AddEventHandler('ex05garage:showVehicles', function(vehicles)
+    if #vehicles == 0 then
+        TriggerEvent('chat:addMessage', { args = { '[ガレージ]', '格納中の車両がありません' } })
+        return
+    end
+
+    for _, v in ipairs(vehicles) do
+        TriggerEvent('chat:addMessage', { args = { '[ガレージ]', ('%s (%s) — /garagetakeout %s'):format(v.model, v.plate, v.plate) } })
+    end
+end)
+
+RegisterCommand('garagetakeout', function(source, args)
+    TriggerServerEvent('ex05garage:takeOut', args[1])
+end, false)
+
+RegisterNetEvent('ex05garage:spawnVehicle')
+AddEventHandler('ex05garage:spawnVehicle', function(vehicleData)
+    RequestModel(vehicleData.model)
+    while not HasModelLoaded(vehicleData.model) do Wait(0) end
+
+    local vehicle = CreateVehicle(vehicleData.model, GARAGE_COORDS.x, GARAGE_COORDS.y, GARAGE_COORDS.z, 0.0, true, false)
+    SetVehicleNumberPlateText(vehicle, vehicleData.plate)
+    SetModelAsNoLongerNeeded(vehicleData.model)
+
+    -- DBに保存されたダメージ状態・燃料を復元してから出庫する
+    SetVehicleFuelLevel(vehicle, vehicleData.fuel + 0.0)
+    SetVehicleEngineHealth(vehicle, vehicleData.engine_health + 0.0)
+    SetVehicleBodyHealth(vehicle, vehicleData.body_health + 0.0)
+
+    SetVehicleOnGroundProperly(vehicle)
+    TaskWarpPedIntoVehicle(PlayerPedId(), vehicle, -1)
+end)
+
+RegisterNetEvent('ex05garage:notify')
+AddEventHandler('ex05garage:notify', function(message)
+    TriggerEvent('chat:addMessage', { args = { '[ガレージ]', message } })
+end)
+
+-- デバッグ用: 所有車両を登録する(オーナーシップ画面が無いため)
+RegisterCommand('garageregister', function(source, args)
+    TriggerServerEvent('ex05garage:debugRegisterVehicle', args[1], args[2], GARAGE_NAME)
+end, false)</code></pre>
+      </div>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>実際のリソースファイルは<a href="ex05-garage/">samples/ex05-garage/</a>に置いてあります。<code>/garageregister [車種] [ナンバー]</code>はオーナーシップ登録画面(車両購入時に本来行う処理)が無い環境でも動作確認できるようにしたデバッグ用コマンドです。フレームワークが検出できない場合はFiveM標準の識別子にフォールバックする設計にしています。</p>
+    </section>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../assets/js/lessons-data.js"></script>
+  <script src="../assets/js/exercises-data.js"></script>
+  <script src="../assets/js/samples-data.js"></script>
+  <script src="../assets/js/progress.js"></script>
+  <script src="../assets/js/nav.js"></script>
+  <script src="../assets/vendor/prism/prism.js"></script>
+  <script src="../assets/js/code-copy.js"></script>
+</body>
+</html>
