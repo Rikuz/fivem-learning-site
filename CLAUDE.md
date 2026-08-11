@@ -25,6 +25,7 @@ FiveM(GTA Vのマルチプレイヤー拡張フレームワーク)のスクリ�
 | レッスンデータは `assets/js/lessons-data.js` に **JS配列**として持つ(JSONをfetchしない) | `file://` で `index.html` を直接ダブルクリックして開いた場合、`fetch()` はCORSエラーで失敗する。スクリプトタグで読み込むJS配列ならサーバーなしでも動く |
 | 進捗管理は `localStorage` | サーバー・DB不要。ユーザーの要望通り「ブラウザに保存して次回も続きから」を満たす。スキーマは `docs/ARCHITECTURE.md` 参照 |
 | 本番公開先は **GitHub Pages**(プロジェクトページ形式) | 無料・HTTPS配信・素のHTML/CSS/JSをpushするだけで公開できる。ただし `https://<user>.github.io/<repo>/` のように**サブディレクトリ配下**で配信されるため、CSS/JS/リンクの参照は必ず相対パスで統一する(下記ルール参照)。これは `file://` 直接オープン対応とも両立する選択 |
+| CSSフレームワークは **Pico.css(classless版、CDN不使用)** を土台として採用 | `assets/vendor/pico/pico.min.css` にローカル同梱し、Prism.jsと同じ「CDN非依存でオフラインでも動く」方針を踏襲。classless版はタグセレクタに直接スタイルを当てるため、独自クラス(`.lesson-card`等)を持つ既存コンポーネントの見た目とは衝突しない。**各HTMLの`<head>`では、Pico本体を既存の`base.css`/`components.css`より必ず先に読み込む**(後から読み込む自前CSSで上書きするため)。ただし`body>main`のような子孫結合子セレクタはPico側の詳細度が高いため、`base.css`側も`body > main`のように合わせている(単に`main`と書くと負ける)。配色は「疲れにくさ」を最優先し、純白/純黒を避けた低コントラスト寄りのパレット+`prefers-color-scheme`によるダークモード対応を`base.css`の`:root`で行う |
 
 ---
 
@@ -57,7 +58,8 @@ fivem-learning-site/
 │   │   ├── render-samples.js       # サンプルコード一覧ページの描画
 │   │   └── nav.js                  # 共通ヘッダー/パンくず/前後レッスンリンクの描画
 │   └── vendor/
-│       └── prism/                  # コードハイライト(prism.js / prism.css をローカル同梱)
+│       ├── prism/                  # コードハイライト(prism.js / prism.css をローカル同梱)
+│       └── pico/                   # CSSフレームワーク(pico.min.css、classless版をローカル同梱)
 ├── lessons/
 │   ├── tier1-beginner/             # 入門
 │   ├── tier2-novice/               # 初級

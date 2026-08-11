@@ -1,27 +1,30 @@
 /* base.css — リセット・共通レイアウト・カラー変数 */
 
 :root {
-  /* tier別カラー */
-  --tier1-main: #2e7d32;
-  --tier1-bg: #e8f5e9;
-  --tier2-main: #0277bd;
-  --tier2-bg: #e1f5fe;
-  --tier3-main: #ef6c00;
-  --tier3-bg: #fff3e0;
-  --tier4-main: #d84315;
-  --tier4-bg: #fbe9e7;
-  --tier5-main: #4a148c;
-  --tier5-bg: #f3e5f5;
+  /* tier別カラー(彩度を抑えた、目が疲れにくい配色) */
+  --tier1-main: #3a7a52;
+  --tier1-bg: #eaf3ec;
+  --tier2-main: #3d6ea1;
+  --tier2-bg: #e9f0f6;
+  --tier3-main: #b3701f;
+  --tier3-bg: #f6efe4;
+  --tier4-main: #b0553a;
+  --tier4-bg: #f5ebe6;
+  --tier5-main: #71508f;
+  --tier5-bg: #f0ecf4;
 
-  /* 共通カラー */
-  --color-text: #1a1a1a;
-  --color-bg: #ffffff;
-  --color-muted: #666666;
-  --color-border: #e0e0e0;
-  --color-complete: #2e7d32;
-  --color-link: #0277bd;
-  --color-code-bg: #1e1e1e;
-  --color-badge-bg: #f0f0f0;
+  /* 共通カラー(純白/純黒を避け、コントラストを少し落として長時間閲覧の疲労を軽減) */
+  --color-text: #2b2d31;
+  --color-bg: #faf9f7;
+  --color-surface: #ffffff;
+  --color-muted: #6b6d72;
+  --color-border: #e2e0db;
+  --color-complete: #3a7a52;
+  --color-link: #3d6ea1;
+  --color-code-bg: #262a30;
+  --color-code-text: #d8dadd;
+  --color-badge-bg: #f0eee9;
+  --color-shadow: rgba(30, 28, 24, 0.08);
 
   /* タイポグラフィ */
   --font-body: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN",
@@ -38,6 +41,34 @@
   --space-2: 16px;
   --space-3: 24px;
   --space-4: 32px;
+}
+
+/* ダークモード: システム設定に合わせて、こちらも純黒/純白を避けた低刺激な配色にする */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --tier1-main: #6fc492;
+    --tier1-bg: #1c2a20;
+    --tier2-main: #7aaed8;
+    --tier2-bg: #1c2733;
+    --tier3-main: #dba25c;
+    --tier3-bg: #2e2619;
+    --tier4-main: #e08a6c;
+    --tier4-bg: #2e2118;
+    --tier5-main: #b79bd4;
+    --tier5-bg: #29222f;
+
+    --color-text: #dfded9;
+    --color-bg: #1b1c1e;
+    --color-surface: #232427;
+    --color-muted: #9a9b9f;
+    --color-border: #38393d;
+    --color-complete: #6fc492;
+    --color-link: #7aaed8;
+    --color-code-bg: #17181a;
+    --color-code-text: #d8dadd;
+    --color-badge-bg: #2a2b2f;
+    --color-shadow: rgba(0, 0, 0, 0.35);
+  }
 }
 
 * {
@@ -83,7 +114,7 @@ small,
   color: var(--color-muted);
 }
 
-main {
+body > main {
   max-width: 880px;
   margin: 0 auto;
   padding: var(--space-3) var(--space-2) var(--space-4);
@@ -100,7 +131,7 @@ pre {
 }
 
 @media (max-width: 640px) {
-  main {
+  body > main {
     padding: var(--space-2) var(--space-2) var(--space-3);
   }
 
