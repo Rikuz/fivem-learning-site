@@ -145,6 +145,7 @@ window.LESSONS = LESSONS;
 | `crime` | 犯罪行為(ゲーム内) |
 | `law-enforcement` | 警察業務 |
 | `housing` | 住居・不動産 |
+| `monetization` | 収益化・課金 |
 
 ---
 

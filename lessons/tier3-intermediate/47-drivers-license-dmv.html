@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>運転免許・DMV系システム | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t3-47-drivers-license-dmv">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="3">🟠 中級</span>
+      <span class="badge category-badge">🎮 経済・ゲームプレイ</span>
+    </div>
+
+    <h1>運転免許・DMV系システム</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>チェックポイントを順番に通過する実技試験を作り、時間内に合格したプレイヤーにDBへ保存される運転免許を発行する</strong>ことができるようになります。単一の外部スクリプトが広く標準化されている分野ではないため、Tier2-18のエリア判定とTier3-03のDB連携を組み合わせた自作システムとして構築します。</p>
+      <p><strong>こんな時に使う:</strong> 「免許を持っていないと車を借りられない/公道を走れない」という縛りをRPサーバーに導入したいとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>教習・試験は「①決められた順番でチェックポイントを通過する」「②制限時間内に完走する」「③完走できたら合格として免許をDBに記録する」という3ステップで作ります。チェックポイントの通過判定はTier2-18で学んだ距離ベースのエリア判定を使い、<strong>順番を飛ばして通過できないよう、必ず「次に通過すべきチェックポイントの番号」をserver側で管理</strong>します。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>SQL: 免許テーブル</h3>
+      <div class="code-block">
+        <pre><code class="language-sql">CREATE TABLE IF NOT EXISTS `driver_licenses` (
+  `identifier` VARCHAR(64) PRIMARY KEY,
+  `issued_at` DATETIME DEFAULT CURRENT_TIMESTAMP
+);</code></pre>
+      </div>
+
+      <h3>client.lua: チェックポイントを順番に表示し、通過を検知する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local CHECKPOINTS = {
+    vec3(100.0, 200.0, 30.0),
+    vec3(150.0, 250.0, 30.0),
+    vec3(200.0, 220.0, 30.0),
+    vec3(120.0, 180.0, 30.0), -- ゴール(スタート地点付近に戻ってくる周回コース)
+}
+local TIME_LIMIT_MS = 3 * 60 * 1000 -- 3分以内に完走
+local REACH_DISTANCE = 5.0
+
+local testActive = false
+local currentCheckpointIndex = 1
+local testBlip = nil
+local testEndsAt = nil
+
+local function showCheckpointBlip(index)
+    if testBlip then RemoveBlip(testBlip) end
+
+    local coords = CHECKPOINTS[index]
+    testBlip = AddBlipForCoord(coords.x, coords.y, coords.z)
+    SetBlipSprite(testBlip, 1)
+    SetBlipColour(testBlip, 5)
+    SetBlipRoute(testBlip, true)
+end
+
+RegisterCommand('dmv_start', function()
+    if testActive then return end
+    testActive = true
+    currentCheckpointIndex = 1
+    testEndsAt = GetGameTimer() + TIME_LIMIT_MS
+
+    showCheckpointBlip(currentCheckpointIndex)
+    TriggerEvent('chat:addMessage', { args = { '[DMV]', ('試験を開始しました(制限時間%d分)'):format(TIME_LIMIT_MS / 60000) } })
+end, false)
+
+CreateThread(function()
+    while true do
+        Wait(500)
+
+        if testActive then
+            if GetGameTimer() >= testEndsAt then
+                testActive = false
+                if testBlip then RemoveBlip(testBlip) end
+                TriggerEvent('chat:addMessage', { args = { '[DMV]', '時間切れで不合格です' } })
+            else
+                local ped = PlayerPedId()
+                -- 乗車中でなければ試験にならないため、車両搭乗中かも確認する
+                local vehicle = GetVehiclePedIsIn(ped, false)
+                local playerCoords = (vehicle ~= 0) and GetEntityCoords(vehicle) or GetEntityCoords(ped)
+                local target = CHECKPOINTS[currentCheckpointIndex]
+                local distance = #(playerCoords - target)
+
+                if distance <= REACH_DISTANCE then
+                    currentCheckpointIndex = currentCheckpointIndex + 1
+
+                    if currentCheckpointIndex > #CHECKPOINTS then
+                        testActive = false
+                        if testBlip then RemoveBlip(testBlip) end
+                        TriggerServerEvent('dmv:requestIssueLicense')
+                    else
+                        showCheckpointBlip(currentCheckpointIndex)
+                    end
+                end
+            end
+        end
+    end
+end)
+
+RegisterNetEvent('dmv:notify')
+AddEventHandler('dmv:notify', function(message)
+    TriggerEvent('chat:addMessage', { args = { '[DMV]', message } })
+end)</code></pre>
+      </div>
+
+      <h3>server.lua: 免許を発行し、後で確認できるようにする</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local function getIdentifier(playerId)
+    return GetPlayerIdentifierByType(playerId, 'license')
+end
+
+local function hasLicense(playerId)
+    local identifier = getIdentifier(playerId)
+    local row = MySQL.scalar.await('SELECT identifier FROM driver_licenses WHERE identifier = ?', { identifier })
+    return row ~= nil
+end
+
+RegisterNetEvent('dmv:requestIssueLicense')
+AddEventHandler('dmv:requestIssueLicense', function()
+    local playerId = source
+    local identifier = getIdentifier(playerId)
+
+    -- 既に持っている場合は再発行しない(INSERT IGNOREで一意制約に任せる)
+    MySQL.query('INSERT IGNORE INTO driver_licenses (identifier) VALUES (?)', { identifier })
+
+    TriggerClientEvent('dmv:notify', playerId, '合格しました!運転免許が発行されました')
+end)
+
+-- レンタカー等、免許が必要な操作の前に確認する使用例
+RegisterNetEvent('rentalcar:requestRent')
+AddEventHandler('rentalcar:requestRent', function()
+    local playerId = source
+
+    if not hasLicense(playerId) then
+        TriggerClientEvent('dmv:notify', playerId, '運転免許を取得してください')
+        return
+    end
+
+    -- 免許確認後の貸出処理(Tier2-06参照)
+end)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li>チェックポイントの通過判定を<strong>「次に通過すべき番号」をserver側でも把握する設計</strong>にしないと(上記コード例は簡略化のためclient側のみで管理していますが、不正防止を厳密にするなら合格判定と同様にserver側でも検証してください)、順番を飛ばして最後のチェックポイントだけ踏んで合格にしてしまう不正が可能になります。</li>
+        <li>免許の有無をチェックする関数(<code>hasLicense</code>)は、レンタカーや車両購入等、免許が必要な<strong>あらゆる機能で共通して呼び出せる</strong>ようにしておくと、後から機能を追加しやすくなります。</li>
+        <li>試験中に切断した場合、<code>testActive</code>フラグがリセットされないままになる可能性があります。Tier2-15の<code>playerDropped</code>と組み合わせて後片付けすることを検討してください。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>より本格的に作り込む場合は、コース逸脱の検知(チェックポイント以外のルートを大きく外れたら失格にする)や、他車両との接触判定(減点方式)なども考えられます。免許の種類を複数用意する場合(普通免許・大型免許等)は、<code>driver_licenses</code>テーブルに<code>license_type</code>列を追加する設計に拡張してください。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

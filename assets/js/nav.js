@@ -1,12 +1,13 @@
 // assets/js/nav.js — 共通ヘッダー/パンくず/前後レッスンリンクの描画
 
-// lessons/tierX/*.html・tracks/*.html・samples/*.html は2階層/1階層下、practice/*.html は1階層下にあるため、ルートへの相対パスを判定する
+// lessons/tierX/*.html・tracks/*.html・samples/*.html・reference/*.html は2階層/1階層下、practice/*.html は1階層下にあるため、ルートへの相対パスを判定する
 function computeSiteRoot() {
   const path = window.location.pathname;
   if (/\/lessons\//.test(path)) return "../../";
   if (/\/practice\//.test(path)) return "../";
   if (/\/tracks\//.test(path)) return "../";
   if (/\/samples\//.test(path)) return "../";
+  if (/\/reference\//.test(path)) return "../";
   return "";
 }
 
@@ -40,6 +41,7 @@ function renderSiteHeader() {
         <a href="${root}practice.html">実践演習</a>
         <a href="${root}tracks.html">プロジェクトトラック</a>
         <a href="${root}samples.html">サンプルコード</a>
+        <a href="${root}reference.html">リファレンス</a>
       </nav>
     </div>
   `;

@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>マップ編集・カスタムプロップ配置(YMAP等) | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t3-45-map-editing-custom-props">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="3">🟠 中級</span>
+      <span class="badge category-badge">🌍 ワールド操作</span>
+    </div>
+
+    <h1>マップ編集・カスタムプロップ配置(YMAP等)</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>屋外のカスタムプロップ(装飾物)を、静的なYMAPファイルとして配置する方法と、Tier2-09で学んだ動的な<code>CreateObject</code>で配置する方法を使い分けられる</strong>ようになります。「ずっとそこにある装飾」と「プレイヤーの操作で出し入れする物」の違いを整理して理解します。</p>
+      <p><strong>こんな時に使う:</strong> 街に固定の装飾(看板・柵・イベント用の飾り付け等)を追加したいが、Tier4-35の家具設置システムのようにプレイヤーごとに動的配置する必要はないとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>プロップ配置には大きく2つのアプローチがあります。<strong>①静的配置(YMAP)</strong>は、resource起動時に自動的に読み込まれ続ける固定の装飾に向いています(Tier3-44のMLOと同じ仕組み)。<strong>②動的配置(<code>CreateObject</code>)</strong>は、プレイヤーの操作やDBの内容に応じて配置場所や数が変わる場合に向いています(Tier4-35の家具設置がこれにあたります)。「常にそこにあるべきか」「条件によって変わるか」で使い分けるのが基本方針です。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>fxmanifest.lua: 静的なプロップ配置(YMAP)を読み込む</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">fx_version 'cerulean'
+game 'gta5'
+
+author '自分の名前'
+description '街の装飾プロップ配置'
+version '1.0.0'
+
+this_is_a_map 'yes'
+
+files {
+    'stream/decorations.ymap',
+}</code></pre>
+      </div>
+
+      <h3>比較: 動的配置(Tier2-09の復習)</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">-- 条件によって出し入れする場合はCreateObjectを使う(Tier2-09・Tier4-35参照)
+local function spawnEventDecoration(coords)
+    local model = `prop_xmas_tree_int`
+
+    RequestModel(model)
+    while not HasModelLoaded(model) do Wait(0) end
+
+    local obj = CreateObject(model, coords.x, coords.y, coords.z, false, false, false)
+    FreezeEntityPosition(obj, true)
+    SetModelAsNoLongerNeeded(model)
+
+    return obj
+end
+
+-- 例: イベント期間中だけコマンドで装飾を出し入れする
+local eventDecorations = {}
+
+RegisterCommand('event_decorate_on', function()
+    eventDecorations[#eventDecorations + 1] = spawnEventDecoration(vec3(200.0, 100.0, 30.0))
+end, false)
+
+RegisterCommand('event_decorate_off', function()
+    for _, obj in ipairs(eventDecorations) do
+        if DoesEntityExist(obj) then
+            DeleteEntity(obj)
+        end
+    end
+    eventDecorations = {}
+end, false)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li>静的配置(YMAP)は<strong>resourceが起動している限り常に読み込まれ続けます</strong>。「季節限定の装飾だから期間外は消したい」という場合は、YMAPではなくTier2-09の動的配置(または期間外はresource自体を`stop`する運用)を選んでください。</li>
+        <li>大量のプロップを動的配置(<code>CreateObject</code>)で置くと、Tier5-01で学ぶパフォーマンスに影響します。数十〜数百個規模の固定装飾は、素直にYMAPの静的配置にした方が軽量です。</li>
+        <li>YMAPで配置したプロップの座標を後から微調整したい場合、Lua側から動的に動かすことはできません(静的データのため)。座標を作り直してYMAPファイル自体を差し替える必要があります。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>実際のYMAPファイルの作成(座標を決めて配置する作業)には、コミュニティ製の「FiveM Map Editor」のようなin-game編集ツールがよく使われますが、そうしたツール自体の操作は本サイトのスコープ外(Luaスクリプト開発に特化しているため)です。ここで扱ったのは、既に作られたYMAPを<strong>resourceとして正しく読み込ませる方法</strong>と、動的配置との使い分けの考え方です。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

@@ -218,3 +218,97 @@ main li {
   color: var(--color-muted);
   font-style: italic;
 }
+
+/* ===== reference/*.html(リファレンス集)専用スタイル ===== */
+
+.glossary-group,
+.native-group {
+  margin-bottom: var(--space-4);
+}
+
+.glossary-group h2,
+.native-group h2 {
+  border-bottom: 2px solid var(--color-border);
+  padding-bottom: 6px;
+}
+
+.glossary-list {
+  margin: 0;
+}
+
+.glossary-list dt {
+  font-weight: bold;
+  margin-top: var(--space-2);
+}
+
+.glossary-list dd {
+  margin: 4px 0 0;
+  color: var(--color-text);
+}
+
+.glossary-list dd a {
+  font-size: var(--font-size-small);
+  margin-left: 4px;
+}
+
+.native-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-small);
+  margin-bottom: var(--space-2);
+}
+
+.native-table th,
+.native-table td {
+  text-align: left;
+  padding: 6px 10px;
+  border: 1px solid var(--color-border);
+  vertical-align: top;
+}
+
+.native-table th {
+  background: var(--color-badge-bg);
+}
+
+.native-table code {
+  white-space: nowrap;
+}
+
+.error-entry {
+  border: 1px solid var(--color-border);
+  border-left: 4px solid var(--tier4-main);
+  border-radius: 6px;
+  padding: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.error-entry__message {
+  font-family: var(--font-code);
+  font-size: var(--font-size-small);
+  background: var(--color-code-bg);
+  color: #d4d4d4;
+  padding: 8px;
+  border-radius: 4px;
+  overflow-x: auto;
+  margin: 0 0 8px;
+}
+
+.error-entry__cause {
+  margin: 4px 0;
+}
+
+.error-entry__fix {
+  margin: 4px 0 0;
+  color: var(--color-muted);
+}
+
+.reference-search {
+  width: 100%;
+  max-width: 480px;
+  padding: 8px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  font-size: var(--font-size-base);
+  margin-bottom: var(--space-3);
+  box-sizing: border-box;
+}

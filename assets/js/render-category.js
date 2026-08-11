@@ -22,13 +22,24 @@ function updateURL(state) {
   window.history.replaceState(null, "", newURL);
 }
 
-// 「したいこと」から探す逆引き検索: タイトル/サマリー/keywordsに部分一致するか判定する
+// 全文検索インデックス(assets/js/search-index.js、scripts/build-search-index.jsで生成)をid引きできるようMap化する
+let searchIndexMap = null;
+function getSearchIndexMap() {
+  if (!searchIndexMap) {
+    searchIndexMap = new Map();
+    (window.SEARCH_INDEX || []).forEach((entry) => searchIndexMap.set(entry.id, entry.text));
+  }
+  return searchIndexMap;
+}
+
+// 「したいこと」から探す逆引き検索: タイトル/サマリー/keywords/本文全文に部分一致するか判定する
 function matchesQuery(lesson, query) {
   if (!query) return true;
   const normalized = query.trim().toLowerCase();
   if (!normalized) return true;
 
-  const haystack = [lesson.title, lesson.summary, ...(lesson.keywords || [])]
+  const bodyText = getSearchIndexMap().get(lesson.id) || "";
+  const haystack = [lesson.title, lesson.summary, ...(lesson.keywords || []), bodyText]
     .join(" ")
     .toLowerCase();
 

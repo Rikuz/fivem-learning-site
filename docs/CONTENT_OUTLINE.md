@@ -23,6 +23,7 @@
 | `t1-11-hash-strings` | GetHashKeyとハッシュ文字列 | `lua-basics` | t1-02 | `GetHashKey`の役割、`` `モデル名` ``バッククォート記法がハッシュ変換の糖衣構文であること |
 | `t1-12-server-cfg-structure` | server.cfgの全体構造 | `environment` | t1-01 | `set`/`setr`/`sets`と`ensure`の違い、読み込み順序、よく使うconvar一覧、`exec`での分割管理 |
 | `t1-13-vscode-lua-setup` | VS CodeでFiveM開発環境を整える | `environment` | t1-01 | sumneko.lua拡張機能とFiveM native定義ファイルによる補完・型チェックのセットアップ |
+| `t1-14-txadmin-administration` | txAdminの本格的な使い方(権限管理・バックアップ・リソース監視) | `environment`, `admin-tools` | t1-01, t1-12 | admins.jsonのパーミッションノード一覧、Backupsタブ、Scheduled Restarts、統合リソースモニターの使い方 |
 
 ---
 
@@ -100,6 +101,10 @@
 | `t3-41-status-bar-hud-sync` | ステータスバー(体力/満腹度/喉の渇き等)の同期 | `nui`, `events` | t3-39 | `GetEntityHealth`等のnativeと、フレームワーク非依存の汎用ステータス値をHUDに同期する設計 |
 | `t3-42-admin-permission-tiers` | 管理者権限レベル(Permission Tier)の設計 | `admin-tools`, `security` | t3-20 | Ace権限とJobを組み合わせた多段階権限(モデレーター/管理者/開発者)の設計パターン |
 | `t3-43-admin-player-list-spectate` | オンラインプレイヤー一覧とスペクテイト/ノークリップ | `admin-tools` | t3-42, t2-20 | NUIでのオンラインプレイヤー一覧表示、`NetworkSetInSpectatorMode`でのスペクテイト、`FREEZE_ENTITY_POSITION`を用いたノークリップの実装 |
+| `t3-44-mlo-interior-basics` | MLO/インテリア導入の基礎 | `world` | t1-04, t2-09 | `this_is_a_map`・`data_file 'DLC_ITYP_REQUEST'`でのMLO導入、`GetInteriorAtCoords`/`ActivateInteriorEntitySet`/`RefreshInterior`でのentity set切り替え |
+| `t3-45-map-editing-custom-props` | マップ編集・カスタムプロップ配置(YMAP等) | `world` | t3-44 | 静的なYMAP配置(`this_is_a_map`)と動的な`CreateObject`配置(Tier2-09)の使い分け |
+| `t3-46-resource-testing-qa` | 自作リソースのテスト/QAの考え方 | `environment` | t1-05 | restart耐性・複数クライアント同時利用・不正入力への耐性を確認する公開前チェックリスト、セルフテストコマンドのパターン |
+| `t3-47-drivers-license-dmv` | 運転免許・DMV系システム | `gameplay` | t2-18, t3-03 | チェックポイント通過型の実技試験を自作し、合格者にDB保存された免許を発行、レンタカー等の利用条件にする |
 
 ### exports 正確な構文(FiveM公式ドキュメント準拠)
 
@@ -448,6 +453,7 @@ end)
 | `t4-36-housing-storage-lock` | 自宅の収納・施錠システム(ox_inventory + ox_doorlockとの連携) | `housing`, `targeting` | t4-34, t3-37, t4-14 | 所有者以外は開錠・収納アクセス不可にする権限制御。複数物件所有時の管理設計 |
 | `t4-37-test-drive-system` | 試乗(テストドライブ)システム | `vehicle`, `gameplay` | t4-12 | 制限時間付きの試乗車貸出、エリア外に出た場合の強制返却処理 |
 | `t4-38-vehicle-financing-loan` | 分割払い(ローン)システム | `gameplay`, `framework` | t4-12, t4-06 | 頭金+分割回数の設計、定期的な引き落とし処理、滞納時の扱い |
+| `t4-39-tebex-integration` | 決済/課金ショップ連携(Tebex)の基礎 | `monetization`, `framework` | t2-04, t2-20 | `sv_tebexSecret`でのストア連携、`{id}`プレースホルダーを使ったコマンド課金、オフライン購入時の保留処理 |
 
 ### okokBankingV2 正確な構文(要順守・憶測禁止。docs.okokscripts.io/scripts/okokbankingv2/exports で確認済み)
 
@@ -709,7 +715,7 @@ exports['Renewed-Banking']:CreateJobAccount(jobTable, initialBalance)
 
 ## カテゴリキー一覧(`docs/ARCHITECTURE.md`と同期させること)
 
-`environment`, `lua-basics`, `npc-entity`, `nui`, `database`, `framework`, `okok`, `lb-phone`, `events`, `performance`, `security`, `vehicle`, `animation`, `targeting`, `ui-library`, `world`, `effects`, `appearance`, `camera`, `gameplay`, `admin-tools`, `voice`, `dispatch`, `crime`, `law-enforcement`, `housing`
+`environment`, `lua-basics`, `npc-entity`, `nui`, `database`, `framework`, `okok`, `lb-phone`, `events`, `performance`, `security`, `vehicle`, `animation`, `targeting`, `ui-library`, `world`, `effects`, `appearance`, `camera`, `gameplay`, `admin-tools`, `voice`, `dispatch`, `crime`, `law-enforcement`, `housing`, `monetization`
 
 ## 今後レッスンを追加する場合のルール
 

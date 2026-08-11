@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>自作リソースのテスト/QAの考え方 | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t3-46-resource-testing-qa">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="3">🟠 中級</span>
+      <span class="badge category-badge">⚙️ 環境構築</span>
+    </div>
+
+    <h1>自作リソースのテスト/QAの考え方</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>「自分の環境で1回動いた」で終わらせず、restart耐性・複数人同時利用・エラーなしの起動を確認するための体系立ったチェック手順</strong>を持てるようになります。Tier1-05のデバッグの基本を、公開前の品質チェックという視点で発展させたレッスンです。</p>
+      <p><strong>こんな時に使う:</strong> 作ったスクリプトを本番サーバーに導入する前、または他の人に配布する前に、最低限確認しておくべきことを知りたいとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>「動いた」には段階があります。①<strong>起動時にエラーが出ない</strong>、②<strong>1人で操作して期待通り動く</strong>、③<strong>resourceを再起動しても壊れない</strong>、④<strong>複数人が同時に使っても矛盾が起きない</strong>という順で確認範囲を広げていくと、抜け漏れに気づきやすくなります。特に③・④は1人での動作確認だけでは見つからない不具合の温床です。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>F8コンソール/サーバーコンソールでのrestart耐性チェック</h3>
+      <div class="code-block">
+        <pre><code class="language-bash"># サーバーコンソールから対象resourceだけを再起動する(全体再起動より高速に確認できる)
+restart my-resource
+
+# fxmanifest.luaの変更を反映しつつ再起動する場合
+refresh
+restart my-resource</code></pre>
+      </div>
+
+      <h3>server.lua: 起動直後に自己チェックする(セルフテストコマンド)</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">-- resource起動のたびに、重要な前提条件が揃っているかを自動でチェックする
+local function runSelfCheck()
+    local ok = true
+
+    if GetResourceState('oxmysql') ~= 'started' then
+        print('^1[my-resource] 警告: oxmysqlが起動していません^0') -- Tier1-05のprintデバッグの応用
+        ok = false
+    end
+
+    if GetConvar('my_resource_api_key', '') == '' then
+        print('^1[my-resource] 警告: my_resource_api_keyが未設定です^0')
+        ok = false
+    end
+
+    if ok then
+        print('^2[my-resource] 起動チェック: 問題ありません^0')
+    end
+end
+
+AddEventHandler('onResourceStart', function(resourceName)
+    if GetCurrentResourceName() ~= resourceName then return end
+    runSelfCheck()
+end)</code></pre>
+      </div>
+
+      <h3>pcallを使った安全な初期化(Tier1-07の応用)</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local success, err = pcall(function()
+    -- 外部リソースのexportsを呼ぶなど、失敗しうる初期化処理
+    exports['some-dependency']:Initialize()
+end)
+
+if not success then
+    print(('^1[my-resource] 初期化に失敗しました: %s^0'):format(err))
+end</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li><strong>「起動時にエラーが出ない」ことと「正しく動く」ことは別です。</strong> 構文エラーがなくても、ロジックの誤りは実際に操作してみないと見つかりません。起動確認だけで安心せず、必ず実際の操作フローを一通り試してください。</li>
+        <li>1人でのテストだけでは、Tier5-02の非同期処理やTier3-05のバリデーションで想定していた「同時に複数人が操作したときの競合」を見つけられません。可能であれば2つのクライアントで同時に操作して確認しましょう。</li>
+        <li><code>restart</code>で状態がおかしくなる典型的な原因は、「resource停止時に生成物(NPC・Blip・オブジェクト等)を削除し忘れている」ことです。Tier2-02等で学んだ<code>onResourceStop</code>での後片付けを必ず確認してください。</li>
+        <li>本番導入前に、意図的に不正な入力(存在しないアイテム名、範囲外の数値等)を送ってTier3-05のバリデーションが機能しているか確認するのも有効なテストです。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>チェックリストとしてまとめると、①<code>ensure</code>直後にエラーが出ないか、②主要な操作を一通り試したか、③<code>restart</code>後も壊れないか、④2人以上で同時に試したか、⑤不正な入力を送っても落ちないか、の5点です。全て自動化する必要はありませんが、公開・本番導入の前にこの順番で確認する習慣をつけると、トラブルの多くを未然に防げます。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

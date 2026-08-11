@@ -185,6 +185,16 @@ npx serve .
 
 ---
 
+## 全文検索インデックス(assets/js/search-index.js)について
+
+`category.html`の「したいことから探す」検索ボックスは、レッスンのtitle/summary/keywordsだけでなく<strong>本文全文</strong>も検索対象にしている。本文テキストは`assets/js/search-index.js`という自動生成ファイルに`SEARCH_INDEX`配列(`{id, text}`)として持たせている(fetchではなく他のdata.js群と同じくinline `<script>`読み込み、file://対応のため)。
+
+- **`lessons/`配下にレッスンHTMLを追加・編集したら、必ず`node scripts/build-search-index.js`を再実行して`assets/js/search-index.js`を再生成すること。** `search-index.js`を手で直接編集しない。
+- `scripts/build-search-index.js`は各レッスンHTMLの`<main>`内のテキストをタグ除去して抽出するだけの単純なNodeスクリプトで、`samples/`配下(サンプルコードのHTML)は対象外。
+- サイト自体の閲覧にはビルド手順は不要(`search-index.js`は生成済みの状態でリポジトリにコミットされる)。このスクリプトは「レッスン内容が変わった後にインデックスを更新するための著者向けの補助ツール」であり、npm installやビルドパイプラインの一部ではない。
+
+---
+
 ## 実践演習(practice/)のルール
 
 レッスンとは別に、`practice.html`(一覧)と`practice/*.html`(詳細)からなる**実践演習**を用意している。詳細な仕様は`docs/EXERCISE_OUTLINE.md`を参照(演習にとっての唯一の正)。

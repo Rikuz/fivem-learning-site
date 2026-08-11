@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>用語集・FAQ | リファレンス | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+  <link rel="stylesheet" href="../assets/css/lesson.css">
+</head>
+<body>
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <h1>用語集・FAQ</h1>
+    <p>サイト内で繰り返し登場する用語をカテゴリ別にまとめています。各レッスンの初出時にも簡単な補足を入れていますが、まとめて引きたいときはこのページを使ってください。</p>
+
+    <input type="search" id="glossary-search" class="reference-search" placeholder="用語を検索(例: StateBags, oxmysql, NUI)">
+
+    <div id="glossary-content">
+      <section class="glossary-group" data-group>
+        <h2>基礎用語</h2>
+        <dl class="glossary-list">
+          <dt data-term>resource(リソース)</dt>
+          <dd data-def>FiveMにおけるスクリプトの単位。1つのフォルダが1つのresourceに対応し、必ず<code>fxmanifest.lua</code>を持つ。<a href="../lessons/tier1-beginner/03-first-script.html">→ Tier1-03</a></dd>
+
+          <dt data-term>fxmanifest.lua</dt>
+          <dd data-def>resourceの設定ファイル。<code>fx_version</code>・使用するLuaファイル・依存関係(<code>dependency</code>)などを宣言する。<a href="../lessons/tier1-beginner/04-fxmanifest.html">→ Tier1-04</a></dd>
+
+          <dt data-term>native関数</dt>
+          <dd data-def>FiveMがゲームエンジン(RAGE)を直接操作するために提供する組み込み関数。<code>CreatePed</code>・<code>GetEntityCoords</code>等。<a href="../lessons/tier1-beginner/10-native-reference.html">→ Tier1-10</a></dd>
+
+          <dt data-term>convar</dt>
+          <dd data-def>サーバー起動時に<code>server.cfg</code>で設定できる変数。<code>GetConvar()</code>で読み取る。<a href="../lessons/tier1-beginner/12-server-cfg-structure.html">→ Tier1-12</a></dd>
+
+          <dt data-term>識別子(identifier)</dt>
+          <dd data-def>プレイヤーを一意に特定する文字列。license・steam・discord等の種類がある。<a href="../lessons/tier2-novice/20-player-identifiers.html">→ Tier2-20</a></dd>
+
+          <dt data-term>client側 / server側</dt>
+          <dd data-def>FiveMのLuaコードは実行される場所によって、各プレイヤーのPCで動く「client側」とサーバー機で動く「server側」に分かれる。同じイベント名でも登録場所によって挙動が異なる。</dd>
+
+          <dt data-term>ensure / restart / refresh</dt>
+          <dd data-def>サーバーコンソールで使うresource操作コマンド。<code>ensure</code>は起動、<code>restart</code>は再起動、<code>refresh</code>はresourceリストの再読み込み。</dd>
+        </dl>
+      </section>
+
+      <section class="glossary-group" data-group>
+        <h2>イベント・通信関連</h2>
+        <dl class="glossary-list">
+          <dt data-term>event(イベント)</dt>
+          <dd data-def><code>RegisterNetEvent</code>/<code>TriggerEvent</code>等で発火・購読する、resource間・client-server間の非同期メッセージング機構。<a href="../lessons/tier2-novice/01-events-basics.html">→ Tier2-01</a></dd>
+
+          <dt data-term>export</dt>
+          <dd data-def>他のresourceから関数を呼び出せるように公開する仕組み。<code>exports('名前', 関数)</code>で公開し、<code>exports['resource名']:名前()</code>で呼び出す。<a href="../lessons/tier3-intermediate/06-exports-between-resources.html">→ Tier3-06</a></dd>
+
+          <dt data-term>RegisterCommand</dt>
+          <dd data-def>チャット欄やコンソールから<code>/コマンド名</code>で実行できる処理を登録する。<a href="../lessons/tier2-novice/04-commands.html">→ Tier2-04</a></dd>
+
+          <dt data-term>TriggerEvent / TriggerServerEvent / TriggerClientEvent</dt>
+          <dd data-def>それぞれ「同じ側で発火」「serverへ送る」「特定または全clientへ送る」の3種類のイベント発火方法。</dd>
+        </dl>
+      </section>
+
+      <section class="glossary-group" data-group>
+        <h2>NUI(画面UI)関連</h2>
+        <dl class="glossary-list">
+          <dt data-term>NUI</dt>
+          <dd data-def>FiveMが内蔵するChromiumベースのブラウザで描画するUI画面。HTML/CSS/JSで作る。<a href="../lessons/tier3-intermediate/01-nui-basics.html">→ Tier3-01</a></dd>
+
+          <dt data-term>SetNuiFocus</dt>
+          <dd data-def>NUIにマウス/キーボード操作を渡す、または戻すnative。<code>SetNuiFocus(true, true)</code>で渡し、<code>SetNuiFocus(false, false)</code>で戻す。<a href="../lessons/tier3-intermediate/01-nui-basics.html">→ Tier3-01</a></dd>
+
+          <dt data-term>RegisterNUICallback</dt>
+          <dd data-def>JS側の<code>fetch()</code>から送られたデータをLua側で受け取る仕組み。<a href="../lessons/tier3-intermediate/02-nui-callback.html">→ Tier3-02</a></dd>
+
+          <dt data-term>ui_page</dt>
+          <dd data-def><code>fxmanifest.lua</code>でNUIのエントリポイント(HTMLファイル)を指定するディレクティブ。</dd>
+        </dl>
+      </section>
+
+      <section class="glossary-group" data-group>
+        <h2>DB連携関連</h2>
+        <dl class="glossary-list">
+          <dt data-term>oxmysql</dt>
+          <dd data-def>FiveMで広く使われるMySQL連携リソース。<a href="../lessons/tier3-intermediate/03-database-oxmysql.html">→ Tier3-03</a></dd>
+
+          <dt data-term>MySQL.query / MySQL.insert / MySQL.update / MySQL.scalar</dt>
+          <dd data-def>oxmysqlのモダンAPI関数群。用途に応じて戻り値の形が異なる(全行/挿入ID/影響行数/単一値)。<a href="../lessons/tier3-intermediate/32-oxmysql-modern-api.html">→ Tier3-32</a></dd>
+
+          <dt data-term>プレースホルダー(?)</dt>
+          <dd data-def>SQL文中の値を安全に埋め込むための書き方。文字列連結ではなくこれを使うことで、SQLインジェクションを防げる。</dd>
+        </dl>
+      </section>
+
+      <section class="glossary-group" data-group>
+        <h2>マルチプレイヤー同期関連</h2>
+        <dl class="glossary-list">
+          <dt data-term>StateBags</dt>
+          <dd data-def>プレイヤーやエンティティに紐づく、多くのclientで共有される状態データ。<code>Entity(ent).state:set(...)</code>や<code>Player(id).state:set(...)</code>で操作する。<a href="../lessons/tier5-advanced/03-statebags.html">→ Tier5-03</a></dd>
+
+          <dt data-term>replicated</dt>
+          <dd data-def>StateBagsの<code>:set()</code>の第3引数。<code>true</code>にすると全clientに同期され、<code>false</code>だとserver内でしか見えない。</dd>
+
+          <dt data-term>routing bucket(ルーティングバケット)</dt>
+          <dd data-def>プレイヤー・エンティティの見える範囲(インスタンス)を分離する仕組み。強盗ミッション等で他プレイヤーと干渉しない専用空間を作るのに使う。<a href="../lessons/tier5-advanced/08-routing-buckets.html">→ Tier5-08</a></dd>
+        </dl>
+      </section>
+
+      <section class="glossary-group" data-group>
+        <h2>外部スクリプト・フレームワーク関連</h2>
+        <dl class="glossary-list">
+          <dt data-term>ox_lib</dt>
+          <dd data-def>Overextended製の汎用ユーティリティライブラリ。通知・プログレスバー・コンテキストメニュー・入力ダイアログ等を提供する。<a href="../lessons/tier3-intermediate/08-ox-lib-notify-progress.html">→ Tier3-08</a></dd>
+
+          <dt data-term>ox_target / qb-target</dt>
+          <dd data-def>マウスカーソルでのインタラクションメニュー(「ドアを開ける」等の選択肢表示)を提供するリソース。<a href="../lessons/tier3-intermediate/07-ox-target.html">→ Tier3-07</a></dd>
+
+          <dt data-term>ox_inventory</dt>
+          <dd data-def>アイテム・インベントリ管理リソース。<code>AddItem</code>/<code>RemoveItem</code>/<code>RegisterStash</code>/<code>RegisterShop</code>等を提供する。<a href="../lessons/tier3-intermediate/30-ox-inventory-item-registry.html">→ Tier3-30</a></dd>
+
+          <dt data-term>ox_doorlock</dt>
+          <dd data-def>ドアの施錠・解錠を管理するリソース。ドアの登録自体はゲーム内コマンドで行う。<a href="../lessons/tier4-upper-intermediate/14-ox-doorlock.html">→ Tier4-14</a></dd>
+
+          <dt data-term>lb-phone</dt>
+          <dd data-def>スマートフォンUIを提供するリソース。<code>Config.CustomApps</code>にアプリを登録することでカスタムアプリを追加できる。<a href="../lessons/tier4-upper-intermediate/04-lb-phone-custom-app.html">→ Tier4-04</a></dd>
+
+          <dt data-term>okokシリーズ</dt>
+          <dd data-def>okokNotify・okokTextUI・okokBankingV2等、コミュニティで広く使われる通知・銀行システム等のスクリプト群。<a href="../lessons/tier4-upper-intermediate/03-okok-integration.html">→ Tier4-03</a></dd>
+
+          <dt data-term>ESX / QBCore / Qbox / ox_core</dt>
+          <dd data-def>FiveMの代表的なロールプレイフレームワーク。プレイヤーデータ・Job・所持金等を統一的に管理する。テーブル構造は互いに異なる。<a href="../lessons/tier4-upper-intermediate/01-framework-basics.html">→ Tier4-01</a></dd>
+        </dl>
+      </section>
+
+      <section class="glossary-group" data-group>
+        <h2>管理者・運用関連</h2>
+        <dl class="glossary-list">
+          <dt data-term>txAdmin</dt>
+          <dd data-def>FXServerに標準同梱されるWeb管理パネル。権限管理・バックアップ・リソース監視等を行える。<a href="../lessons/tier1-beginner/14-txadmin-administration.html">→ Tier1-14</a></dd>
+
+          <dt data-term>ACE権限</dt>
+          <dd data-def>FiveMのアクセス制御の仕組み。<code>add_ace</code>/<code>add_principal</code>で権限をプレイヤーやグループに付与する。<a href="../lessons/tier2-novice/04-commands.html">→ Tier2-04</a></dd>
+
+          <dt data-term>Discord Webhook</dt>
+          <dd data-def>Discordのチャンネルに外部からメッセージを送信できる、あらかじめ発行されたURL。<code>PerformHttpRequest</code>で送信する。<a href="../lessons/tier3-intermediate/22-discord-webhook-log.html">→ Tier3-22</a></dd>
+        </dl>
+      </section>
+    </div>
+
+    <p id="glossary-empty" class="category-summary" style="display:none;">該当する用語が見つかりませんでした。</p>
+  </main>
+
+  <footer id="site-footer"></footer>
+
+  <script src="../assets/js/lessons-data.js"></script>
+  <script src="../assets/js/progress.js"></script>
+  <script src="../assets/js/nav.js"></script>
+  <script>
+    const glossarySearch = document.getElementById('glossary-search');
+    glossarySearch.addEventListener('input', () => {
+      const query = glossarySearch.value.trim().toLowerCase();
+      let anyVisible = false;
+
+      document.querySelectorAll('[data-group]').forEach((group) => {
+        let groupHasMatch = false;
+        const dts = group.querySelectorAll('[data-term]');
+
+        dts.forEach((dt) => {
+          const dd = dt.nextElementSibling;
+          const text = (dt.textContent + ' ' + dd.textContent).toLowerCase();
+          const match = !query || text.includes(query);
+          dt.style.display = match ? '' : 'none';
+          dd.style.display = match ? '' : 'none';
+          if (match) groupHasMatch = true;
+        });
+
+        group.style.display = groupHasMatch ? '' : 'none';
+        if (groupHasMatch) anyVisible = true;
+      });
+
+      document.getElementById('glossary-empty').style.display = anyVisible ? 'none' : 'block';
+    });
+  </script>
+</body>
+</html>

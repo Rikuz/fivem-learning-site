@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MLO/インテリア導入の基礎 | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t3-44-mlo-interior-basics">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="3">🟠 中級</span>
+      <span class="badge category-badge">🌍 ワールド操作</span>
+    </div>
+
+    <h1>MLO/インテリア導入の基礎</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>既製のMLO(カスタムインテリア。YTYP/YMAPとしてパッケージされた建物内装)をリソースとして導入し、家具の表示/非表示をinterior entity setで切り替える</strong>ことができるようになります。Tier4-34〜36の住居システムに、既製のリッチな内装を組み込む際の土台になります。</p>
+      <p><strong>こんな時に使う:</strong> ゼロから内装をスクリプトで組み立てるのではなく、既製の(自作または配布・購入した)MLOアセットをサーバーに導入したいとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>MLO(Map Loaded Object)は、GTA V標準の内装を上書き/追加する形で配置される、専用に作られた建物内装データです。実体は<strong>YTYP(型定義)</strong>・<strong>YMAP(配置情報)</strong>等のファイル群で、通常<code>stream/</code>フォルダにまとめられます。導入自体はスクリプトを書く作業ではなく、<code>fxmanifest.lua</code>に「これはマップリソースである」と正しく宣言する作業が中心です。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>fxmanifest.lua: MLOリソースとして正しく認識させる</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">fx_version 'cerulean'
+game 'gta5'
+
+author '自分の名前'
+description 'カスタムMLOインテリア'
+version '1.0.0'
+
+-- このリソースがマップ(YMAP/YTYP等)であることをFiveMに伝える
+this_is_a_map 'yes'
+
+files {
+    'stream/**/*.ymap',
+    'stream/**/*.ytyp',
+    'stream/**/*.ydr',
+    'stream/**/*.ytd',
+}
+
+-- YTYP(内装の型定義)を確実に読み込ませる。これを忘れるとYMAPは配置されても
+-- 内装の実体(部屋・家具)が認識されず、空っぽの内装になってしまう
+data_file 'DLC_ITYP_REQUEST' 'stream/my_mlo.ytyp'</code></pre>
+      </div>
+
+      <h3>client.lua: interior entity setで家具の表示/非表示を切り替える</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local function toggleFurnitureSet(coords, entitySetName, enable)
+    local interiorId = GetInteriorAtCoords(coords.x, coords.y, coords.z)
+    if interiorId == 0 then return end
+
+    if enable then
+        ActivateInteriorEntitySet(interiorId, entitySetName)
+    else
+        DeactivateInteriorEntitySet(interiorId, entitySetName)
+    end
+
+    -- entity setの変更を実際の見た目に反映させるために必須
+    RefreshInterior(interiorId)
+end
+
+-- 使用例: 家具プリセット「luxury」を表示する
+RegisterCommand('togglefurniture', function()
+    local coords = GetEntityCoords(PlayerPedId())
+    toggleFurnitureSet(coords, 'luxury', true)
+end, false)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li><code>this_is_a_map 'yes'</code>と<code>data_file 'DLC_ITYP_REQUEST' ...</code>の2つを両方書き忘れると、「YMAPは読み込まれているのに内装が空っぽ/一部の家具が出ない」という典型的な不具合になります。MLOが正しく表示されないときは、まずこの2点を確認してください。</li>
+        <li><code>entitySetName</code>(家具プリセットの名前)は、MLO作成者がYTYPで定義した名称と完全に一致している必要があります。名前はMLO配布元のドキュメントやYTYPファイルの中身を確認してください。</li>
+        <li>複数のMLOリソースが同じ座標に干渉する(既存の内装と衝突する)ことがあります。導入前に配置座標が既存のリソースと重複していないか確認しましょう。</li>
+        <li>MLOはファイルサイズが大きくなりがちです。導入しすぎるとクライアントの読み込み時間やストリーミング負荷が増えるため、Tier5-01のパフォーマンス計測と合わせて確認することをおすすめします。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p class="version-note">MLOアセット自体の作成(CodeWalker等の外部ツールでのモデリング・YTYP編集)は本サイトのスコープ外(Luaスクリプト開発に特化しているため)です。ここで扱っているのは「既に作られたMLOをリソースとして正しく読み込ませる」部分に限定しています。<code>this_is_a_map</code>・<code>data_file</code>・<code>ActivateInteriorEntitySet</code>等の構文はCfx公式ドキュメント(docs.fivem.net)で確認済みですが、配布元によってentity set名やフォルダ構成が異なるため、導入時は必ず配布元のREADMEも確認してください。次のレッスン(Tier3-45)では、内装ではなく屋外のカスタムプロップ配置を扱います。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ネイティブ関数早見表 | リファレンス | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+  <link rel="stylesheet" href="../assets/css/lesson.css">
+</head>
+<body>
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <h1>ネイティブ関数早見表</h1>
+    <p>サイト内のレッスンで実際に使ったnative関数(FiveMがゲームエンジンを直接操作するために提供する組み込み関数)を、カテゴリ別にまとめています。より詳しい引数の意味はTier1-10「ネイティブ関数リファレンスの読み方」、または各natives公式リファレンス(docs.fivem.net/natives)を参照してください。</p>
+
+    <input type="search" id="native-search" class="reference-search" placeholder="native名を検索(例: CreatePed, StateBags, Blip)">
+
+    <div id="native-content">
+      <section class="native-group" data-group>
+        <h2>エンティティ生成・削除</h2>
+        <table class="native-table">
+          <thead><tr><th>native</th><th>説明</th><th>関連レッスン</th></tr></thead>
+          <tbody>
+            <tr data-row><td><code>CreatePed(pedType, model, x, y, z, heading, isNetwork, bScriptHostPed)</code></td><td>Pedを生成する</td><td><a href="../lessons/tier2-novice/02-spawn-npc.html">Tier2-02</a></td></tr>
+            <tr data-row><td><code>CreateVehicle(model, x, y, z, heading, isNetwork, bScriptHostPed)</code></td><td>車両を生成する</td><td><a href="../lessons/tier2-novice/06-spawn-vehicle.html">Tier2-06</a></td></tr>
+            <tr data-row><td><code>CreateObject(model, x, y, z, isNetwork, netMissionEntity, doorFlag)</code></td><td>オブジェクト(プロップ)を生成する</td><td><a href="../lessons/tier2-novice/09-create-object.html">Tier2-09</a></td></tr>
+            <tr data-row><td><code>DeletePed(ped)</code> / <code>DeleteEntity(entity)</code></td><td>Ped/エンティティを削除する</td><td><a href="../lessons/tier2-novice/02-spawn-npc.html">Tier2-02</a></td></tr>
+            <tr data-row><td><code>DoesEntityExist(entity)</code></td><td>エンティティが存在するか確認する</td><td></td></tr>
+            <tr data-row><td><code>SetEntityAsMissionEntity(entity, true, true)</code></td><td>削除前にミッションエンティティ化する</td><td><a href="../lessons/tier2-novice/02-spawn-npc.html">Tier2-02</a></td></tr>
+            <tr data-row><td><code>RequestModel(model)</code> / <code>HasModelLoaded(model)</code> / <code>SetModelAsNoLongerNeeded(model)</code></td><td>モデルを読み込む/読み込み確認/解放する</td><td><a href="../lessons/tier2-novice/02-spawn-npc.html">Tier2-02</a></td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="native-group" data-group>
+        <h2>座標・移動</h2>
+        <table class="native-table">
+          <thead><tr><th>native</th><th>説明</th><th>関連レッスン</th></tr></thead>
+          <tbody>
+            <tr data-row><td><code>GetEntityCoords(entity)</code></td><td>エンティティの座標を取得する</td><td></td></tr>
+            <tr data-row><td><code>SetEntityCoords(entity, x, y, z, ...)</code></td><td>エンティティの座標を設定する</td><td></td></tr>
+            <tr data-row><td><code>GetEntityHeading(entity)</code> / <code>SetEntityHeading(entity, heading)</code></td><td>向きの取得・設定</td><td></td></tr>
+            <tr data-row><td><code>FreezeEntityPosition(entity, true)</code></td><td>位置を固定する</td><td><a href="../lessons/tier2-novice/02-spawn-npc.html">Tier2-02</a></td></tr>
+            <tr data-row><td><code>PlayerPedId()</code></td><td>自分自身のPedハンドルを取得する</td><td></td></tr>
+            <tr data-row><td><code>PlayerId()</code></td><td>自分自身のプレイヤーIDを取得する</td><td></td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="native-group" data-group>
+        <h2>プレイヤー・Ped</h2>
+        <table class="native-table">
+          <thead><tr><th>native</th><th>説明</th><th>関連レッスン</th></tr></thead>
+          <tbody>
+            <tr data-row><td><code>GetPlayerPed(playerId)</code></td><td>指定プレイヤーのPedを取得する</td><td></td></tr>
+            <tr data-row><td><code>GetPlayers()</code></td><td>接続中の全プレイヤーID一覧を取得する(server側)</td><td><a href="../lessons/tier3-intermediate/43-admin-player-list-spectate.html">Tier3-43</a></td></tr>
+            <tr data-row><td><code>GetPlayerName(playerId)</code></td><td>プレイヤー名を取得する</td><td></td></tr>
+            <tr data-row><td><code>GetPlayerIdentifiers(playerId)</code> / <code>GetPlayerIdentifierByType(playerId, type)</code></td><td>識別子を取得する</td><td><a href="../lessons/tier2-novice/20-player-identifiers.html">Tier2-20</a></td></tr>
+            <tr data-row><td><code>SetEntityInvincible(ped, true)</code></td><td>無敵化する</td><td><a href="../lessons/tier2-novice/02-spawn-npc.html">Tier2-02</a></td></tr>
+            <tr data-row><td><code>GetEntityHealth(entity)</code> / <code>SetEntityHealth(entity, hp)</code></td><td>体力の取得・設定</td><td><a href="../lessons/tier3-intermediate/41-status-bar-hud-sync.html">Tier3-41</a></td></tr>
+            <tr data-row><td><code>SetBlockingOfNonTemporaryEvents(ped, true)</code></td><td>周囲の出来事への反応を止める</td><td><a href="../lessons/tier2-novice/02-spawn-npc.html">Tier2-02</a></td></tr>
+            <tr data-row><td><code>NetworkSetInSpectatorMode(toggle, ped)</code></td><td>指定Pedをスペクテイト(観戦)する</td><td><a href="../lessons/tier3-intermediate/43-admin-player-list-spectate.html">Tier3-43</a></td></tr>
+            <tr data-row><td><code>DropPlayer(playerId, reason)</code></td><td>プレイヤーをキックする</td><td><a href="../lessons/tier4-upper-intermediate/07-ban-kick-system.html">Tier4-07</a></td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="native-group" data-group>
+        <h2>車両</h2>
+        <table class="native-table">
+          <thead><tr><th>native</th><th>説明</th><th>関連レッスン</th></tr></thead>
+          <tbody>
+            <tr data-row><td><code>SetVehicleOnGroundProperly(vehicle)</code></td><td>車両を地面に正しく設置する</td><td><a href="../lessons/tier2-novice/06-spawn-vehicle.html">Tier2-06</a></td></tr>
+            <tr data-row><td><code>SetVehicleNumberPlateText(vehicle, plate)</code></td><td>ナンバープレートを設定する</td><td></td></tr>
+            <tr data-row><td><code>GetVehicleFuelLevel(vehicle)</code> / <code>SetVehicleFuelLevel(vehicle, level)</code></td><td>燃料の取得・設定</td><td><a href="../samples/ex-05-framework-garage.html">ex-05</a></td></tr>
+            <tr data-row><td><code>GetVehicleEngineHealth(vehicle)</code> / <code>SetVehicleEngineHealth(vehicle, hp)</code></td><td>エンジン状態の取得・設定</td><td><a href="../lessons/tier2-novice/14-vehicle-repair.html">Tier2-14</a></td></tr>
+            <tr data-row><td><code>SetVehicleFixed(vehicle)</code></td><td>ダメージを完全修復する</td><td><a href="../lessons/tier2-novice/14-vehicle-repair.html">Tier2-14</a></td></tr>
+            <tr data-row><td><code>SetVehicleDeformationFixed(vehicle)</code></td><td>車体のへこみを元に戻す</td><td><a href="../lessons/tier2-novice/14-vehicle-repair.html">Tier2-14</a></td></tr>
+            <tr data-row><td><code>TaskWarpPedIntoVehicle(ped, vehicle, seatIndex)</code></td><td>車両に瞬時に乗せる</td><td></td></tr>
+            <tr data-row><td><code>GetVehiclePedIsIn(ped, false)</code></td><td>乗っている車両を取得する</td><td></td></tr>
+            <tr data-row><td><code>GetEntitySpeed(vehicle)</code></td><td>速度を取得する(m/s)</td><td><a href="../lessons/tier3-intermediate/40-speedometer-minimap-hud.html">Tier3-40</a></td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="native-group" data-group>
+        <h2>Blip/Marker</h2>
+        <table class="native-table">
+          <thead><tr><th>native</th><th>説明</th><th>関連レッスン</th></tr></thead>
+          <tbody>
+            <tr data-row><td><code>AddBlipForCoord(x, y, z)</code></td><td>Blipを生成する</td><td><a href="../lessons/tier2-novice/03-blip-marker.html">Tier2-03</a></td></tr>
+            <tr data-row><td><code>SetBlipSprite</code> / <code>SetBlipColour</code> / <code>SetBlipScale</code> / <code>SetBlipAsShortRange</code></td><td>Blipの見た目を設定する</td><td><a href="../lessons/tier2-novice/03-blip-marker.html">Tier2-03</a></td></tr>
+            <tr data-row><td><code>SetBlipRoute(blip, true)</code></td><td>GPSルート線を表示する</td><td><a href="../samples/ex-12-delivery-job-capstone.html">ex-12</a></td></tr>
+            <tr data-row><td><code>RemoveBlip(blip)</code></td><td>Blipを削除する</td><td></td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="native-group" data-group>
+        <h2>アニメーション</h2>
+        <table class="native-table">
+          <thead><tr><th>native</th><th>説明</th><th>関連レッスン</th></tr></thead>
+          <tbody>
+            <tr data-row><td><code>RequestAnimDict(dict)</code> / <code>HasAnimDictLoaded(dict)</code></td><td>アニメ辞書を読み込む</td><td><a href="../lessons/tier2-novice/07-play-animation.html">Tier2-07</a></td></tr>
+            <tr data-row><td><code>TaskPlayAnim(ped, dict, anim, ...)</code></td><td>アニメーションを再生する</td><td><a href="../lessons/tier2-novice/07-play-animation.html">Tier2-07</a></td></tr>
+            <tr data-row><td><code>ClearPedTasks(ped)</code></td><td>再生中のタスク(アニメ含む)を解除する</td><td></td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="native-group" data-group>
+        <h2>イベント・コマンド</h2>
+        <table class="native-table">
+          <thead><tr><th>native / 関数</th><th>説明</th><th>関連レッスン</th></tr></thead>
+          <tbody>
+            <tr data-row><td><code>RegisterCommand(name, handler, restricted)</code></td><td>チャットコマンドを登録する</td><td><a href="../lessons/tier2-novice/04-commands.html">Tier2-04</a></td></tr>
+            <tr data-row><td><code>RegisterNetEvent(name)</code> / <code>AddEventHandler(name, handler)</code></td><td>イベントを登録する</td><td><a href="../lessons/tier2-novice/01-events-basics.html">Tier2-01</a></td></tr>
+            <tr data-row><td><code>TriggerEvent</code> / <code>TriggerServerEvent</code> / <code>TriggerClientEvent</code></td><td>イベントを発火する</td><td><a href="../lessons/tier2-novice/01-events-basics.html">Tier2-01</a></td></tr>
+            <tr data-row><td><code>IsPlayerAceAllowed(playerId, ace)</code></td><td>ACE権限を確認する</td><td><a href="../lessons/tier2-novice/04-commands.html">Tier2-04</a></td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="native-group" data-group>
+        <h2>NUI</h2>
+        <table class="native-table">
+          <thead><tr><th>native / 関数</th><th>説明</th><th>関連レッスン</th></tr></thead>
+          <tbody>
+            <tr data-row><td><code>SetNuiFocus(hasFocus, hasCursor)</code></td><td>NUIへのマウス/キーボードフォーカスを制御する</td><td><a href="../lessons/tier3-intermediate/01-nui-basics.html">Tier3-01</a></td></tr>
+            <tr data-row><td><code>SendNUIMessage(data)</code></td><td>Lua→JSへメッセージを送る</td><td><a href="../lessons/tier3-intermediate/01-nui-basics.html">Tier3-01</a></td></tr>
+            <tr data-row><td><code>RegisterNUICallback(name, handler)</code></td><td>JS→Luaのコールバックを登録する</td><td><a href="../lessons/tier3-intermediate/02-nui-callback.html">Tier3-02</a></td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="native-group" data-group>
+        <h2>ワールド・インテリア</h2>
+        <table class="native-table">
+          <thead><tr><th>native</th><th>説明</th><th>関連レッスン</th></tr></thead>
+          <tbody>
+            <tr data-row><td><code>GetInteriorAtCoords(x, y, z)</code></td><td>座標のインテリアIDを取得する</td><td><a href="../lessons/tier3-intermediate/44-mlo-interior-basics.html">Tier3-44</a></td></tr>
+            <tr data-row><td><code>ActivateInteriorEntitySet</code> / <code>DeactivateInteriorEntitySet</code></td><td>内装のentity setを切り替える</td><td><a href="../lessons/tier3-intermediate/44-mlo-interior-basics.html">Tier3-44</a></td></tr>
+            <tr data-row><td><code>RefreshInterior(interiorId)</code></td><td>インテリアの変更を反映する</td><td><a href="../lessons/tier3-intermediate/44-mlo-interior-basics.html">Tier3-44</a></td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="native-group" data-group>
+        <h2>StateBags</h2>
+        <table class="native-table">
+          <thead><tr><th>native / 関数</th><th>説明</th><th>関連レッスン</th></tr></thead>
+          <tbody>
+            <tr data-row><td><code>Entity(entity).state:set(key, value, replicated)</code></td><td>エンティティのStateBagを設定する</td><td><a href="../lessons/tier5-advanced/03-statebags.html">Tier5-03</a></td></tr>
+            <tr data-row><td><code>Player(playerId).state:set(key, value, replicated)</code></td><td>プレイヤーのStateBagを設定する</td><td><a href="../lessons/tier5-advanced/03-statebags.html">Tier5-03</a></td></tr>
+            <tr data-row><td><code>AddStateBagChangeHandler(key, bagName, handler)</code></td><td>StateBagsの変化を監視する</td><td><a href="../lessons/tier5-advanced/03-statebags.html">Tier5-03</a></td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="native-group" data-group>
+        <h2>HTTP・外部連携</h2>
+        <table class="native-table">
+          <thead><tr><th>native / 関数</th><th>説明</th><th>関連レッスン</th></tr></thead>
+          <tbody>
+            <tr data-row><td><code>PerformHttpRequest(url, callback, method, data, headers)</code></td><td>HTTPリクエストを送信する</td><td><a href="../lessons/tier3-intermediate/22-discord-webhook-log.html">Tier3-22</a></td></tr>
+            <tr data-row><td><code>json.encode</code> / <code>json.decode</code></td><td>Luaテーブル⇔JSON文字列の変換</td><td><a href="../lessons/tier3-intermediate/22-discord-webhook-log.html">Tier3-22</a></td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="native-group" data-group>
+        <h2>制御・その他</h2>
+        <table class="native-table">
+          <thead><tr><th>native / 関数</th><th>説明</th><th>関連レッスン</th></tr></thead>
+          <tbody>
+            <tr data-row><td><code>Wait(ms)</code></td><td>指定ミリ秒待機する(スレッド内では必須)</td><td><a href="../lessons/tier2-novice/05-threads-loops.html">Tier2-05</a></td></tr>
+            <tr data-row><td><code>CreateThread(function)</code></td><td>新しいスレッドを開始する</td><td><a href="../lessons/tier2-novice/05-threads-loops.html">Tier2-05</a></td></tr>
+            <tr data-row><td><code>GetGameTimer()</code></td><td>ゲーム内の経過ミリ秒を取得する(タイマー処理に使う)</td><td><a href="../lessons/tier4-upper-intermediate/30-jail-system.html">Tier4-30</a></td></tr>
+            <tr data-row><td><code>GetResourceState(resourceName)</code></td><td>resourceの起動状態を確認する</td><td><a href="../lessons/tier4-upper-intermediate/01-framework-basics.html">Tier4-01</a></td></tr>
+            <tr data-row><td><code>GetCurrentResourceName()</code></td><td>自分自身のresource名を取得する</td><td></td></tr>
+          </tbody>
+        </table>
+      </section>
+    </div>
+
+    <p id="native-empty" class="category-summary" style="display:none;">該当するnativeが見つかりませんでした。</p>
+  </main>
+
+  <footer id="site-footer"></footer>
+
+  <script src="../assets/js/lessons-data.js"></script>
+  <script src="../assets/js/progress.js"></script>
+  <script src="../assets/js/nav.js"></script>
+  <script>
+    const nativeSearch = document.getElementById('native-search');
+    nativeSearch.addEventListener('input', () => {
+      const query = nativeSearch.value.trim().toLowerCase();
+      let anyVisible = false;
+
+      document.querySelectorAll('[data-group]').forEach((group) => {
+        let groupHasMatch = false;
+
+        group.querySelectorAll('[data-row]').forEach((row) => {
+          const match = !query || row.textContent.toLowerCase().includes(query);
+          row.style.display = match ? '' : 'none';
+          if (match) groupHasMatch = true;
+        });
+
+        group.style.display = groupHasMatch ? '' : 'none';
+        if (groupHasMatch) anyVisible = true;
+      });
+
+      document.getElementById('native-empty').style.display = anyVisible ? 'none' : 'block';
+    });
+  </script>
+</body>
+</html>

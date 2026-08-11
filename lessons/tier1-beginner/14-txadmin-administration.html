@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>txAdminの本格的な使い方(権限管理・バックアップ・リソース監視) | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t1-14-txadmin-administration">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="1">🟢 入門</span>
+      <span class="badge category-badge">⚙️ 環境構築</span>
+      <span class="badge category-badge">🛠️ 管理者ツール</span>
+    </div>
+
+    <h1>txAdminの本格的な使い方(権限管理・バックアップ・リソース監視)</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>txAdmin(FXServerに標準同梱されているWeb管理パネル)で、管理者権限の割り当て・自動バックアップ・スケジュール再起動・リソースの負荷監視</strong>を行えるようになります。Tier1-01ではローカルサーバーの起動だけを扱いましたが、ここでは実際にサーバーを運用する上で欠かせない管理機能を扱います。</p>
+      <p><strong>こんな時に使う:</strong> サーバーを複数人で管理したい、定期的にデータをバックアップしたい、「どのリソースが重いのか」を調べたいとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>txAdminはFXServerに標準で同梱されており、デフォルトでは<code>http://localhost:40120</code>(または設定したポート)でWebパネルにアクセスできます。管理者権限・バックアップ・リソース監視は、いずれもこのWebパネルの各タブから操作します。<strong>設定ファイルを直接手で編集するのではなく、txAdmin自体のUIから操作するのが公式に推奨されている方法</strong>です。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>管理者権限(admins.json)の主なパーミッションノード</h3>
+      <p>管理者ごとの権限は<code>txData/admins.json</code>に保存され、txAdminの「Admin Manager」画面から付与・剥奪します。代表的なパーミッションノードは以下の通りです。</p>
+      <div class="code-block">
+        <pre><code class="language-javascript">// admins.json内の permissions 配列の抜粋イメージ(直接手編集はせず、Admin Manager画面から設定する)
+{
+  "moderator_taro": {
+    "permissions": [
+      "players.kick",
+      "players.warn",
+      "players.spectate",
+      "console.view"
+    ]
+  },
+  "admin_hanako": {
+    "permissions": [
+      "all_permissions"
+    ]
+  }
+}</code></pre>
+      </div>
+
+      <h3>代表的なパーミッションノード一覧</h3>
+      <table class="dependency-table">
+        <thead><tr><th>ノード</th><th>できること</th></tr></thead>
+        <tbody>
+          <tr><td><code>all_permissions</code></td><td>全権限(他の権限指定は無視される)</td></tr>
+          <tr><td><code>manage.admins</code></td><td>他の管理者アカウントの作成・編集・削除</td></tr>
+          <tr><td><code>control.server</code></td><td>サーバーの起動・停止・再起動</td></tr>
+          <tr><td><code>console.view</code> / <code>console.write</code></td><td>コンソールの閲覧 / コマンド実行</td></tr>
+          <tr><td><code>server.cfg.editor</code></td><td>txAdmin上でのserver.cfg編集</td></tr>
+          <tr><td><code>players.kick</code> / <code>players.ban</code> / <code>players.warn</code></td><td>プレイヤーのキック・BAN・警告</td></tr>
+          <tr><td><code>players.spectate</code> / <code>players.teleport</code></td><td>プレイヤーの観戦・テレポート</td></tr>
+        </tbody>
+      </table>
+
+      <h3>server.cfgでの権限確認との違い</h3>
+      <div class="code-block">
+        <pre><code class="language-bash"># これはTier3-42で学んだACE権限(自作スクリプト向け)
+# txAdminの管理者権限とは別の仕組みなので混同しないこと
+add_ace group.admin command.heal allow</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li><strong>txAdminの管理者権限と、Tier3-42で学んだACE権限(自作スクリプト向け)は別物です。</strong> txAdminのAdmin Managerで権限を与えても、自作スクリプトの<code>IsPlayerAceAllowed</code>による判定には反映されません。それぞれ独立して設定する必要があります。</li>
+        <li><code>admins.json</code>は基本的に手で直接編集するファイルではありません。Admin Manager画面から操作し、直接編集する場合はtxAdminを再起動するまで反映されないことがあります。</li>
+        <li>自動バックアップは「バックアップを取ること」自体は自動化できますが、<strong>バックアップ先のディスク容量を定期的に確認する</strong>運用は別途必要です。ローカル保存のみだと、サーバー自体に障害が起きた場合にバックアップも失われます。</li>
+        <li>スケジュール再起動を設定する際は、プレイヤーへの事前アナウンス(カウントダウン通知)を有効にしておくと、再起動によるプレイ中断への不満を減らせます。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>txAdminには他にも、①「Backups」タブでの手動/自動バックアップ(server-dataフォルダ全体のスナップショット)、②「Settings → Scheduled Restarts」でのメモリクリア目的の定期再起動設定(6時間・12時間おき等が一般的)、③ダッシュボードに統合されたリソースモニター(各リソースのCPU tick時間を、コンソールにコマンドを打たずに視覚的に確認できる)といった機能があります。いずれもWebパネルから直感的に操作できるので、実際にログインして各タブを一通り触ってみることをおすすめします。</p>
+      <p class="version-note">txAdminはバージョンによってUIのタブ構成やパーミッションノードの名称が変わることがあります。本レッスンの内容はCfxの公式ドキュメント(docs.fivem.net)で確認済みですが、導入しているバージョンのドキュメントも併せて確認してください。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

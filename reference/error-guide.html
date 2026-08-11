@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>エラーメッセージ集 | リファレンス | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+  <link rel="stylesheet" href="../assets/css/lesson.css">
+</head>
+<body>
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <h1>エラーメッセージ集</h1>
+    <p>開発中によく遭遇する詰まりポイントと、その典型的な原因・対処法をまとめています。Tier1-05「デバッグの基本」と合わせて活用してください。まずF8コンソール(client側)またはサーバーを起動しているターミナル(server側)でエラーメッセージの<strong>ファイル名と行番号</strong>を確認するのが第一歩です。</p>
+
+    <input type="search" id="error-search" class="reference-search" placeholder="エラーメッセージやキーワードで検索">
+
+    <div id="error-content">
+      <div class="error-entry" data-row>
+        <p class="error-entry__message">Error parsing script @resource-name/client.lua: ...</p>
+        <p class="error-entry__cause"><strong>原因:</strong> Luaの構文エラー。<code>end</code>の数が合っていない、カンマ・カッコの閉じ忘れ等。</p>
+        <p class="error-entry__fix"><strong>対処:</strong> メッセージに含まれる行番号を確認し、その付近のブロック(<code>function</code>/<code>if</code>/<code>for</code>等)の対応関係を確認する。(<a href="../lessons/tier1-beginner/05-debug-basics.html">Tier1-05</a>)</p>
+      </div>
+
+      <div class="error-entry" data-row>
+        <p class="error-entry__message">attempt to call a nil value (global 'lib')</p>
+        <p class="error-entry__cause"><strong>原因:</strong> ox_libが読み込まれる前に<code>lib.xxx</code>を呼んでいる。多くはox_libの初期化スクリプト読み込みや<code>dependency</code>指定の不足。</p>
+        <p class="error-entry__fix"><strong>対処:</strong> <code>fxmanifest.lua</code>に<code>dependency 'ox_lib'</code>と、必要に応じて<code>client_script '@ox_lib/init.lua'</code>を追加する。(<a href="../lessons/tier3-intermediate/08-ox-lib-notify-progress.html">Tier3-08</a>)</p>
+      </div>
+
+      <div class="error-entry" data-row>
+        <p class="error-entry__message">attempt to index a nil value (global 'XXX') / attempt to call a nil value (field 'XXX')</p>
+        <p class="error-entry__cause"><strong>原因:</strong> 変数名のタイプミス、未定義のテーブル/関数へのアクセス。または呼び出し先resourceのexportsがまだ起動していない。</p>
+        <p class="error-entry__fix"><strong>対処:</strong> 変数名のスペルを確認する。exports呼び出しの場合は、呼び出し先resourceが自分より先に起動しているか(<code>dependency</code>の指定)を確認する。(<a href="../lessons/tier3-intermediate/06-exports-between-resources.html">Tier3-06</a>)</p>
+      </div>
+
+      <div class="error-entry" data-row>
+        <p class="error-entry__message">Could not find resource resource-name(サーバーコンソールで<code>ensure</code>実行時)</p>
+        <p class="error-entry__cause"><strong>原因:</strong> resource名のタイポ、または対象フォルダが<code>resources</code>ディレクトリの直下(または設定したパス)に置かれていない。</p>
+        <p class="error-entry__fix"><strong>対処:</strong> フォルダ名と<code>ensure</code>に指定した名前が完全一致しているか確認する。<code>server.cfg</code>の<code>set resources_path</code>設定もあわせて確認する。</p>
+      </div>
+
+      <div class="error-entry" data-row>
+        <p class="error-entry__message">SCRIPT ERROR: ... execution of native XXXXXXXX failed: ...</p>
+        <p class="error-entry__cause"><strong>原因:</strong> native関数に渡している引数の型・個数が正しくない(数値を期待する箇所に文字列を渡した、座標をvec3ではなくx,y,z個別で渡すべき所を間違えた等)。</p>
+        <p class="error-entry__fix"><strong>対処:</strong> エラーに含まれるnative名でTier1-10のnative参照方法を使い、公式リファレンスの引数の型を確認する。</p>
+      </div>
+
+      <div class="error-entry" data-row>
+        <p class="error-entry__message">NUIの<code>fetch()</code>がいつまでも完了しない(ボタンを押しても反応がない)</p>
+        <p class="error-entry__cause"><strong>原因:</strong> Lua側の<code>RegisterNUICallback</code>ハンドラ内で<code>cb(...)</code>を呼び忘れている。</p>
+        <p class="error-entry__fix"><strong>対処:</strong> コールバック関数の最後に必ず<code>cb('ok')</code>等を呼ぶ。(<a href="../lessons/tier3-intermediate/02-nui-callback.html">Tier3-02</a>)</p>
+      </div>
+
+      <div class="error-entry" data-row>
+        <p class="error-entry__message">NUIのui/index.htmlをブラウザで直接開くと <code>GetParentResourceName is not defined</code> 等のエラーになる</p>
+        <p class="error-entry__cause"><strong>原因:</strong> <code>GetParentResourceName()</code>やNUI宛のfetch()は、FiveMのゲームクライアント内(NUI環境)でのみ動作する。これはバグではなく仕様。</p>
+        <p class="error-entry__fix"><strong>対処:</strong> 見た目(レイアウト・CSS)の確認はブラウザ単体でもできるが、実際の通信確認はFiveM実機で行う。(<a href="../lessons/tier3-intermediate/02-nui-callback.html">Tier3-02</a>)</p>
+      </div>
+
+      <div class="error-entry" data-row>
+        <p class="error-entry__message">attempt to index a nil value (global 'MySQL')</p>
+        <p class="error-entry__cause"><strong>原因:</strong> oxmysqlが起動していない、または自分のresourceより後に起動している。</p>
+        <p class="error-entry__fix"><strong>対処:</strong> <code>fxmanifest.lua</code>に<code>dependency 'oxmysql'</code>を追加し、サーバーコンソールで<code>oxmysql</code>が正常に起動しているか確認する。(<a href="../lessons/tier3-intermediate/03-database-oxmysql.html">Tier3-03</a>)</p>
+      </div>
+
+      <div class="error-entry" data-row>
+        <p class="error-entry__message">resourceを<code>restart</code>するたびにNPC/Blip/オブジェクトが増えていく</p>
+        <p class="error-entry__cause"><strong>原因:</strong> <code>onResourceStop</code>での後片付け(生成物の削除)を実装していない。</p>
+        <p class="error-entry__fix"><strong>対処:</strong> resource停止時に<code>DeletePed</code>/<code>DeleteEntity</code>/<code>RemoveBlip</code>で確実に削除する処理を追加する。(<a href="../lessons/tier2-novice/02-spawn-npc.html">Tier2-02</a>)</p>
+      </div>
+
+      <div class="error-entry" data-row>
+        <p class="error-entry__message">生成したPed/車両/オブジェクトが透明、または一部パーツが欠けて表示される</p>
+        <p class="error-entry__cause"><strong>原因:</strong> <code>RequestModel</code>直後、モデルの読み込み完了(<code>HasModelLoaded</code>)を待たずに生成処理を行っている。</p>
+        <p class="error-entry__fix"><strong>対処:</strong> <code>while not HasModelLoaded(model) do Wait(0) end</code>で読み込み完了を待ってから生成する。(<a href="../lessons/tier2-novice/02-spawn-npc.html">Tier2-02</a>)</p>
+      </div>
+
+      <div class="error-entry" data-row>
+        <p class="error-entry__message">アニメーションが再生されない、または途中で止まる</p>
+        <p class="error-entry__cause"><strong>原因:</strong> <code>RequestAnimDict</code>直後、<code>HasAnimDictLoaded</code>で読み込み完了を待っていない。</p>
+        <p class="error-entry__fix"><strong>対処:</strong> アニメ辞書の読み込み待ちループを必ず挟む。(<a href="../lessons/tier2-novice/07-play-animation.html">Tier2-07</a>)</p>
+      </div>
+
+      <div class="error-entry" data-row>
+        <p class="error-entry__message"><code>IsPlayerAceAllowed</code>が常にfalseを返す</p>
+        <p class="error-entry__cause"><strong>原因:</strong> <code>server.cfg</code>の<code>add_ace</code>/<code>add_principal</code>の記述順や、識別子の形式(<code>identifier.steam:...</code>等)のミス。</p>
+        <p class="error-entry__fix"><strong>対処:</strong> <code>add_principal</code>でプレイヤーをグループに所属させてから、<code>add_ace</code>でそのグループに権限を付与する順序になっているか確認する。(<a href="../lessons/tier2-novice/04-commands.html">Tier2-04</a>)</p>
+      </div>
+
+      <div class="error-entry" data-row>
+        <p class="error-entry__message">StateBagsの変更が他プレイヤーの画面に反映されない</p>
+        <p class="error-entry__cause"><strong>原因:</strong> <code>:set(key, value, replicated)</code>の第3引数(replicated)を<code>true</code>にしていない。</p>
+        <p class="error-entry__fix"><strong>対処:</strong> 他clientにも同期したい値は必ず第3引数を<code>true</code>にする。(<a href="../lessons/tier5-advanced/03-statebags.html">Tier5-03</a>)</p>
+      </div>
+
+      <div class="error-entry" data-row>
+        <p class="error-entry__message">TriggerServerEvent/TriggerClientEventを呼んだのにイベントが実行されない</p>
+        <p class="error-entry__cause"><strong>原因:</strong> 受け取り側で<code>RegisterNetEvent</code>の登録漏れ、またはイベント名のタイポ、client/serverの実行側を取り違えている。</p>
+        <p class="error-entry__fix"><strong>対処:</strong> 発火側と受信側でイベント名が完全一致しているか、受信側のファイルが正しくclient_script/server_scriptとして登録されているか確認する。(<a href="../lessons/tier2-novice/01-events-basics.html">Tier2-01</a>)</p>
+      </div>
+
+      <div class="error-entry" data-row>
+        <p class="error-entry__message">attempt to compare number with nil / attempt to perform arithmetic on a nil value</p>
+        <p class="error-entry__cause"><strong>原因:</strong> <code>tonumber()</code>の変換に失敗した値(存在しない引数、想定外の文字列等)をそのまま計算・比較に使っている。</p>
+        <p class="error-entry__fix"><strong>対処:</strong> <code>tonumber()</code>の戻り値が<code>nil</code>でないかを必ずチェックしてから使う(Tier3-05のバリデーションと同じ考え方)。</p>
+      </div>
+
+      <div class="error-entry" data-row>
+        <p class="error-entry__message">ox_targetの選択肢がインタラクションしても表示されない</p>
+        <p class="error-entry__cause"><strong>原因:</strong> <code>addBoxZone</code>の座標がずれている、<code>addModel</code>のモデル名が実際のプロップと一致していない、またはox_target自体が起動していない。</p>
+        <p class="error-entry__fix"><strong>対処:</strong> 座標・モデル名を再確認し、<code>ensure ox_target</code>が正しく実行されているか確認する。(<a href="../lessons/tier3-intermediate/07-ox-target.html">Tier3-07</a>)</p>
+      </div>
+
+      <div class="error-entry" data-row>
+        <p class="error-entry__message">「1人で動作確認したときは問題なかったのに、本番導入後に不具合が起きた」</p>
+        <p class="error-entry__cause"><strong>原因:</strong> restart耐性・複数人同時利用・不正な入力への耐性を、公開前に確認していなかった典型パターン。</p>
+        <p class="error-entry__fix"><strong>対処:</strong> Tier3-46のチェックリスト(restart確認・複数クライアント確認・不正入力確認)を公開前に一通り実施する。(<a href="../lessons/tier3-intermediate/46-resource-testing-qa.html">Tier3-46</a>)</p>
+      </div>
+    </div>
+
+    <p id="error-empty" class="category-summary" style="display:none;">該当するエラーが見つかりませんでした。</p>
+  </main>
+
+  <footer id="site-footer"></footer>
+
+  <script src="../assets/js/lessons-data.js"></script>
+  <script src="../assets/js/progress.js"></script>
+  <script src="../assets/js/nav.js"></script>
+  <script>
+    const errorSearch = document.getElementById('error-search');
+    errorSearch.addEventListener('input', () => {
+      const query = errorSearch.value.trim().toLowerCase();
+      let anyVisible = false;
+
+      document.querySelectorAll('[data-row]').forEach((row) => {
+        const match = !query || row.textContent.toLowerCase().includes(query);
+        row.style.display = match ? '' : 'none';
+        if (match) anyVisible = true;
+      });
+
+      document.getElementById('error-empty').style.display = anyVisible ? 'none' : 'block';
+    });
+  </script>
+</body>
+</html>

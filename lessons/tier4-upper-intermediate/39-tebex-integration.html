@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>決済/課金ショップ連携(Tebex)の基礎 | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t4-39-tebex-integration">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="4">🔴 中上級</span>
+      <span class="badge category-badge">💳 収益化・課金</span>
+      <span class="badge category-badge">🧩 フレームワーク連携</span>
+    </div>
+
+    <h1>決済/課金ショップ連携(Tebex)の基礎</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>Tebex(FiveMで広く使われる課金ストアプラットフォーム)とサーバーを連携させ、購入時にTebexから実行されるコマンドで報酬をゲーム内に届ける</strong>仕組みを作れるようになります。FiveMはTebexとの連携機能を標準で内蔵しており、追加のリソース導入は必須ではありません。</p>
+      <p><strong>こんな時に使う:</strong> サーバー運営費用をまかなうための寄付/VIP特典ショップを作りたい、購入したアイテムを自動でプレイヤーに届けたいとき。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>連携の全体像はシンプルです。①<code>server.cfg</code>にTebexから発行される秘密鍵を設定してサーバーとストアを紐付ける。②Tebexの管理画面(パッケージ設定)で「購入されたらこのコマンドをサーバーで実行する」という<strong>コマンド文字列</strong>を登録する。③そのコマンド名と一致する<code>RegisterCommand</code>を自分のスクリプト側で用意しておく、という3ステップです。<strong>スクリプト側から見ると、Tebexは「特定のコマンドをサーバーコンソールから実行してくれる外部サービス」</strong>という扱いになります。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>server.cfg: Tebexとサーバーを紐付ける</h3>
+      <div class="code-block">
+        <pre><code class="language-bash"># Tebexの管理画面(Integrations > Game Servers > FiveM)で発行される秘密鍵を設定する
+sv_tebexSecret yourtebexsecretkey</code></pre>
+      </div>
+
+      <h3>Tebex管理画面側: パッケージに登録するコマンド文字列(参考イメージ)</h3>
+      <div class="code-block">
+        <pre><code class="language-bash"># Tebexのパッケージ設定画面で、購入時に実行するコマンドとして登録する
+# {id}はTebexが自動的に購入者の識別子(Steam64ID等)に置き換えてくれるプレースホルダー
+grantvip {id} 30</code></pre>
+      </div>
+
+      <h3>server.lua: Tebexから実行されるコマンドを自分のスクリプトで用意する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">-- Tebexのコマンドはサーバーコンソールから実行される(source == 0)。
+-- また購入者がオフラインでも実行される設定にできるため、
+-- 「今オンラインかどうか」で処理を分岐する必要がある。
+local function findOnlinePlayerByIdentifier(targetIdentifier)
+    for _, playerId in ipairs(GetPlayers()) do
+        local playerIdNum = tonumber(playerId)
+        for _, identifier in ipairs(GetPlayerIdentifiers(playerIdNum)) do
+            if identifier == targetIdentifier then
+                return playerIdNum
+            end
+        end
+    end
+    return nil
+end
+
+RegisterCommand('grantvip', function(source, args)
+    -- Tebexコンソール以外からの誤実行を防ぐため、コンソール実行(source == 0)のみ受け付ける
+    if source ~= 0 then return end
+
+    local targetIdentifier = args[1]
+    local days = tonumber(args[2]) or 30
+    if not targetIdentifier then return end
+
+    local playerId = findOnlinePlayerByIdentifier(targetIdentifier)
+
+    if playerId then
+        -- オンラインであれば即座に付与する(Tier3-03のDB保存と組み合わせる想定)
+        TriggerClientEvent('myscript:notify', playerId, ('VIP特典(%d日間)が付与されました!'):format(days))
+    else
+        -- オフラインの場合は「未受け取り特典」としてDBに記録し、次回ログイン時に届ける
+        MySQL.insert('INSERT INTO pending_purchases (identifier, item, amount) VALUES (?, ?, ?)', {
+            targetIdentifier, 'vip_days', days
+        })
+    end
+end, false)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li><code>RegisterCommand</code>のハンドラ内で<code>source ~= 0</code>をチェックせずに実装すると、一般プレイヤーがチャット欄から同じコマンドを打って特典を不正取得できてしまいます。<strong>Tebexが呼ぶコマンドは、コンソール実行(source == 0)以外を必ず弾いてください。</strong></li>
+        <li>Tebexの「Execute the command even if the player is offline」設定を有効にした場合、購入時にプレイヤーが必ずオンラインとは限りません。オフライン時の処理(DBに保留として記録し、次回ログイン時に届ける)を必ず用意してください。</li>
+        <li><code>{id}</code>に置き換わる識別子の種類(Steam64ID/XUID等)は、購入者がTebexのチェックアウト時に連携したアカウント種別に依存します。自分のスクリプトの識別子管理方式(Tier2-20参照)と一致させて比較してください。</li>
+        <li>秘密鍵(<code>sv_tebexSecret</code>)は絶対に公開リポジトリにコミットしないでください。他のconvarと同様、本番用の値は<code>server.cfg</code>にのみ記載します。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p class="version-note">本レッスンの<code>sv_tebexSecret</code>・<code>{id}</code>プレースホルダー・オフライン実行設定はTebex公式ドキュメント(docs.tebex.io)およびCfx公式ドキュメント(docs.fivem.net)で確認済みです。実際のプラン内容・コマンド構文はTebex側の仕様変更やプラン(FiveM専用の「Server Wrapper」連携)によって細部が変わる可能性があるため、導入時は必ず最新の公式ドキュメントを確認してください。プレイヤー自身がトランザクションIDから受け取りを行える<code>/redeem</code>コマンドも標準で用意されています。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

@@ -147,6 +147,17 @@ const LESSONS = [
     summary: "sumneko.lua拡張機能とFiveM native定義ファイルで、補完・型チェックが効く開発環境を整える",
     keywords: ["VS Codeの補完を効かせたい", "Luaの拡張機能を入れたい", "native関数の補完がほしい", "赤い波線を消したい"],
   },
+  {
+    id: "t1-14-txadmin-administration",
+    title: "txAdminの本格的な使い方(権限管理・バックアップ・リソース監視)",
+    tier: 1,
+    categories: ["environment", "admin-tools"],
+    prerequisites: ["t1-01-setup-environment", "t1-12-server-cfg-structure"],
+    path: "lessons/tier1-beginner/14-txadmin-administration.html",
+    estimatedMinutes: 25,
+    summary: "txAdminの管理者権限(admins.json)・自動バックアップ・スケジュール再起動・リソース監視タブの使い方を学ぶ",
+    keywords: ["txAdminの権限管理をしたい", "サーバーのバックアップを取りたい", "自動再起動を設定したい", "リソースの重さを調べたい"],
+  },
 
   // ===== Tier 2: 初級 =====
   {
@@ -844,6 +855,50 @@ const LESSONS = [
     summary: "NUIでのプレイヤー一覧表示、NetworkSetInSpectatorModeでのスペクテイト、ノークリップの実装を学ぶ",
     keywords: ["プレイヤーをスペクテイトしたい", "ノークリップを実装したい", "観戦モードを作りたい"],
   },
+  {
+    id: "t3-44-mlo-interior-basics",
+    title: "MLO/インテリア導入の基礎",
+    tier: 3,
+    categories: ["world"],
+    prerequisites: ["t1-04-fxmanifest", "t2-09-create-object"],
+    path: "lessons/tier3-intermediate/44-mlo-interior-basics.html",
+    estimatedMinutes: 25,
+    summary: "this_is_a_map・DLC_ITYP_REQUESTで既製のMLO(カスタムインテリア)を導入し、interior entity setで内装を切り替える",
+    keywords: ["MLOを導入したい", "カスタムインテリアを入れたい", "既製の建物を配置したい", "interior entity setの使い方"],
+  },
+  {
+    id: "t3-45-map-editing-custom-props",
+    title: "マップ編集・カスタムプロップ配置(YMAP等)",
+    tier: 3,
+    categories: ["world"],
+    prerequisites: ["t3-44-mlo-interior-basics"],
+    path: "lessons/tier3-intermediate/45-map-editing-custom-props.html",
+    estimatedMinutes: 20,
+    summary: "静的なYMAPによるカスタムプロップ配置と、動的なCreateObject配置の使い分けを学ぶ",
+    keywords: ["マップを編集したい", "プロップを配置したい", "YMAPを追加したい", "街に装飾を追加したい"],
+  },
+  {
+    id: "t3-46-resource-testing-qa",
+    title: "自作リソースのテスト/QAの考え方",
+    tier: 3,
+    categories: ["environment"],
+    prerequisites: ["t1-05-debug-basics"],
+    path: "lessons/tier3-intermediate/46-resource-testing-qa.html",
+    estimatedMinutes: 20,
+    summary: "F8コンソール・再起動耐性・複数クライアントでの動作確認など、公開前のチェックリストを学ぶ",
+    keywords: ["動作確認の方法を知りたい", "リソースのテスト方法", "公開前のチェックリスト", "restartで壊れないか確認したい"],
+  },
+  {
+    id: "t3-47-drivers-license-dmv",
+    title: "運転免許・DMV系システム",
+    tier: 3,
+    categories: ["gameplay"],
+    prerequisites: ["t2-18-custom-zones", "t3-03-database-oxmysql"],
+    path: "lessons/tier3-intermediate/47-drivers-license-dmv.html",
+    estimatedMinutes: 25,
+    summary: "チェックポイント通過型の教習・試験を自作し、合格したプレイヤーにDB保存された免許を発行する",
+    keywords: ["運転免許システムを作りたい", "DMVを実装したい", "教習所を作りたい", "免許を持っていないと運転できないようにしたい"],
+  },
 
   // ===== Tier 4: 中上級(okok/lb-phone含む) =====
   {
@@ -1270,6 +1325,17 @@ const LESSONS = [
     summary: "頭金+分割回数を指定し、定期的に自動で分割金が引き落とされるローンシステムを実装する",
     keywords: ["分割払いを実装したい", "ローンシステムを作りたい", "車両を分割で購入させたい"],
   },
+  {
+    id: "t4-39-tebex-integration",
+    title: "決済/課金ショップ連携(Tebex)の基礎",
+    tier: 4,
+    categories: ["monetization", "framework"],
+    prerequisites: ["t2-04-commands", "t2-20-player-identifiers"],
+    path: "lessons/tier4-upper-intermediate/39-tebex-integration.html",
+    estimatedMinutes: 25,
+    summary: "sv_tebexSecretでTebexストアと連携し、購入時に実行されるコマンドで報酬を届ける仕組みを実装する",
+    keywords: ["課金ショップを作りたい", "Tebexと連携したい", "寄付特典を実装したい", "購入したアイテムを届けたい"],
+  },
 
   // ===== Tier 5: 上級 =====
   {
@@ -1425,6 +1491,7 @@ const CATEGORY_INFO = {
   crime: { label: "犯罪行為", emoji: "🚨" },
   "law-enforcement": { label: "警察業務", emoji: "👮" },
   housing: { label: "住居・不動産", emoji: "🏠" },
+  monetization: { label: "収益化・課金", emoji: "💳" },
 };
 window.CATEGORY_INFO = CATEGORY_INFO;
 
@@ -1456,5 +1523,6 @@ const CATEGORY_SUMMARY = {
   crime: "窃盗・薬物・故売など、ゲーム内の犯罪行為に関わるシステムを作れるようになります。",
   "law-enforcement": "MDT・逮捕・投獄など、警察側の業務に関わるシステムを作れるようになります。",
   housing: "物件購入・家具設置・収納/施錠など、住居(不動産)システムを作れるようになります。",
+  monetization: "Tebex等の課金ストアと連携し、購入したアイテム・特典をゲーム内に届けられるようになります。",
 };
 window.CATEGORY_SUMMARY = CATEGORY_SUMMARY;
