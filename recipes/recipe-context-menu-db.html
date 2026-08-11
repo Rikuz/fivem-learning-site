@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ox_libコンテキストメニュー × oxmysql: DBの内容から動的にメニューを作る | レシピ集 | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+  <link rel="stylesheet" href="../assets/css/lesson.css">
+  <link rel="stylesheet" href="../assets/vendor/prism/prism.css">
+</head>
+<body>
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <h1>ox_libコンテキストメニュー × oxmysql: DBの内容から動的にメニューを作る</h1>
+
+    <section class="conclusion">
+      <h2>やりたいこと</h2>
+      <p>固定の選択肢を書くのではなく、DBに保存された商品一覧を取得してから、その内容でox_libのコンテキストメニューを組み立てる。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>組み合わせるレッスン</h2>
+      <ul class="related-lessons-list">
+        <li><a href="../lessons/tier3-intermediate/35-ox-lib-context-menu.html">ox_libの組み込みコンテキストメニュー</a><span class="related-lessons-list__note">Tier3-35</span></li>
+        <li><a href="../lessons/tier3-intermediate/32-oxmysql-modern-api.html">oxmysqlのモダンな書き方</a><span class="related-lessons-list__note">Tier3-32</span></li>
+      </ul>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>client.lua: サーバーから受け取った一覧でメニューを組み立てる</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">RegisterCommand('dynamicshop', function()
+    TriggerServerEvent('recipe:requestItemList')
+end, false)
+
+RegisterNetEvent('recipe:receiveItemList')
+AddEventHandler('recipe:receiveItemList', function(items)
+    local options = {}
+
+    for _, item in ipairs(items) do
+        table.insert(options, {
+            title = item.label,
+            description = ('価格: $%s'):format(item.price),
+            onSelect = function()
+                TriggerServerEvent('recipe:purchaseItem', item.id)
+            end,
+        })
+    end
+
+    -- Tier3-35のregisterContext/showContextでメニューを表示する
+    lib.registerContext({ id = 'dynamic_item_menu', title = '商品一覧', options = options })
+    lib.showContext('dynamic_item_menu')
+end)</code></pre>
+      </div>
+
+      <h3>server.lua: DBから商品一覧を取得して渡す</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">RegisterNetEvent('recipe:requestItemList')
+AddEventHandler('recipe:requestItemList', function()
+    local playerId = source
+
+    -- Tier3-32のモダンAPIでDBから一覧を取得する
+    local items = MySQL.query.await('SELECT id, label, price FROM shop_items ORDER BY price ASC', {})
+
+    TriggerClientEvent('recipe:receiveItemList', playerId, items or {})
+end)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点</h2>
+      <ul>
+        <li>メニューの選択肢を毎回DBから取得すると、商品数が多い・呼び出し頻度が高い場合はTier3-16のキャッシュ戦略も検討してください。</li>
+        <li><code>onSelect</code>内で商品IDを送るだけにし、価格の再計算・在庫確認は必ずserver側で行ってください(Tier3-05参照)。</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer id="site-footer"></footer>
+
+  <script src="../assets/js/lessons-data.js"></script>
+  <script src="../assets/js/recipes-data.js"></script>
+  <script src="../assets/js/progress.js"></script>
+  <script src="../assets/js/nav.js"></script>
+  <script src="../assets/vendor/prism/prism.js"></script>
+  <script src="../assets/js/code-copy.js"></script>
+</body>
+</html>

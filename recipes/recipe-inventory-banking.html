@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ox_inventory × okokBanking: 所持アイテムで銀行手数料を割り引く | レシピ集 | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+  <link rel="stylesheet" href="../assets/css/lesson.css">
+  <link rel="stylesheet" href="../assets/vendor/prism/prism.css">
+</head>
+<body>
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <h1>ox_inventory × okokBanking: 所持アイテムで銀行手数料を割り引く</h1>
+
+    <section class="conclusion">
+      <h2>やりたいこと</h2>
+      <p>「VIPカード」のようなアイテムを所持していると、okokBankingV2の出金手数料が安くなる特典を実装する。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>組み合わせるレッスン</h2>
+      <ul class="related-lessons-list">
+        <li><a href="../lessons/tier3-intermediate/30-ox-inventory-item-registry.html">ox_inventoryにアイテムを追加する</a><span class="related-lessons-list__note">Tier3-30</span></li>
+        <li><a href="../lessons/tier4-upper-intermediate/06-okok-banking-integration.html">okokBankingV2と連携する</a><span class="related-lessons-list__note">Tier4-06</span></li>
+      </ul>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>server.lua: 所持アイテムに応じて手数料率を変える</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local function getWithdrawFee(playerId, amount)
+    -- Tier3-30のGetItemCountで所持数を確認する
+    local hasVipCard = exports.ox_inventory:GetItemCount(playerId, 'vip_card') > 0
+    local feeRate = hasVipCard and 0.01 or 0.05 -- VIPカード所持で手数料5%→1%に割引
+
+    return math.floor(amount * feeRate)
+end
+
+RegisterNetEvent('recipe:withdraw')
+AddEventHandler('recipe:withdraw', function(society, amount)
+    local playerId = source
+    local fee = getWithdrawFee(playerId, amount)
+    local total = amount + fee
+
+    -- Tier4-06のRemoveMoney/AddTransactionと組み合わせる
+    exports['okokBanking']:RemoveMoney(society, total)
+    exports['okokBanking']:AddTransaction(society, { value = total, type = 'withdraw', reason = ('出金(手数料$%s込み)'):format(fee) })
+
+    TriggerClientEvent('okokNotify:Alert', playerId, 'ATM', ('$%sを出金しました(手数料$%s)'):format(amount, fee), 5000, 'success', true)
+end)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点</h2>
+      <ul>
+        <li>手数料率のような重要な数値は必ずserver側の定数として管理し、clientから送らせないでください(Tier3-05参照)。</li>
+        <li>出金前に口座残高が<code>total</code>(手数料込みの金額)以上あるかの確認も忘れずに追加してください。</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer id="site-footer"></footer>
+
+  <script src="../assets/js/lessons-data.js"></script>
+  <script src="../assets/js/recipes-data.js"></script>
+  <script src="../assets/js/progress.js"></script>
+  <script src="../assets/js/nav.js"></script>
+  <script src="../assets/vendor/prism/prism.js"></script>
+  <script src="../assets/js/code-copy.js"></script>
+</body>
+</html>

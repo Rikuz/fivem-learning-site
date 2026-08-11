@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NUI付きリソーステンプレート | テンプレート集 | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+  <link rel="stylesheet" href="../assets/css/lesson.css">
+  <link rel="stylesheet" href="../assets/vendor/prism/prism.css">
+</head>
+<body>
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <h1>NUI付きリソーステンプレート</h1>
+
+    <section class="conclusion">
+      <h2>概要</h2>
+      <p>開く/閉じる操作とJS↔Lua間の双方向通信を備えた、NUI画面付きresourceの土台です。Tier3-01・Tier3-02の内容をひとまとめにしたものです。</p>
+    </section>
+
+    <section class="directory-structure">
+      <h2>ディレクトリ構造</h2>
+      <pre class="directory-tree">tpl-nui/
+├── fxmanifest.lua
+├── client.lua
+└── ui/
+    ├── index.html
+    ├── style.css
+    └── script.js</pre>
+    </section>
+
+    <section class="code-example">
+      <h2>コード</h2>
+
+      <h3>fxmanifest.lua</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">fx_version 'cerulean'
+game 'gta5'
+
+author '自分の名前'
+description 'NUI付きresourceテンプレート'
+version '1.0.0'
+
+ui_page 'ui/index.html'
+
+files {
+    'ui/index.html',
+    'ui/style.css',
+    'ui/script.js'
+}
+
+client_script 'client.lua'</code></pre>
+      </div>
+
+      <h3>client.lua</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local isOpen = false
+
+RegisterCommand('opennui', function()
+    if isOpen then return end
+    isOpen = true
+
+    SetNuiFocus(true, true)
+    SendNUIMessage({ action = 'open' })
+end, false)
+
+RegisterNUICallback('close', function(data, cb)
+    isOpen = false
+    SetNuiFocus(false, false)
+    cb('ok')
+end)
+
+-- JS側からLuaへデータを送る例(Tier3-02参照)
+RegisterNUICallback('submitData', function(data, cb)
+    print('NUIから受け取ったデータ:', json.encode(data))
+    cb('ok')
+end)</code></pre>
+      </div>
+
+      <h3>ui/index.html</h3>
+      <div class="code-block">
+        <pre><code class="language-markup">&lt;!doctype html&gt;
+&lt;html lang="ja"&gt;
+&lt;head&gt;
+  &lt;meta charset="utf-8"&gt;
+  &lt;link rel="stylesheet" href="style.css"&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;div id="app" class="hidden"&gt;
+    &lt;h1&gt;NUIテンプレート&lt;/h1&gt;
+    &lt;input id="text-input" type="text" placeholder="何か入力..."&gt;
+    &lt;button id="submit-btn"&gt;送信&lt;/button&gt;
+    &lt;button id="close-btn"&gt;閉じる&lt;/button&gt;
+  &lt;/div&gt;
+  &lt;script src="script.js"&gt;&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;</code></pre>
+      </div>
+
+      <h3>ui/style.css</h3>
+      <div class="code-block">
+        <pre><code class="language-css">html, body {
+  background: transparent;
+  margin: 0;
+  font-family: sans-serif;
+}
+
+.hidden {
+  display: none;
+}
+
+#app {
+  position: fixed;
+  top: 20%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 320px;
+  background: #1e1e1e;
+  color: #fff;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+#app input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px;
+  margin-bottom: 8px;
+  border-radius: 4px;
+  border: 1px solid #333;
+  background: #2a2a2a;
+  color: #fff;
+}
+
+#app button {
+  background: #4c7dff;
+  border: none;
+  border-radius: 4px;
+  color: #fff;
+  padding: 8px 12px;
+  cursor: pointer;
+  margin-right: 6px;
+}</code></pre>
+      </div>
+
+      <h3>ui/script.js</h3>
+      <div class="code-block">
+        <pre><code class="language-javascript">function post(name, body) {
+  return fetch(`https://${GetParentResourceName()}/${name}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json; charset=UTF-8' },
+    body: JSON.stringify(body || {}),
+  });
+}
+
+window.addEventListener('message', (event) => {
+  const data = event.data;
+  if (data.action === 'open') {
+    document.getElementById('app').classList.remove('hidden');
+  }
+});
+
+document.getElementById('submit-btn').addEventListener('click', () => {
+  const text = document.getElementById('text-input').value;
+  post('submitData', { text });
+});
+
+document.getElementById('close-btn').addEventListener('click', () => {
+  document.getElementById('app').classList.add('hidden');
+  post('close');
+});</code></pre>
+      </div>
+    </section>
+
+    <section class="supplement">
+      <h2>使い方</h2>
+      <p>実際のファイルは<a href="tpl-nui/">templates/tpl-nui/</a>に置いてあります。<code>/opennui</code>で開き、入力して送信するとLua側の<code>print</code>にデータが出力されます。画面のレイアウトは<code>ui/index.html</code>・<code>ui/style.css</code>を書き換えて作り込んでください。</p>
+    </section>
+  </main>
+
+  <footer id="site-footer"></footer>
+
+  <script src="../assets/js/lessons-data.js"></script>
+  <script src="../assets/js/templates-data.js"></script>
+  <script src="../assets/js/progress.js"></script>
+  <script src="../assets/js/nav.js"></script>
+  <script src="../assets/vendor/prism/prism.js"></script>
+  <script src="../assets/js/code-copy.js"></script>
+</body>
+</html>

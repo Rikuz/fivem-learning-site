@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DB連携(oxmysql)リソーステンプレート | テンプレート集 | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+  <link rel="stylesheet" href="../assets/css/lesson.css">
+  <link rel="stylesheet" href="../assets/vendor/prism/prism.css">
+</head>
+<body>
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <h1>DB連携(oxmysql)リソーステンプレート</h1>
+
+    <section class="conclusion">
+      <h2>概要</h2>
+      <p>テーブル作成・保存・取得(1件/複数件)の基本パターンを揃えた、oxmysql連携resourceの土台です。Tier3-03・Tier3-32の内容を土台にしています。</p>
+    </section>
+
+    <section class="directory-structure">
+      <h2>ディレクトリ構造</h2>
+      <pre class="directory-tree">tpl-database/
+├── fxmanifest.lua
+├── server.lua
+└── schema.sql</pre>
+    </section>
+
+    <section class="code-example">
+      <h2>コード</h2>
+
+      <h3>fxmanifest.lua</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">fx_version 'cerulean'
+game 'gta5'
+
+author '自分の名前'
+description 'DB連携(oxmysql)resourceテンプレート'
+version '1.0.0'
+
+dependency 'oxmysql'
+
+server_script 'server.lua'</code></pre>
+      </div>
+
+      <h3>schema.sql</h3>
+      <div class="code-block">
+        <pre><code class="language-sql">CREATE TABLE IF NOT EXISTS `my_resource_data` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `identifier` VARCHAR(64) NOT NULL,
+  `value` VARCHAR(255) NOT NULL,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP
+);</code></pre>
+      </div>
+
+      <h3>server.lua</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">-- resource起動時にテーブルを作成する(Tier3-03参照)
+CreateThread(function()
+    MySQL.query([[
+        CREATE TABLE IF NOT EXISTS `my_resource_data` (
+            `id` INT AUTO_INCREMENT PRIMARY KEY,
+            `identifier` VARCHAR(64) NOT NULL,
+            `value` VARCHAR(255) NOT NULL,
+            `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    ]])
+end)
+
+-- 保存する(Tier3-32のモダンAPI)
+local function saveValue(identifier, value)
+    return MySQL.insert('INSERT INTO my_resource_data (identifier, value) VALUES (?, ?)', { identifier, value })
+end
+
+-- 最新の1件を取得する
+local function getLatestValue(identifier)
+    return MySQL.single.await('SELECT * FROM my_resource_data WHERE identifier = ? ORDER BY created_at DESC LIMIT 1', { identifier })
+end
+
+-- 複数件取得する
+local function getAllValues(identifier)
+    return MySQL.query.await('SELECT * FROM my_resource_data WHERE identifier = ? ORDER BY created_at DESC', { identifier })
+end
+
+-- 使用例
+RegisterCommand('savetest', function(source, args)
+    local playerId = source
+    local identifier = GetPlayerIdentifierByType(playerId, 'license')
+    saveValue(identifier, args[1] or 'テスト値')
+end, false)
+
+RegisterCommand('loadtest', function(source)
+    local playerId = source
+    local identifier = GetPlayerIdentifierByType(playerId, 'license')
+    local rows = getAllValues(identifier)
+
+    for _, row in ipairs(rows or {}) do
+        print(row.id, row.value, row.created_at)
+    end
+end, false)</code></pre>
+      </div>
+    </section>
+
+    <section class="supplement">
+      <h2>使い方</h2>
+      <p>実際のファイルは<a href="tpl-database/">templates/tpl-database/</a>に置いてあります。テーブル名(<code>my_resource_data</code>)・列を自分の用途に合わせて書き換え、<code>saveValue</code>/<code>getLatestValue</code>/<code>getAllValues</code>のパターンを流用してCRUD処理を組み立ててください。</p>
+    </section>
+  </main>
+
+  <footer id="site-footer"></footer>
+
+  <script src="../assets/js/lessons-data.js"></script>
+  <script src="../assets/js/templates-data.js"></script>
+  <script src="../assets/js/progress.js"></script>
+  <script src="../assets/js/nav.js"></script>
+  <script src="../assets/vendor/prism/prism.js"></script>
+  <script src="../assets/js/code-copy.js"></script>
+</body>
+</html>

@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NUI × StateBags: 複数プレイヤーで共有されるUI状態を同期する | レシピ集 | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+  <link rel="stylesheet" href="../assets/css/lesson.css">
+  <link rel="stylesheet" href="../assets/vendor/prism/prism.css">
+</head>
+<body>
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <h1>NUI × StateBags: 複数プレイヤーで共有されるUI状態を同期する</h1>
+
+    <section class="conclusion">
+      <h2>やりたいこと</h2>
+      <p>街の掲示板(prop)のようなオブジェクトの内容を誰かが更新したら、それを見ている全プレイヤーのNUI表示にも反映する。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>組み合わせるレッスン</h2>
+      <ul class="related-lessons-list">
+        <li><a href="../lessons/tier3-intermediate/01-nui-basics.html">NUIの基礎(画面UIを表示する)</a><span class="related-lessons-list__note">Tier3-01</span></li>
+        <li><a href="../lessons/tier5-advanced/03-statebags.html">StateBagsによる同期</a><span class="related-lessons-list__note">Tier5-03</span></li>
+      </ul>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>server.lua: 掲示板の内容を更新する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">RegisterNetEvent('recipe:updateSignMessage')
+AddEventHandler('recipe:updateSignMessage', function(signNetId, message)
+    local signEntity = NetworkGetEntityFromNetworkId(signNetId)
+    if signEntity == 0 then return end
+
+    -- 第3引数をtrueにすると全clientに同期される(replicated、Tier5-03参照)
+    Entity(signEntity).state:set('message', message, true)
+end)</code></pre>
+      </div>
+
+      <h3>client.lua: StateBagsの変化を検知してNUIに反映する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">-- 掲示板のStateBagsが変化したら、開いているNUIに反映する(Tier5-03参照)
+AddStateBagChangeHandler('message', '', function(bagName, key, value)
+    SendNUIMessage({ action = 'updateSignMessage', message = value })
+end)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点</h2>
+      <ul>
+        <li><code>AddStateBagChangeHandler</code>は、そのプレイヤーがNUIを開いていなくても発火します。<code>SendNUIMessage</code>を送るだけなら害はありませんが、演出(音を鳴らす等)を伴う場合はNUIが開いているかどうかのフラグを併用してください。</li>
+        <li>StateBagsは「多くのclientが継続的に参照する比較的静的なデータ」向きです。頻繁に更新される値には向きません(Tier5-03参照)。</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer id="site-footer"></footer>
+
+  <script src="../assets/js/lessons-data.js"></script>
+  <script src="../assets/js/recipes-data.js"></script>
+  <script src="../assets/js/progress.js"></script>
+  <script src="../assets/js/nav.js"></script>
+  <script src="../assets/vendor/prism/prism.js"></script>
+  <script src="../assets/js/code-copy.js"></script>
+</body>
+</html>

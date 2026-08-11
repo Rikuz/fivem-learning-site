@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>StateBags同期リソーステンプレート | テンプレート集 | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+  <link rel="stylesheet" href="../assets/css/lesson.css">
+  <link rel="stylesheet" href="../assets/vendor/prism/prism.css">
+</head>
+<body>
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <h1>StateBags同期リソーステンプレート</h1>
+
+    <section class="conclusion">
+      <h2>概要</h2>
+      <p>プレイヤーの状態を全clientに同期し、変化を監視して反映する、マルチプレイヤー同期resourceの土台です。Tier5-03の内容を土台にしています。</p>
+    </section>
+
+    <section class="directory-structure">
+      <h2>ディレクトリ構造</h2>
+      <pre class="directory-tree">tpl-statebags/
+├── fxmanifest.lua
+├── client.lua
+└── server.lua</pre>
+    </section>
+
+    <section class="code-example">
+      <h2>コード</h2>
+
+      <h3>fxmanifest.lua</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">fx_version 'cerulean'
+game 'gta5'
+
+author '自分の名前'
+description 'StateBags同期resourceテンプレート'
+version '1.0.0'
+
+client_script 'client.lua'
+server_script 'server.lua'</code></pre>
+      </div>
+
+      <h3>server.lua</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">-- プレイヤーの状態をStateBagsで管理し、全clientに同期する(Tier5-03参照)
+RegisterCommand('setstatus', function(source, args)
+    local playerId = source
+    local status = args[1] or 'idle'
+
+    -- 第3引数をtrueにすると全clientに同期される(replicated)
+    Player(playerId).state:set('myStatus', status, true)
+end, false)</code></pre>
+      </div>
+
+      <h3>client.lua</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">-- 他プレイヤーのStateBagsの変化を監視する(Tier5-03参照)
+AddStateBagChangeHandler('myStatus', '', function(bagName, key, value, reserved, replicated)
+    print(('%sのmyStatusが%sに変わりました'):format(bagName, tostring(value)))
+end)
+
+-- 自分自身の状態を確認する
+RegisterCommand('mystatus', function()
+    local status = LocalPlayer.state.myStatus
+    print('自分の状態:', status or '未設定')
+end, false)
+
+-- 特定エンティティの状態を確認する例
+local function getEntityStatus(entity)
+    return Entity(entity).state.myStatus
+end</code></pre>
+      </div>
+    </section>
+
+    <section class="supplement">
+      <h2>使い方</h2>
+      <p>実際のファイルは<a href="tpl-statebags/">templates/tpl-statebags/</a>に置いてあります。<code>myStatus</code>というキー名・値の中身を自分の用途(拘束状態、勤務状態、所属チーム等)に合わせて書き換えてください。1フレームごとに変わるような値には向かない点に注意してください(Tier5-03参照)。</p>
+    </section>
+  </main>
+
+  <footer id="site-footer"></footer>
+
+  <script src="../assets/js/lessons-data.js"></script>
+  <script src="../assets/js/templates-data.js"></script>
+  <script src="../assets/js/progress.js"></script>
+  <script src="../assets/js/nav.js"></script>
+  <script src="../assets/vendor/prism/prism.js"></script>
+  <script src="../assets/js/code-copy.js"></script>
+</body>
+</html>

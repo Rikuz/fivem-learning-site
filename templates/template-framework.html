@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>フレームワーク連携(ESX/QBCore対応)リソーステンプレート | テンプレート集 | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+  <link rel="stylesheet" href="../assets/css/lesson.css">
+  <link rel="stylesheet" href="../assets/vendor/prism/prism.css">
+</head>
+<body>
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <h1>フレームワーク連携(ESX/QBCore対応)リソーステンプレート</h1>
+
+    <section class="conclusion">
+      <h2>概要</h2>
+      <p>ESX/QBCore/Qboxを自動検知し、識別子・所持金の取得を共通関数化した、フレームワーク連携resourceの土台です。Tier4-01の内容と、ex-05で使ったフレームワーク検知パターンを再利用しています。</p>
+    </section>
+
+    <section class="directory-structure">
+      <h2>ディレクトリ構造</h2>
+      <pre class="directory-tree">tpl-framework/
+├── fxmanifest.lua
+└── server.lua</pre>
+    </section>
+
+    <section class="code-example">
+      <h2>コード</h2>
+
+      <h3>fxmanifest.lua</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">fx_version 'cerulean'
+game 'gta5'
+
+author '自分の名前'
+description 'フレームワーク連携(ESX/QBCore対応)resourceテンプレート'
+version '1.0.0'
+
+server_script 'server.lua'</code></pre>
+      </div>
+
+      <h3>server.lua</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">-- フレームワーク検知(Tier4-01参照)
+local function detectFramework()
+    if GetResourceState('es_extended') == 'started' then
+        return 'esx'
+    elseif GetResourceState('qbx_core') == 'started' then
+        return 'qbox'
+    elseif GetResourceState('qb-core') == 'started' then
+        return 'qbcore'
+    end
+    return nil
+end
+
+local FRAMEWORK = detectFramework()
+local ESX, QBCore
+
+CreateThread(function()
+    if FRAMEWORK == 'esx' then
+        ESX = exports['es_extended']:getSharedObject()
+    elseif FRAMEWORK == 'qbcore' then
+        QBCore = exports['qb-core']:GetCoreObject()
+    end
+
+    print(('^2[my-resource] 検出したフレームワーク: %s^0'):format(FRAMEWORK or '未検出'))
+end)
+
+-- 共通関数として、識別子・所持金の取得をフレームワークごとに吸収する
+local function getIdentifier(playerId)
+    if FRAMEWORK == 'esx' and ESX then
+        local xPlayer = ESX.GetPlayerFromId(playerId)
+        return xPlayer and xPlayer.identifier
+    elseif FRAMEWORK == 'qbcore' and QBCore then
+        local Player = QBCore.Functions.GetPlayer(playerId)
+        return Player and Player.PlayerData.citizenid
+    end
+    return GetPlayerIdentifierByType(playerId, 'license') -- フレームワーク未検出時のフォールバック
+end
+
+local function getMoney(playerId)
+    if FRAMEWORK == 'esx' and ESX then
+        local xPlayer = ESX.GetPlayerFromId(playerId)
+        return xPlayer and xPlayer.getMoney() or 0
+    elseif FRAMEWORK == 'qbcore' and QBCore then
+        local Player = QBCore.Functions.GetPlayer(playerId)
+        return Player and Player.PlayerData.money['cash'] or 0
+    end
+    return 0
+end
+
+-- 使用例
+RegisterCommand('mymoney', function(source)
+    local playerId = source
+    print(('所持金: $%d(識別子: %s)'):format(getMoney(playerId), getIdentifier(playerId)))
+end, false)</code></pre>
+      </div>
+    </section>
+
+    <section class="supplement">
+      <h2>使い方</h2>
+      <p>実際のファイルは<a href="tpl-framework/">templates/tpl-framework/</a>に置いてあります。<code>getIdentifier</code>/<code>getMoney</code>と同じパターンで、Job取得・所持金の増減等の関数もフレームワークごとに追加していけます。ox_coreを使う場合はテーブル構造がESX/QBCoreと根本的に異なるため、別途分岐を追加してください(Tier4-01参照)。</p>
+    </section>
+  </main>
+
+  <footer id="site-footer"></footer>
+
+  <script src="../assets/js/lessons-data.js"></script>
+  <script src="../assets/js/templates-data.js"></script>
+  <script src="../assets/js/progress.js"></script>
+  <script src="../assets/js/nav.js"></script>
+  <script src="../assets/vendor/prism/prism.js"></script>
+  <script src="../assets/js/code-copy.js"></script>
+</body>
+</html>

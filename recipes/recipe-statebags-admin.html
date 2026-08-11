@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>StateBags × 管理者ツール: プレイヤー一覧に拘束状態を表示する | レシピ集 | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+  <link rel="stylesheet" href="../assets/css/lesson.css">
+  <link rel="stylesheet" href="../assets/vendor/prism/prism.css">
+</head>
+<body>
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <h1>StateBags × 管理者ツール: プレイヤー一覧に拘束状態を表示する</h1>
+
+    <section class="conclusion">
+      <h2>やりたいこと</h2>
+      <p>Tier4-29で作った拘束状態(StateBags)を、管理者向けのオンラインプレイヤー一覧に反映し、「誰が今拘束中か」を一目で確認できるようにする。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>組み合わせるレッスン</h2>
+      <ul class="related-lessons-list">
+        <li><a href="../lessons/tier5-advanced/03-statebags.html">StateBagsによる同期</a><span class="related-lessons-list__note">Tier5-03</span></li>
+        <li><a href="../lessons/tier3-intermediate/43-admin-player-list-spectate.html">オンラインプレイヤー一覧とスペクテイト/ノークリップ</a><span class="related-lessons-list__note">Tier3-43</span></li>
+      </ul>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>server.lua: プレイヤー一覧に拘束状態を含める</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">RegisterCommand('adminplayerstatus', function(source)
+    local playerId = source
+    if not IsPlayerAceAllowed(playerId, 'group.moderator') then return end
+
+    for _, targetId in ipairs(GetPlayers()) do
+        local targetIdNum = tonumber(targetId)
+
+        -- Tier4-29で設定したisHandcuffedのStateBagsを読み取る(Tier5-03参照)
+        local isHandcuffed = Player(targetIdNum).state.isHandcuffed or false
+
+        TriggerClientEvent('chat:addMessage', playerId, {
+            args = { '[管理者]', ('%s — 拘束中: %s'):format(GetPlayerName(targetIdNum), isHandcuffed and 'はい' or 'いいえ') }
+        })
+    end
+end, false)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点</h2>
+      <ul>
+        <li>StateBagsは元々「拘束システム自身」のために設定した値です。管理者ツール側は<strong>読み取るだけ</strong>にし、直接書き換えないようにしてください(状態管理の責任が分散すると事故のもとになります)。</li>
+        <li>この例はチャットメッセージで一覧表示する簡易版です。Tier3-43のNUIプレイヤー一覧と組み合わせれば、リスト内に拘束アイコンを表示するような、より見やすいUIにできます。</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer id="site-footer"></footer>
+
+  <script src="../assets/js/lessons-data.js"></script>
+  <script src="../assets/js/recipes-data.js"></script>
+  <script src="../assets/js/progress.js"></script>
+  <script src="../assets/js/nav.js"></script>
+  <script src="../assets/vendor/prism/prism.js"></script>
+  <script src="../assets/js/code-copy.js"></script>
+</body>
+</html>

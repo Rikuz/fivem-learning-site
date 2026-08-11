@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ox_target連携リソーステンプレート | テンプレート集 | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+  <link rel="stylesheet" href="../assets/css/lesson.css">
+  <link rel="stylesheet" href="../assets/vendor/prism/prism.css">
+</head>
+<body>
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <h1>ox_target連携リソーステンプレート</h1>
+
+    <section class="conclusion">
+      <h2>概要</h2>
+      <p>座標範囲(<code>addBoxZone</code>)とモデル指定(<code>addModel</code>)、両方のインタラクション登録パターンを揃えた、ox_target連携resourceの土台です。Tier3-07の内容を土台にしています。</p>
+    </section>
+
+    <section class="directory-structure">
+      <h2>ディレクトリ構造</h2>
+      <pre class="directory-tree">tpl-ox-target/
+├── fxmanifest.lua
+└── client.lua</pre>
+    </section>
+
+    <section class="code-example">
+      <h2>コード</h2>
+
+      <h3>fxmanifest.lua</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">fx_version 'cerulean'
+game 'gta5'
+
+author '自分の名前'
+description 'ox_target連携resourceテンプレート'
+version '1.0.0'
+
+dependency 'ox_target'
+
+client_script 'client.lua'</code></pre>
+      </div>
+
+      <h3>client.lua</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">-- 座標範囲でのインタラクション登録(Tier3-07参照)
+exports.ox_target:addBoxZone({
+    coords = vec3(0.0, 0.0, 0.0), -- 実際の座標に置き換える
+    size = vec3(2.0, 2.0, 2.0),
+    options = {
+        {
+            name = 'my_interaction',
+            icon = 'fa-solid fa-hand-pointer',
+            label = 'インタラクションのラベル',
+            onSelect = function()
+                TriggerServerEvent('my-resource:onInteract')
+            end,
+        },
+    }
+})
+
+-- 特定モデルへのインタラクション登録(そのモデルの全エンティティに反映される)
+exports.ox_target:addModel('prop_atm_01', {
+    {
+        name = 'my_model_interaction',
+        icon = 'fa-solid fa-hand-pointer',
+        label = 'モデル向けインタラクション',
+        onSelect = function(data)
+            print('選択したエンティティ:', data.entity)
+        end,
+    }
+})
+
+RegisterNetEvent('my-resource:onInteract')
+AddEventHandler('my-resource:onInteract', function()
+    TriggerEvent('chat:addMessage', { args = { '[テンプレート]', 'インタラクションが実行されました' } })
+end)</code></pre>
+      </div>
+    </section>
+
+    <section class="supplement">
+      <h2>使い方</h2>
+      <p>実際のファイルは<a href="tpl-ox-target/">templates/tpl-ox-target/</a>に置いてあります。<code>addBoxZone</code>の座標、<code>addModel</code>のモデル名を実際に使うものに書き換え、<code>onSelect</code>内の処理を実装してください。サーバー側の検証(所持品・権限確認等)は必ずTier3-05の考え方に沿って行ってください。</p>
+    </section>
+  </main>
+
+  <footer id="site-footer"></footer>
+
+  <script src="../assets/js/lessons-data.js"></script>
+  <script src="../assets/js/templates-data.js"></script>
+  <script src="../assets/js/progress.js"></script>
+  <script src="../assets/js/nav.js"></script>
+  <script src="../assets/vendor/prism/prism.js"></script>
+  <script src="../assets/js/code-copy.js"></script>
+</body>
+</html>

@@ -1,0 +1,42 @@
+html, body {
+  background: transparent;
+  margin: 0;
+  font-family: sans-serif;
+}
+
+.hidden {
+  display: none;
+}
+
+#app {
+  position: fixed;
+  top: 20%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 320px;
+  background: #1e1e1e;
+  color: #fff;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+#app input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px;
+  margin-bottom: 8px;
+  border-radius: 4px;
+  border: 1px solid #333;
+  background: #2a2a2a;
+  color: #fff;
+}
+
+#app button {
+  background: #4c7dff;
+  border: none;
+  border-radius: 4px;
+  color: #fff;
+  padding: 8px 12px;
+  cursor: pointer;
+  margin-right: 6px;
+}

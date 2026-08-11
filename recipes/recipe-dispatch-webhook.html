@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>cd_dispatch × Discord Webhook: 通報を警察とDiscordの両方に送る | レシピ集 | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+  <link rel="stylesheet" href="../assets/css/lesson.css">
+  <link rel="stylesheet" href="../assets/vendor/prism/prism.css">
+</head>
+<body>
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <h1>cd_dispatch × Discord Webhook: 通報を警察とDiscordの両方に送る</h1>
+
+    <section class="conclusion">
+      <h2>やりたいこと</h2>
+      <p>事件が発生したら、ゲーム内の警察役プレイヤーへの通知(cd_dispatch)と、管理者向けDiscordチャンネルへのログ送信を1つの関数から同時に行う。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>組み合わせるレッスン</h2>
+      <ul class="related-lessons-list">
+        <li><a href="../lessons/tier4-upper-intermediate/16-cd-dispatch.html">cd_dispatchで警察無線通知を送る</a><span class="related-lessons-list__note">Tier4-16</span></li>
+        <li><a href="../lessons/tier3-intermediate/22-discord-webhook-log.html">重要操作をDiscord Webhookでログ収集する</a><span class="related-lessons-list__note">Tier3-22</span></li>
+      </ul>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>server.lua: 通報処理を1つの関数にまとめる</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local WEBHOOK_URL = 'https://discord.com/api/webhooks/xxxxx/yyyyy' -- 実際のWebhook URLに置き換える
+
+local function reportIncident(coords, title, message)
+    -- 警察役のプレイヤーに通知する(Tier4-16参照)
+    TriggerEvent('cd_dispatch:AddNotification', {
+        job_table = { 'police' },
+        coords = coords,
+        title = title,
+        message = message,
+        flash = 0,
+        unique_id = tostring(math.random(0, 100000)),
+    })
+
+    -- 同時にDiscordへもログを送る(Tier3-22参照)
+    local payload = json.encode({
+        embeds = { { title = title, description = message, color = 15158332 } }
+    })
+
+    PerformHttpRequest(WEBHOOK_URL, function() end, 'POST', payload, {
+        ['Content-Type'] = 'application/json'
+    })
+end
+
+-- 使用例: 強盗のドアが破られたら通報する
+RegisterNetEvent('heist:doorBreached')
+AddEventHandler('heist:doorBreached', function(coords)
+    reportIncident(coords, '10-90 - 強盗事件', '金庫室のドアが破られました')
+end)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点</h2>
+      <ul>
+        <li><code>PerformHttpRequest</code>は非同期です(Tier3-03のDB処理と同じ考え方)。送信結果を厳密に確認したい場合はコールバック内で処理してください。</li>
+        <li>Discordへのログ送信を全ての通報で行うとレート制限に引っかかることがあります。本当に重要な事件(強盗・銃撃戦等)だけに絞ることをおすすめします(Tier3-22参照)。</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer id="site-footer"></footer>
+
+  <script src="../assets/js/lessons-data.js"></script>
+  <script src="../assets/js/recipes-data.js"></script>
+  <script src="../assets/js/progress.js"></script>
+  <script src="../assets/js/nav.js"></script>
+  <script src="../assets/vendor/prism/prism.js"></script>
+  <script src="../assets/js/code-copy.js"></script>
+</body>
+</html>

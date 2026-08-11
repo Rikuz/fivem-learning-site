@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ox_target × lb-phone: インタラクションをスマホ通知に連携する | レシピ集 | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+  <link rel="stylesheet" href="../assets/css/lesson.css">
+  <link rel="stylesheet" href="../assets/vendor/prism/prism.css">
+</head>
+<body>
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <h1>ox_target × lb-phone: インタラクションをスマホ通知に連携する</h1>
+
+    <section class="conclusion">
+      <h2>やりたいこと</h2>
+      <p>ox_targetのインタラクション(例: 宅配ボックスを確認する)をきっかけに、lb-phoneアプリのアイコンに新着通知バッジを表示する。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>組み合わせるレッスン</h2>
+      <ul class="related-lessons-list">
+        <li><a href="../lessons/tier3-intermediate/07-ox-target.html">ox_targetでインタラクションを作る</a><span class="related-lessons-list__note">Tier3-07</span></li>
+        <li><a href="../lessons/tier4-upper-intermediate/23-lb-phone-notification-badge.html">アプリの新着通知バッジ</a><span class="related-lessons-list__note">Tier4-23</span></li>
+      </ul>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>client.lua: 宅配ボックスにインタラクションを追加する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">exports.ox_target:addBoxZone({
+    coords = vec3(100.0, 200.0, 30.0),
+    size = vec3(1.5, 1.5, 2.0),
+    options = {
+        {
+            name = 'check_delivery_box',
+            icon = 'fa-solid fa-box',
+            label = '宅配ボックスを確認する',
+            onSelect = function()
+                TriggerServerEvent('recipe:checkDeliveryBox')
+            end,
+        },
+    }
+})
+
+RegisterNetEvent('recipe:notifyPhone')
+AddEventHandler('recipe:notifyPhone', function(count)
+    exports['lb-phone']:SendCustomAppMessage('delivery_app', { action = 'updateBadge', count = count })
+end)</code></pre>
+      </div>
+
+      <h3>server.lua: 未受け取り件数を確認して通知する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">RegisterNetEvent('recipe:checkDeliveryBox')
+AddEventHandler('recipe:checkDeliveryBox', function()
+    local playerId = source
+    local pendingCount = 3 -- 実際にはDBから取得する想定(Tier3-03参照)
+
+    TriggerClientEvent('recipe:notifyPhone', playerId, pendingCount)
+end)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点</h2>
+      <ul>
+        <li><code>SendCustomAppMessage</code>の第1引数(アプリID)は、<code>Config.CustomApps</code>に登録したキーと完全に一致させてください(Tier4-04参照)。</li>
+        <li>未受け取り件数はTier3-03のDB連携で実際の値を取得するようにしてください。上記コード例は概念を示す簡略版です。</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer id="site-footer"></footer>
+
+  <script src="../assets/js/lessons-data.js"></script>
+  <script src="../assets/js/recipes-data.js"></script>
+  <script src="../assets/js/progress.js"></script>
+  <script src="../assets/js/nav.js"></script>
+  <script src="../assets/vendor/prism/prism.js"></script>
+  <script src="../assets/js/code-copy.js"></script>
+</body>
+</html>

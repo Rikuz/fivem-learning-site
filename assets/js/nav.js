@@ -8,6 +8,8 @@ function computeSiteRoot() {
   if (/\/tracks\//.test(path)) return "../";
   if (/\/samples\//.test(path)) return "../";
   if (/\/reference\//.test(path)) return "../";
+  if (/\/templates\//.test(path)) return "../";
+  if (/\/recipes\//.test(path)) return "../";
   return "";
 }
 
@@ -36,11 +38,14 @@ function renderSiteHeader() {
     <div class="site-header__inner">
       <a class="site-header__title" href="${root}index.html">FiveMスクリプト学習</a>
       <nav class="site-header__links">
+        <a href="${root}start-guide.html">スタートガイド</a>
         <a href="${root}index.html">難易度別ロードマップ</a>
         <a href="${root}category.html">カテゴリ別一覧</a>
         <a href="${root}practice.html">実践演習</a>
         <a href="${root}tracks.html">プロジェクトトラック</a>
         <a href="${root}samples.html">サンプルコード</a>
+        <a href="${root}templates.html">テンプレート集</a>
+        <a href="${root}recipes.html">レシピ集</a>
         <a href="${root}reference.html">リファレンス</a>
       </nav>
     </div>

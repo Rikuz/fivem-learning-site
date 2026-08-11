@@ -1,0 +1,6 @@
+CREATE TABLE IF NOT EXISTS `my_resource_data` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `identifier` VARCHAR(64) NOT NULL,
+  `value` VARCHAR(255) NOT NULL,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP
+);

@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FiveMスクリプト学習 | スタートガイド</title>
+  <meta name="description" content="3つの質問に答えると、あなたに合った入口(ロードマップ/カテゴリ検索/プロジェクトトラック)を診断します">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/components.css">
+  <link rel="stylesheet" href="assets/css/lesson.css">
+</head>
+<body>
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <h1>スタートガイド</h1>
+    <p>このサイトには「難易度別ロードマップ」「カテゴリ別一覧」「プロジェクトトラック」など複数の入口があります。3つの質問に答えると、あなたに合った始め方を診断します。</p>
+
+    <form id="wizard-form">
+      <fieldset class="wizard-question">
+        <legend>Q1. プログラミング経験は?</legend>
+        <label class="wizard-option"><input type="radio" name="q1" value="none" required> 全くプログラミング経験がない</label>
+        <label class="wizard-option"><input type="radio" name="q1" value="other-lang"> 他の言語(JavaScript・Python等)の経験がある</label>
+        <label class="wizard-option"><input type="radio" name="q1" value="lua"> Luaを触ったことがある</label>
+      </fieldset>
+
+      <fieldset class="wizard-question">
+        <legend>Q2. FiveMを触ったことは?</legend>
+        <label class="wizard-option"><input type="radio" name="q2" value="never" required> 全くない(サーバーを見たこともない)</label>
+        <label class="wizard-option"><input type="radio" name="q2" value="player"> プレイヤーとして遊んだことがある</label>
+        <label class="wizard-option"><input type="radio" name="q2" value="scripter"> 自分でスクリプトを書いたことがある</label>
+      </fieldset>
+
+      <fieldset class="wizard-question">
+        <legend>Q3. 今すぐ実現したいことは決まっていますか?</legend>
+        <label class="wizard-option"><input type="radio" name="q3" value="undecided" required> まだ決まっていない。基礎から順番に学びたい</label>
+        <label class="wizard-option"><input type="radio" name="q3" value="specific-goal"> 作りたいもの(lb-phoneアプリ・犯罪script・住居システム等)が決まっている</label>
+        <label class="wizard-option"><input type="radio" name="q3" value="specific-technique"> 特定の技術(NUIの使い方・DB連携等)だけ知りたい</label>
+      </fieldset>
+
+      <button type="submit" class="wizard-submit">診断する</button>
+    </form>
+
+    <div id="recommendation" class="hidden"></div>
+  </main>
+
+  <footer id="site-footer"></footer>
+
+  <script src="assets/js/lessons-data.js"></script>
+  <script src="assets/js/exercises-data.js"></script>
+  <script src="assets/js/tracks-data.js"></script>
+  <script src="assets/js/progress.js"></script>
+  <script src="assets/js/nav.js"></script>
+  <script src="assets/js/render-start-guide.js"></script>
+</body>
+</html>

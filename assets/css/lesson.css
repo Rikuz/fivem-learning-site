@@ -312,3 +312,54 @@ main li {
   margin-bottom: var(--space-3);
   box-sizing: border-box;
 }
+
+/* ===== start-guide.html(スタートガイド)専用スタイル ===== */
+
+.wizard-question {
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: var(--space-2);
+  margin: 0 0 var(--space-2);
+}
+
+.wizard-question legend {
+  font-weight: bold;
+  padding: 0 6px;
+}
+
+.wizard-option {
+  display: block;
+  padding: 6px 0;
+  cursor: pointer;
+}
+
+.wizard-option input {
+  margin-right: 6px;
+}
+
+.wizard-submit {
+  background: var(--tier2-main, #4c7dff);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 20px;
+  font-size: var(--font-size-base);
+  cursor: pointer;
+}
+
+#recommendation {
+  margin-top: var(--space-3);
+  padding: var(--space-2);
+  background: var(--color-badge-bg);
+  border-radius: 8px;
+}
+
+#recommendation.hidden {
+  display: none;
+}
+
+.wizard-cta {
+  display: inline-block;
+  font-weight: bold;
+  margin: var(--space-1) 0;
+}

@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ox_doorlock × Job確認: 職業によって開閉できるドアを制限する | レシピ集 | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+  <link rel="stylesheet" href="../assets/css/lesson.css">
+  <link rel="stylesheet" href="../assets/vendor/prism/prism.css">
+</head>
+<body>
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <h1>ox_doorlock × Job確認: 職業によって開閉できるドアを制限する</h1>
+
+    <section class="conclusion">
+      <h2>やりたいこと</h2>
+      <p>警察署の武器庫のドアのように、「特定の職業(Job)に就いているプレイヤーだけが開閉できるドア」を実装する。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>組み合わせるレッスン</h2>
+      <ul class="related-lessons-list">
+        <li><a href="../lessons/tier4-upper-intermediate/14-ox-doorlock.html">ox_doorlockでドアを施錠する</a><span class="related-lessons-list__note">Tier4-14</span></li>
+        <li><a href="../lessons/tier4-upper-intermediate/02-framework-jobs.html">フレームワークで職業(Job)システムを使う</a><span class="related-lessons-list__note">Tier4-02</span></li>
+      </ul>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>server.lua: Job確認後にドアを解錠する</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">RegisterNetEvent('recipe:requestToggleDoor')
+AddEventHandler('recipe:requestToggleDoor', function(doorId, requiredJob)
+    local playerId = source
+
+    -- Tier4-01/Tier4-02のフレームワーク連携でJobを確認する(ESXの例)
+    local xPlayer = ESX.GetPlayerFromId(playerId)
+    if not xPlayer or xPlayer.job.name ~= requiredJob then
+        TriggerClientEvent('myscript:notify', playerId, 'この職業では開閉できません', 'error')
+        return
+    end
+
+    -- Job確認が通った場合のみドアを操作する(Tier4-14参照)
+    local door = exports.ox_doorlock:getDoor(doorId)
+    if not door then return end
+
+    exports.ox_doorlock:setDoorState(doorId, not door.state)
+end)</code></pre>
+      </div>
+
+      <h3>client.lua: インタラクションから呼び出す</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">exports.ox_target:addBoxZone({
+    coords = vec3(450.0, -980.0, 30.0), -- 武器庫のドア座標
+    size = vec3(1.5, 1.5, 2.5),
+    options = {
+        {
+            name = 'toggle_armory_door',
+            icon = 'fa-solid fa-lock',
+            label = '武器庫のドアを操作する',
+            onSelect = function()
+                TriggerServerEvent('recipe:requestToggleDoor', 'armory_door', 'police')
+            end,
+        },
+    }
+})</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点</h2>
+      <ul>
+        <li>Job確認は必ずserver側で行ってください。client側の<code>onSelect</code>だけで判定すると、直接イベントを発火されて回避されます(Tier3-05参照)。</li>
+        <li>QBCore/Qboxを使う場合はJob取得の書き方が異なります(Tier4-01参照)。<code>xPlayer.job.name</code>の部分をフレームワークに合わせて書き換えてください。</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer id="site-footer"></footer>
+
+  <script src="../assets/js/lessons-data.js"></script>
+  <script src="../assets/js/recipes-data.js"></script>
+  <script src="../assets/js/progress.js"></script>
+  <script src="../assets/js/nav.js"></script>
+  <script src="../assets/vendor/prism/prism.js"></script>
+  <script src="../assets/js/code-copy.js"></script>
+</body>
+</html>
