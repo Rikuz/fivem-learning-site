@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FiveMコミュニティ活用ガイド | リファレンス | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../assets/vendor/pico/pico.min.css">
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+  <link rel="stylesheet" href="../assets/css/lesson.css">
+</head>
+<body>
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <h1>FiveMコミュニティ活用ガイド</h1>
+    <p>このサイトでカバーしきれない疑問にぶつかったときや、最新の仕様を確認したいときに頼れる公式情報源と、その使い方のコツをまとめています。</p>
+
+    <div class="glossary-group">
+      <h2>① 公式ドキュメント(docs.fivem.net)</h2>
+      <p>すべての一次情報源です。native関数の正確な引数・戻り値、<code>fxmanifest.lua</code>の全ディレクティブ、Asset Escrow(<a href="../lessons/tier5-advanced/12-resource-protection-licensing.html">Tier5-12</a>)のような公式機能の仕様は、まずここを確認するのが最も確実です。「Server Manual」「Scripting Manual」「Native Reference」等のセクションに分かれています。このサイトの<a href="native-cheatsheet.html">ネイティブ関数早見表</a>に載っていないnativeを調べたい場合は、公式のNative Reference(docs.fivem.net/natives/)で検索してください。</p>
+    </div>
+
+    <div class="glossary-group">
+      <h2>② 公式フォーラム(forum.cfx.re)</h2>
+      <p>「Development」(スクリプト開発の質問)、「Server Bazaar」(リソースの配布・販売)、「Releases」(公式配布物)などのカテゴリに分かれています。<strong>質問する前に検索機能で同じ症状の既存スレッドがないか確認してください。</strong>よくあるエラーは既に同じ質問が投稿されていることが多く、検索だけで解決することも珍しくありません。</p>
+      <p><strong>質問時のコツ:</strong> ①エラーメッセージの全文、②使用フレームワーク(ESX/QBCore/Qbox等)とそのバージョン、③該当するコードの抜粋、の3つを最初から添えると回答が付きやすくなります。「動きません」とだけ書いた質問は、原因の特定に何往復もやり取りが必要になり、後回しにされがちです。</p>
+    </div>
+
+    <div class="glossary-group">
+      <h2>③ 公式Discord</h2>
+      <p>Cfx.reのプロジェクト(FiveM/RedM)向けの公式Discordサーバーがあり、<a href="https://discord.com/invite/fivem" target="_blank" rel="noopener">discord.com/invite/fivem</a> から参加できます。フォーラムより即時性が高く、開発系のチャンネルで質問できます。大規模なコミュニティのため、スレッド機能を使う・過去ログを検索してから質問するといったマナーを守ると、やり取りがスムーズになります。</p>
+    </div>
+
+    <div class="glossary-group">
+      <h2>④ ソースコードを直接確認する(GitHub)</h2>
+      <p>connect先のスクリプトの正確な挙動は、最終的にはソースコードそのものが一次情報です。</p>
+      <ul>
+        <li><code>citizenfx/cfx-server-data</code>: 公式のサーバーデータ雛形(Tier4-40で使用)</li>
+        <li><code>citizenfx/fivem</code>: FiveMランタイム自体のソースコード(nativeの実装まで確認したい上級者向け)</li>
+        <li>ox_lib・ox_target・qb-coreなど個々のリソースは、それぞれのGitHub Organizationのリポジトリを直接参照するのが最も正確です。このサイトの「正確な構文」ブロック(各レッスンの補足参照)も、こうした一次情報を確認した上で執筆しています。</li>
+      </ul>
+    </div>
+
+    <div class="glossary-group">
+      <h2>⑤ 質問する前のセルフチェック</h2>
+      <p>コミュニティに質問する前に、以下を一通り確認すると自己解決できることが多いです。</p>
+      <ul>
+        <li>このサイトの<a href="error-guide.html">エラーメッセージ集</a>に、該当する症状が載っていないか</li>
+        <li><a href="../troubleshoot.html">トラブルシューティング・フローチャート</a>を一通り試したか</li>
+        <li>使っているリソースのバージョン、フレームワーク(ESX/QBCore/Qbox)、エラーメッセージの全文を、質問時にすぐ提示できる状態か</li>
+      </ul>
+    </div>
+  </main>
+
+  <footer id="site-footer"></footer>
+
+  <script src="../assets/js/lessons-data.js"></script>
+  <script src="../assets/js/progress.js"></script>
+  <script src="../assets/js/nav.js"></script>
+</body>
+</html>

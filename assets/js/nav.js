@@ -47,6 +47,7 @@ function renderSiteHeader() {
         <a href="${root}templates.html">テンプレート集</a>
         <a href="${root}recipes.html">レシピ集</a>
         <a href="${root}reference.html">リファレンス</a>
+        <a href="${root}troubleshoot.html">トラブルシューティング</a>
       </nav>
     </div>
   `;
@@ -204,6 +205,22 @@ function renderPrevNextNav() {
   `;
 }
 
+function renderSampleDownloadBanner() {
+  const sampleId = document.body.dataset.sampleId;
+  if (!sampleId) return;
+
+  const sample = findSampleById(sampleId);
+  if (!sample) return;
+
+  const root = computeSiteRoot();
+  const heading = document.querySelector("main h1");
+  if (!heading) return;
+
+  const banner = document.createElement("p");
+  banner.innerHTML = `<a class="wizard-cta" href="${root}samples/downloads/${sample.id}.zip" download>📦 このサンプルのリソース一式をZIPでダウンロード</a>`;
+  heading.insertAdjacentElement("afterend", banner);
+}
+
 function renderSiteFooter() {
   const el = document.getElementById("site-footer");
   if (!el) return;
@@ -214,6 +231,7 @@ function renderSiteFooter() {
 function initNav() {
   renderSiteHeader();
   renderBreadcrumb();
+  renderSampleDownloadBanner();
   renderPrevNextNav();
   renderSiteFooter();
 }

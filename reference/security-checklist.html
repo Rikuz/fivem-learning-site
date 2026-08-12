@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>公開前セキュリティチェックリスト | リファレンス | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../assets/vendor/pico/pico.min.css">
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/components.css">
+  <link rel="stylesheet" href="../assets/css/lesson.css">
+</head>
+<body>
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <h1>公開前セキュリティチェックリスト</h1>
+    <p>サーバーやスクリプトを公開・販売する前に確認しておきたい項目を、チェックボックス形式でまとめています。チェック状態は保存されません(ページを再読み込みするとリセットされます)。詳しい説明は各項目からリンクしているレッスンを参照してください。</p>
+
+    <input type="search" id="checklist-search" class="reference-search" placeholder="キーワードで絞り込み">
+
+    <div id="checklist-content">
+      <div class="checklist-group" data-row>
+        <h2>① サーバー設定</h2>
+        <ul class="checklist-group__list">
+          <li class="checklist-item"><label><input type="checkbox"> <code>sv_licenseKey</code>が<code>changeme</code>のままになっていない(<a href="../lessons/tier4-upper-intermediate/40-vps-deployment-guide.html">Tier4-40</a>)</label></li>
+          <li class="checklist-item"><label><input type="checkbox"> <code>server.cfg</code>に開発用の一時的な<code>ensure</code>やデバッグ用convarが残っていない</label></li>
+          <li class="checklist-item"><label><input type="checkbox"> txAdminの管理者権限(<code>admins.json</code>)が、必要な人にだけ最小限の権限で付与されている(<a href="../lessons/tier1-beginner/14-txadmin-administration.html">Tier1-14</a>)</label></li>
+          <li class="checklist-item"><label><input type="checkbox"> ポート30120のTCP/UDPが、VPS側とクラウド事業者側の両方のファイアウォールで正しく開放されている(<a href="../lessons/tier4-upper-intermediate/40-vps-deployment-guide.html">Tier4-40</a>)</label></li>
+        </ul>
+      </div>
+
+      <div class="checklist-group" data-row>
+        <h2>② スクリプトのセキュリティ</h2>
+        <ul class="checklist-group__list">
+          <li class="checklist-item"><label><input type="checkbox"> 価格・個数・座標など重要な値を、clientから送られた値のまま信用していない(<a href="../lessons/tier3-intermediate/05-server-validation.html">Tier3-05</a>)</label></li>
+          <li class="checklist-item"><label><input type="checkbox"> 頻繁に呼ばれるイベントにレート制限(連打対策)を入れている(<a href="../lessons/tier5-advanced/04-security-hardening.html">Tier5-04</a>)</label></li>
+          <li class="checklist-item"><label><input type="checkbox"> 管理者用コマンドに<code>restricted</code>や<code>IsPlayerAceAllowed</code>による権限チェックが付いている(<a href="../lessons/tier2-novice/04-commands.html">Tier2-04</a>)</label></li>
+          <li class="checklist-item"><label><input type="checkbox"> NUI(HTML/CSS/JS)側に価格計算や判定などの重要なロジックを置いていない(<a href="../lessons/tier5-advanced/12-resource-protection-licensing.html">Tier5-12</a>)</label></li>
+        </ul>
+      </div>
+
+      <div class="checklist-group" data-row>
+        <h2>③ データ・バックアップ</h2>
+        <ul class="checklist-group__list">
+          <li class="checklist-item"><label><input type="checkbox"> DBの自動バックアップが有効になっている(<a href="../lessons/tier1-beginner/14-txadmin-administration.html">Tier1-14</a>)</label></li>
+          <li class="checklist-item"><label><input type="checkbox"> バックアップがVPS内だけでなく、別のストレージにも定期的にコピーされている(<a href="../lessons/tier4-upper-intermediate/40-vps-deployment-guide.html">Tier4-40</a>)</label></li>
+          <li class="checklist-item"><label><input type="checkbox"> Discord IDなどの個人情報を、必要以上にログへ出力していない</label></li>
+        </ul>
+      </div>
+
+      <div class="checklist-group" data-row>
+        <h2>④ 販売・配布する場合</h2>
+        <ul class="checklist-group__list">
+          <li class="checklist-item"><label><input type="checkbox"> Asset Escrow、または自前のライセンス認証を導入している(<a href="../lessons/tier5-advanced/12-resource-protection-licensing.html">Tier5-12</a>)</label></li>
+          <li class="checklist-item"><label><input type="checkbox"> 利用規約(再配布禁止・購入者本人のみ利用可 等)を明記している(<a href="../lessons/tier5-advanced/12-resource-protection-licensing.html">Tier5-12</a>)</label></li>
+          <li class="checklist-item"><label><input type="checkbox"> 決済ショップ(Tebex等)側のsecretやconvarを公開リポジトリに含めていない(<a href="../lessons/tier4-upper-intermediate/39-tebex-integration.html">Tier4-39</a>)</label></li>
+        </ul>
+      </div>
+
+      <div class="checklist-group" data-row>
+        <h2>⑤ 公開直前の最終確認</h2>
+        <ul class="checklist-group__list">
+          <li class="checklist-item"><label><input type="checkbox"> resourceをrestartしても、生成物の重複やエラーが起きない(<a href="../lessons/tier3-intermediate/46-resource-testing-qa.html">Tier3-46</a>)</label></li>
+          <li class="checklist-item"><label><input type="checkbox"> 複数人が同時にアクセスした状態で動作確認した(<a href="../lessons/tier3-intermediate/46-resource-testing-qa.html">Tier3-46</a>)</label></li>
+          <li class="checklist-item"><label><input type="checkbox"> 不正な値・想定外の操作(範囲外の値、未所持アイテムの使用等)を送っても落ちないことを確認した(<a href="../lessons/tier3-intermediate/46-resource-testing-qa.html">Tier3-46</a>)</label></li>
+        </ul>
+      </div>
+    </div>
+
+    <p id="checklist-empty" class="category-summary" style="display:none;">該当する項目が見つかりませんでした。</p>
+  </main>
+
+  <footer id="site-footer"></footer>
+
+  <script src="../assets/js/lessons-data.js"></script>
+  <script src="../assets/js/progress.js"></script>
+  <script src="../assets/js/nav.js"></script>
+  <script>
+    const checklistSearch = document.getElementById('checklist-search');
+    checklistSearch.addEventListener('input', () => {
+      const query = checklistSearch.value.trim().toLowerCase();
+      let anyVisible = false;
+
+      document.querySelectorAll('#checklist-content .checklist-item').forEach((item) => {
+        const match = !query || item.textContent.toLowerCase().includes(query);
+        item.style.display = match ? '' : 'none';
+        if (match) anyVisible = true;
+      });
+
+      document.querySelectorAll('.checklist-group').forEach((group) => {
+        const hasVisibleItem = Array.from(group.querySelectorAll('.checklist-item')).some((item) => item.style.display !== 'none');
+        group.style.display = hasVisibleItem ? '' : 'none';
+      });
+
+      document.getElementById('checklist-empty').style.display = anyVisible ? 'none' : 'block';
+    });
+  </script>
+</body>
+</html>

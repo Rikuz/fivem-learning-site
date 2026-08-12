@@ -454,6 +454,7 @@ end)
 | `t4-37-test-drive-system` | 試乗(テストドライブ)システム | `vehicle`, `gameplay` | t4-12 | 制限時間付きの試乗車貸出、エリア外に出た場合の強制返却処理 |
 | `t4-38-vehicle-financing-loan` | 分割払い(ローン)システム | `gameplay`, `framework` | t4-12, t4-06 | 頭金+分割回数の設計、定期的な引き落とし処理、滞納時の扱い |
 | `t4-39-tebex-integration` | 決済/課金ショップ連携(Tebex)の基礎 | `monetization`, `framework` | t2-04, t2-20 | `sv_tebexSecret`でのストア連携、`{id}`プレースホルダーを使ったコマンド課金、オフライン購入時の保留処理 |
+| `t4-40-vps-deployment-guide` | 本番運用・VPSデプロイガイド | `environment`, `admin-tools` | t1-14 | ローカル(txAdmin)から実際のVPSへ移す際の流れ、`txData`ディレクトリの扱い、`server.cfg`の本番向け見直し、systemdでの自動再起動、定期バックアップの考え方 |
 
 ### okokBankingV2 正確な構文(要順守・憶測禁止。docs.okokscripts.io/scripts/okokbankingv2/exports で確認済み)
 
@@ -710,6 +711,16 @@ exports['Renewed-Banking']:CreateJobAccount(jobTable, initialBalance)
 | `t5-08-routing-buckets` | ルーティングバケットでインスタンスを分ける | `performance`, `world` | t4-01 | `SetPlayerRoutingBucket`/`SetEntityRoutingBucket`でプレイヤーごとに異なるインスタンス(次元)を作る |
 | `t5-09-statebags-advanced` | StateBagsの応用パターン | `performance`, `events` | t5-03 | 複雑なテーブルを持たせる設計、変更検知の絞り込み、ルーティングバケットとの併用 |
 | `t5-10-streaming-culling` | エンティティのストリーミング距離・カリング調整 | `performance` | t5-01 | `SetEntityDistanceCullingRadius`等で大量エンティティ配置時の負荷を制御 |
+| `t5-11-performance-tuning-patterns` | パフォーマンス・チューニング実践パターン | `performance` | t5-01 | `resmon`で「重い」と判明した後の原因切り分けの手順、イベント発火頻度の見直し、`Wait()`の可変化、DBクエリのバッチ化など具体的な改善パターン集 |
+| `t5-12-resource-protection-licensing` | スクリプト販売とリーク対策 | `security`, `monetization` | t5-04, t4-39 | Cfx.re公式のAsset Escrowによる保護(対応ファイル種別・`escrow_ignore`・Tebex経由配布)と、自前のライセンスキー認証パターンの設計。NUIファイルはEscrow対象外である点に注意 |
+
+### Cfx.re Asset Escrow 確認済み情報(要順守・憶測禁止。docs.fivem.net/docs/server-manual/asset-escrow/ で確認済み)
+
+- 保護対象ファイル種別: **Lua / YFT / YDD / YDR**。**NUI(HTML/CSS/JS)は現時点でEscrow対象外**であり、暗号化されない。
+- 有効化にfxmanifest.luaの特別な記述は不要。Cfxポータル(portal.cfx.re)で「Create an asset」からzip(最大1GB)をアップロードすると自動的に暗号化される。
+- 特定ファイルだけEscrowから除外したい場合は`escrow_ignore`ディレクティブを使う(例: `escrow_ignore { 'config.lua' }`)。
+- 権限のないサーバーがEscrow資産を実行しようとすると、コンソールに`You lack the required entitlement`エラーが出て起動しない。
+- Escrow資産は**Tebex経由の配布のみ**サポートされ、購入者間の直接譲渡はできない。サブスクリプション型販売にも対応し、契約終了で自動的に実行権限が失われる。
 
 ---
 

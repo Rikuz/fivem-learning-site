@@ -6,16 +6,19 @@ function sampleCardHTML(sample) {
   const resourceText = sample.resources.length > 1 ? `${sample.resources.length}resource構成` : "1resource構成";
 
   return `
-    <a class="lesson-card" data-lesson-card="${sample.id}" href="${sample.path}">
-      <div class="lesson-card__badges">
-        <span class="badge tier-badge" data-tier="${sample.difficulty}">${difficultyInfo.emoji} 難易度: ${difficultyInfo.label}</span>
-      </div>
-      <p class="lesson-card__title">${sample.title} <span data-complete-check></span></p>
-      <p class="lesson-card__summary">${sample.summary}</p>
-      <div class="lesson-card__meta">
-        <span>${resourceText} / 依存: ${depsText}</span>
-      </div>
-    </a>
+    <div class="sample-card-wrapper">
+      <a class="lesson-card" data-lesson-card="${sample.id}" href="${sample.path}">
+        <div class="lesson-card__badges">
+          <span class="badge tier-badge" data-tier="${sample.difficulty}">${difficultyInfo.emoji} 難易度: ${difficultyInfo.label}</span>
+        </div>
+        <p class="lesson-card__title">${sample.title} <span data-complete-check></span></p>
+        <p class="lesson-card__summary">${sample.summary}</p>
+        <div class="lesson-card__meta">
+          <span>${resourceText} / 依存: ${depsText}</span>
+        </div>
+      </a>
+      <a class="sample-download-link" href="samples/downloads/${sample.id}.zip" download>📦 ZIPをダウンロード</a>
+    </div>
   `;
 }
 

@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>パフォーマンス・チューニング実践パターン | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/vendor/pico/pico.min.css">
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t5-11-performance-tuning-patterns">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="5">⚫ 上級</span>
+      <span class="badge category-badge">⚡ パフォーマンス</span>
+    </div>
+
+    <h1>パフォーマンス・チューニング実践パターン</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>resmonで「重い」と分かった後に原因を体系的に切り分け、イベント発火頻度の見直し・DBクエリのバッチ化・計算結果のキャッシュといった具体的な改善パターン</strong>を適用できるようになります。Tier5-01の<code>Wait()</code>調整だけでは解決しない負荷パターンを扱います。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>resmonで特定のresourceの数値が高いと分かっても、原因は1つとは限りません。よくある原因は大きく分けて次の3種類です。①ループの間隔が短すぎる(Tier5-01で対応済み)、②client-server間のイベントを必要以上の頻度で送っている、③ループや処理の中で重い処理(DBアクセス・大量データの走査)を毎回行っている。この3つを切り分けるには、まずF8コンソールの<code>profiler</code>コマンドで「どの関数にどれだけ時間がかかっているか」をより詳細に確認するのが有効です。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>① profilerで詳細に原因を特定する(docs.fivem.netで確認済み)</h3>
+      <div class="code-block">
+        <pre><code class="language-bash"># F8コンソール(clientの場合)またはサーバーコンソールで実行
+profiler record 500      # 500フレーム分を記録開始(目安として十分な期間)
+profiler status          # 記録の進行状況を確認
+profiler view            # 記録終了後、Chromeが起動し結果を表示する
+profiler saveJSON perf.json  # JSONとして保存(run.batと同じフォルダに出力される)</code></pre>
+      </div>
+      <p>保存したJSONはChromeの開発者ツールの「Performance」タブに読み込むことで、どの関数がどれだけの時間を占めているかを視覚的に確認できます。resmonが「resource単位」の負荷なのに対し、profilerは「関数単位」まで踏み込んで原因を特定できる点が異なります。</p>
+
+      <h3>② イベント発火頻度の見直し</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">-- ⚠️ 見直し前: 座標が変わっていなくても毎フレームserverへ送信している
+CreateThread(function()
+    while true do
+        local coords = GetEntityCoords(PlayerPedId())
+        TriggerServerEvent('myscript:updatePosition', coords)
+        Wait(0)
+    end
+end)</code></pre>
+      </div>
+      <div class="code-block">
+        <pre><code class="language-lua">-- ✅ 見直し後: 値が実際に変化した時だけ、かつ間隔を空けて送信する
+local lastCoords = nil
+
+CreateThread(function()
+    while true do
+        local coords = GetEntityCoords(PlayerPedId())
+        if not lastCoords or #(coords - lastCoords) > 1.0 then
+            TriggerServerEvent('myscript:updatePosition', coords)
+            lastCoords = coords
+        end
+        Wait(1000) -- 1秒間隔+差分チェックで、ネットワークイベント数を大幅に削減できる
+    end
+end)</code></pre>
+      </div>
+
+      <h3>③ DBクエリのバッチ化</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">-- ⚠️ 見直し前: ループの中で1件ずつクエリを投げている(N+1問題)
+for _, itemId in ipairs(itemIds) do
+    local row = MySQL.single.await('SELECT * FROM items WHERE id = ?', { itemId })
+    -- rowを使った処理
+end</code></pre>
+      </div>
+      <div class="code-block">
+        <pre><code class="language-lua">-- ✅ 見直し後: IN句でまとめて1回のクエリにする(Tier3-32のモダンAPI利用)
+local placeholders = {}
+for i = 1, #itemIds do placeholders[i] = '?' end
+
+local rows = MySQL.query.await(
+    ('SELECT * FROM items WHERE id IN (%s)'):format(table.concat(placeholders, ',')),
+    itemIds
+)
+-- rowsをループして処理する(クエリの往復回数が itemIds の件数分→1回になる)</code></pre>
+      </div>
+
+      <h3>④ 重い計算結果のキャッシュ</h3>
+      <div class="code-block">
+        <pre><code class="language-lua">local nearbyPlayersCache = {}
+local lastCacheUpdate = 0
+
+local function getNearbyPlayers(coords)
+    local now = GetGameTimer()
+    -- 直近500ms以内に計算済みならキャッシュを再利用する
+    if now - lastCacheUpdate < 500 then
+        return nearbyPlayersCache
+    end
+
+    nearbyPlayersCache = {} -- 実際にはGetPlayers()等で近距離判定した結果を詰める
+    lastCacheUpdate = now
+    return nearbyPlayersCache
+end</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li><strong>推測で最適化を始めない。</strong> 「たぶんここが重い」で書き換える前に、resmon・profilerで実際に数値を確認してから手を付けてください。体感と実際のボトルネックがずれていることは珍しくありません。</li>
+        <li>イベント頻度の削減やキャッシュは「データの鮮度」とのトレードオフです。座標同期のように多少の遅延が許容される値には有効ですが、当たり判定やお金の残高確認のように即時性が必要な値をキャッシュすると不整合の原因になります。</li>
+        <li>DBクエリのバッチ化は可読性とのバランスも重要です。件数が少ない(数件程度)場合は無理にバッチ化せず、明らかにループ回数が多い箇所から優先的に見直してください。</li>
+        <li><code>profiler view</code>はGoogle Chromeを前提としています。サーバーコンソール側で実行した場合はリンクが表示されるので、それを手元のPCのChromeで開いてください。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>ここで扱った4パターンは、他の多くのボトルネックにも応用できる考え方の型です。「頻度を下げられないか」「まとめられないか」「使い回せないか」の3つの問いを、resmon/profilerで見つけた重い箇所に当てはめてみてください。Tier5-08のルーティングバケットやTier5-09のStateBags応用パターンも、突き詰めれば「不要な同期・不要な計算を減らす」という同じ方向性の最適化です。</p>
+      <p class="version-note">profilerコマンドの出力形式やオプションはFXServerのバージョンによって変わることがあります。本レッスンの内容はdocs.fivem.netの公式ドキュメントで確認済みですが、最新の公式ドキュメントも併せて確認してください。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

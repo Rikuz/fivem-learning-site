@@ -204,6 +204,33 @@
   font-weight: bold;
 }
 
+/* sample-card-wrapper: サンプルコード一覧(samples.html)のカード+ダウンロードリンク */
+.sample-card-wrapper {
+  display: flex;
+  flex-direction: column;
+}
+
+.sample-card-wrapper .lesson-card {
+  flex: 1;
+}
+
+.sample-download-link {
+  display: block;
+  text-align: center;
+  font-size: var(--font-size-small);
+  padding: 6px;
+  margin-top: 4px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  text-decoration: none;
+  color: var(--color-muted);
+}
+
+.sample-download-link:hover {
+  background: var(--color-badge-bg);
+  color: var(--color-text);
+}
+
 /* keyword-search: したいこと逆引き検索(category.html) */
 .keyword-search {
   margin-bottom: var(--space-2);

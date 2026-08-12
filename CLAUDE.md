@@ -40,6 +40,7 @@ fivem-learning-site/
 ├── practice.html                   # 実践演習一覧(難易度順)
 ├── tracks.html                     # プロジェクトトラック一覧(目的別の通し道)
 ├── samples.html                    # サンプルコード一覧(演習と1対1対応する実際に動くリソース一式)
+├── troubleshoot.html                # トラブルシューティング・フローチャート(症状から原因候補を辿る診断UI)
 ├── assets/
 │   ├── css/
 │   │   ├── base.css                # リセット・共通レイアウト・カラー変数
@@ -69,6 +70,7 @@ fivem-learning-site/
 ├── practice/                       # 実践演習の詳細ページ(設計仕様のみ、完成コードは載せない)
 ├── tracks/                         # プロジェクトトラックの詳細ページ(順序付きチェックリスト)
 ├── samples/                        # サンプルコードの解説ページ+実際に動くリソース一式(演習と同数、1対1対応)
+│   └── downloads/                  # サンプルごとのZIP一括ダウンロード(scripts/build-sample-zips.jsの生成物)
 └── docs/
     ├── ARCHITECTURE.md
     ├── CONTENT_OUTLINE.md
@@ -194,6 +196,16 @@ npx serve .
 - **`lessons/`配下にレッスンHTMLを追加・編集したら、必ず`node scripts/build-search-index.js`を再実行して`assets/js/search-index.js`を再生成すること。** `search-index.js`を手で直接編集しない。
 - `scripts/build-search-index.js`は各レッスンHTMLの`<main>`内のテキストをタグ除去して抽出するだけの単純なNodeスクリプトで、`samples/`配下(サンプルコードのHTML)は対象外。
 - サイト自体の閲覧にはビルド手順は不要(`search-index.js`は生成済みの状態でリポジトリにコミットされる)。このスクリプトは「レッスン内容が変わった後にインデックスを更新するための著者向けの補助ツール」であり、npm installやビルドパイプラインの一部ではない。
+
+---
+
+## サンプルコードのZIP一括ダウンロード(samples/downloads/)について
+
+`samples.html`の各カードと`samples/ex-XX-*.html`の各詳細ページには、対応するリソース一式をまとめた`samples/downloads/<id>.zip`へのダウンロードリンクがある(詳細ページ側は`nav.js`の`renderSampleDownloadBanner()`が`data-sample-id`を見て自動挿入するため、個別HTMLの編集は不要)。
+
+- **`samples/<resource-name>/`配下のファイルを追加・変更したら、必ず`node scripts/build-sample-zips.js`を再実行して`samples/downloads/*.zip`を再生成すること。** ZIPを手で作成・編集しない。
+- `scripts/build-sample-zips.js`は`assets/js/samples-data.js`の`SAMPLES`配列(`resources`)を読み、対応する実ファイルをNode標準の`zlib`/`fs`のみでZIP形式(store方式)に固めるだけの単純なスクリプト。npmパッケージは追加していない(CLAUDE.md冒頭の「ビルドツールなし」方針を維持するため)。マルチresource構成のサンプル(ex-07, ex-11)は、複数resourceディレクトリをまとめて1つのZIPにする。
+- こちらもビルド手順ではなく著者向けの補助ツールで、生成済みのZIPがリポジトリにコミットされる。
 
 ---
 

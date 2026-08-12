@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>本番運用・VPSデプロイガイド | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/vendor/pico/pico.min.css">
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t4-40-vps-deployment-guide">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="4">🔴 中上級</span>
+      <span class="badge category-badge">⚙️ 環境構築</span>
+      <span class="badge category-badge">🛠️ 管理者ツール</span>
+    </div>
+
+    <h1>本番運用・VPSデプロイガイド</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>ローカルPC上のtxAdmin環境から、実際にプレイヤーが接続できるVPS(レンタルサーバー)上へFXServerを移し、systemdによる自動再起動・定期バックアップまで含めた「公開に必要な最低限の運用」</strong>ができるようになります。Tier1-01でローカルサーバーの起動、Tier1-14でtxAdminの管理機能を扱いましたが、ここでは「実際に外部へ公開する」ための一段階を扱います。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>ローカルPCで動かしているFXServerは、自分のPCの電源が入っている間しか稼働せず、家庭用回線からの公開はポート開放や通信速度の面で現実的ではありません。そのため本番公開では、常時稼働するVPS(多くはUbuntu/DebianなどのLinux)上にFXServerを設置します。公式ドキュメント(docs.fivem.net)によると、Linux版は<strong>「Windows版が推奨で、Linuxはディストリビューションの互換性問題により提供されているcourtesy port(便宜的な移植)」</strong>と明記されているため、パフォーマンス上の問題が出た場合はWindows Serverでの運用も選択肢に入れてください。以下ではLinux VPSを例に手順を示します。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>① FXServerアーティファクトの取得と展開(docs.fivem.netで確認済み)</h3>
+      <div class="code-block">
+        <pre><code class="language-bash"># サーバーダウンロードページ(docs.fivem.net/docs/server-download/)で
+# 推奨されているmasterブランチのLinux版URLをコピーし、wgetで取得する
+mkdir -p ~/FXServer/server && cd ~/FXServer/server
+wget https://runtime.fivem.net/artifacts/fivem/build_proot_linux/master/xxxxx-yyyyyyyy/fx.tar.xz
+tar xf fx.tar.xz
+
+# サーバーデータ(mapmanager等の基本resource一式)を別途取得する
+git clone https://github.com/citizenfx/cfx-server-data.git ~/FXServer/server-data</code></pre>
+      </div>
+      <p class="version-note">アーティファクトのURLはビルドごとに変わるため、必ず公式のサーバーダウンロードページ(docs.fivem.net/docs/server-download/)で最新の推奨URLを確認してからwgetしてください。</p>
+
+      <h3>② 最小構成のserver.cfg(docs.fivem.netで確認済み)</h3>
+      <div class="code-block">
+        <pre><code class="language-bash"># ~/FXServer/server-data/server.cfg
+endpoint_add_tcp "0.0.0.0:30120"
+endpoint_add_udp "0.0.0.0:30120"
+
+sv_hostname "自分のサーバー名"
+sv_maxclients 48
+
+# portal.cfx.re で無料登録したライセンスキーに必ず置き換える(changemeのままでは起動しない)
+sv_licenseKey changeme
+
+ensure mapmanager
+ensure chat
+ensure spawnmanager
+ensure sessionmanager
+
+# ここから下に自作リソースのensureを追加していく
+# ensure my_script</code></pre>
+      </div>
+
+      <h3>③ サーバーの起動(docs.fivem.netで確認済み)</h3>
+      <div class="code-block">
+        <pre><code class="language-bash">cd ~/FXServer/server-data
+bash ~/FXServer/server/run.sh +exec server.cfg</code></pre>
+      </div>
+
+      <h3>④ systemdでの自動起動・自動再起動(一般的な運用パターン)</h3>
+      <p>上記の起動コマンドをターミナルで実行したままにする方法では、SSH接続が切れるとサーバーも落ちてしまいます。Linuxサーバーの運用で広く使われているのが、systemdにサービスとして登録し、クラッシュ時や再起動時に自動で立ち上げ直す方法です。</p>
+      <div class="code-block">
+        <pre><code class="language-bash"># /etc/systemd/system/fivem.service
+[Unit]
+Description=FiveM FXServer
+After=network.target
+
+[Service]
+Type=simple
+User=fivem
+WorkingDirectory=/home/fivem/FXServer/server-data
+ExecStart=/bin/bash /home/fivem/FXServer/server/run.sh +exec server.cfg
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target</code></pre>
+      </div>
+      <div class="code-block">
+        <pre><code class="language-bash"># 反映・自動起動の有効化・起動
+sudo systemctl daemon-reload
+sudo systemctl enable fivem
+sudo systemctl start fivem
+
+# ログの確認
+sudo journalctl -u fivem -f</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li><code>sv_licenseKey</code>を<code>changeme</code>のまま公開しようとして起動に失敗する例が非常に多いです。必ずportal.cfx.reで無料のライセンスキーを取得し、置き換えてください。</li>
+        <li>ポート<code>30120</code>のTCP・UDP両方を、VPS側のファイアウォール(ufw等)と、クラウド事業者側のセキュリティグループ/ファイアウォール設定の<strong>両方</strong>で開放しないと、プレイヤーが接続できません。片方だけ開けて「繋がらない」と詰まるケースが多いです。</li>
+        <li>root権限で直接FXServerを常時稼働させるのは避け、上記例のように専用ユーザー(<code>fivem</code>等)で動かしてください。自作リソースに脆弱性があった場合の被害範囲を減らせます。</li>
+        <li>Tier1-14で扱ったtxAdminの自動バックアップは「バックアップを取ること」自体は自動化できますが、<strong>VPSそのものに障害が起きた場合に備えて、バックアップを別のサーバー・別のストレージ(S3等)にも定期的にコピーする</strong>運用を別途組んでください。VPS内に保存されたバックアップだけでは、VPS自体の消失に対応できません。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>Windows Serverで運用する場合は、公式ドキュメントのWindows向けセットアップ手順(server.cfgの内容自体はLinuxとほぼ共通)に従ってください。また、txAdminのWebパネル(Tier1-14参照)はLinux/Windowsどちらの環境でも同じように使えるため、systemd(または相当する仕組み)で自動起動さえ組んでおけば、日常的な運用(リソースの再起動・監視・バックアップ)はtxAdminのUIから行えます。</p>
+      <p class="version-note">アーティファクトのURL・推奨OSバージョン・systemdの書き方はいずれも環境やFXServerのバージョンによって変わることがあります。本レッスンのコマンド・server.cfgの内容はdocs.fivem.netの公式ドキュメントで確認済みですが、実際にデプロイする際は最新の公式ドキュメントも必ず確認してください。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>

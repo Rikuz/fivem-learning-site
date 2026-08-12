@@ -1336,6 +1336,17 @@ const LESSONS = [
     summary: "sv_tebexSecretでTebexストアと連携し、購入時に実行されるコマンドで報酬を届ける仕組みを実装する",
     keywords: ["課金ショップを作りたい", "Tebexと連携したい", "寄付特典を実装したい", "購入したアイテムを届けたい"],
   },
+  {
+    id: "t4-40-vps-deployment-guide",
+    title: "本番運用・VPSデプロイガイド",
+    tier: 4,
+    categories: ["environment", "admin-tools"],
+    prerequisites: ["t1-14-txadmin-administration"],
+    path: "lessons/tier4-upper-intermediate/40-vps-deployment-guide.html",
+    estimatedMinutes: 30,
+    summary: "ローカルのtxAdmin環境からVPS上のFXServerへ移行し、systemdでの自動再起動・バックアップ運用まで整える",
+    keywords: ["サーバーを公開したい", "VPSにデプロイしたい", "本番環境を用意したい", "systemdで自動起動したい", "サーバーを常時稼働させたい"],
+  },
 
   // ===== Tier 5: 上級 =====
   {
@@ -1447,6 +1458,28 @@ const LESSONS = [
     estimatedMinutes: 25,
     summary: "SetEntityDistanceCullingRadius等で、大量のNPC/オブジェクトを配置した際の描画・処理負荷を制御する",
     keywords: ["エンティティが多くて重い", "描画距離を調整したい", "カリングの仕組みを知りたい", "大量のNPCを配置したい"],
+  },
+  {
+    id: "t5-11-performance-tuning-patterns",
+    title: "パフォーマンス・チューニング実践パターン",
+    tier: 5,
+    categories: ["performance"],
+    prerequisites: ["t5-01-performance-resmon"],
+    path: "lessons/tier5-advanced/11-performance-tuning-patterns.html",
+    estimatedMinutes: 30,
+    summary: "profilerでの詳細な原因特定、イベント頻度の見直し・DBクエリのバッチ化・計算結果のキャッシュなど具体的な改善パターンを学ぶ",
+    keywords: ["重い原因が resmon だけでは分からない", "profilerの使い方", "イベントを送りすぎている", "DBクエリを減らしたい", "パフォーマンスを本格的に改善したい"],
+  },
+  {
+    id: "t5-12-resource-protection-licensing",
+    title: "スクリプト販売とリーク対策",
+    tier: 5,
+    categories: ["security", "monetization"],
+    prerequisites: ["t5-04-security-hardening", "t4-39-tebex-integration"],
+    path: "lessons/tier5-advanced/12-resource-protection-licensing.html",
+    estimatedMinutes: 30,
+    summary: "Cfx.re公式のAsset Escrowによる保護と、自前のライセンスキー認証パターンで、販売するスクリプトのリーク・不正利用対策を学ぶ",
+    keywords: ["スクリプトを販売したい", "リーク対策をしたい", "Escrowの使い方", "ライセンスキー認証を作りたい", "不正利用を防ぎたい"],
   },
 ];
 

@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>スクリプト販売とリーク対策 | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="../../assets/vendor/pico/pico.min.css">
+  <link rel="stylesheet" href="../../assets/css/base.css">
+  <link rel="stylesheet" href="../../assets/css/components.css">
+  <link rel="stylesheet" href="../../assets/css/lesson.css">
+  <link rel="stylesheet" href="../../assets/vendor/prism/prism.css">
+</head>
+<body data-lesson-id="t5-12-resource-protection-licensing">
+  <header id="site-header"></header>
+  <nav id="breadcrumb"></nav>
+
+  <main>
+    <div class="lesson-meta">
+      <span class="badge tier-badge" data-tier="5">⚫ 上級</span>
+      <span class="badge category-badge">🔒 セキュリティ</span>
+      <span class="badge category-badge">💳 収益化・課金</span>
+    </div>
+
+    <h1>スクリプト販売とリーク対策</h1>
+
+    <section class="conclusion">
+      <h2>結論</h2>
+      <p>このレッスンを終えると、<strong>自分が開発したスクリプトを販売する際に、Cfx.re公式の「Asset Escrow」でコード自体を保護しつつ、自前のライセンスキー認証を組み合わせて、無断リーク・購入者以外での不正利用のリスクを抑える設計</strong>ができるようになります。「絶対に漏れない」保護は存在しませんが、市販されている多くのFiveMスクリプトが実際に採用している考え方を扱います。</p>
+    </section>
+
+    <section class="explanation">
+      <h2>説明</h2>
+      <p>スクリプトの保護は、役割が異なる2つの仕組みを組み合わせて考えます。①<strong>Cfx.re公式のAsset Escrow</strong>: Luaコード自体をCfxのサーバー上で暗号化し、権限のあるサーバーでしか実行できないようにする、プラットフォーム側の保護。②<strong>自前のライセンス認証</strong>: 自分で用意したライセンスサーバーに問い合わせ、正規に購入されたキーかどうかをresource起動時に確認する、開発者側で組み込む保護。Escrowは強力ですが<strong>NUI(HTML/CSS/JS)ファイルは保護対象外</strong>という制限があるため、NUIを多用するスクリプトほど②の考え方や、そもそもNUI側に重要なロジックを置かない設計(Tier3-05のサーバー権威の原則)が重要になります。</p>
+    </section>
+
+    <section class="code-example">
+      <h2>コード例</h2>
+
+      <h3>① Asset Escrowの有効化(docs.fivem.netで確認済み)</h3>
+      <p>fxmanifest.luaに特別な記述は不要で、Cfxポータル(portal.cfx.re)で「Create an asset」からzipをアップロードすると自動的にLua/YFT/YDD/YDRファイルが暗号化されます。設定ファイルなど、あえて暗号化したくないファイルだけ除外することもできます。</p>
+      <div class="code-block">
+        <pre><code class="language-lua">-- fxmanifest.lua
+-- config.luaだけはEscrowの対象から除外し、平文のまま配布したい場合
+escrow_ignore {
+    'config.lua'
+}</code></pre>
+      </div>
+
+      <h3>② 自前のライセンスキー認証(設計パターン)</h3>
+      <p>Tebex経由でEscrow配布する以外のチャネル(自社サイト・Discord経由の直接販売など)で配布する場合や、Escrowを補完したい場合は、購入者ごとに発行したライセンスキーを、自分で用意したライセンスサーバーに問い合わせて確認する仕組みを自作します。以下は考え方を示す設計パターンです(<code>https://license.example.com/api/verify</code>の部分は自分で用意するAPIに置き換えてください)。</p>
+      <div class="code-block">
+        <pre><code class="language-lua">-- server.lua
+local LICENSE_API = 'https://license.example.com/api/verify' -- 自分で用意するライセンスサーバー
+local MY_LICENSE_KEY = 'CHANGE-THIS-TO-THE-KEY-ISSUED-TO-THE-BUYER'
+local isLicensed = false
+
+CreateThread(function()
+    local serverLicenseKey = GetConvar('sv_licenseKey', '') -- そのFXServer固有のキー(Tier1-14参照)
+
+    PerformHttpRequest(LICENSE_API, function(statusCode, response)
+        if statusCode == 200 then
+            local data = json.decode(response)
+            if data and data.valid then
+                isLicensed = true
+                print('^2[MyScript] ライセンス認証に成功しました^0')
+                return
+            end
+        end
+        print('^1[MyScript] ライセンス認証に失敗しました。主要機能を無効化します^0')
+    end, 'POST', json.encode({
+        licenseKey = MY_LICENSE_KEY,
+        serverLicenseKey = serverLicenseKey, -- サーバー固有のキーも一緒に送り、1ライセンス=1サーバーに紐付ける
+    }), { ['Content-Type'] = 'application/json' })
+end)
+
+-- 主要機能はisLicensedを確認してから動かす
+RegisterNetEvent('myscript:mainFeature')
+AddEventHandler('myscript:mainFeature', function()
+    if not isLicensed then return end
+    -- 本来の処理
+end)</code></pre>
+      </div>
+
+      <h3>③ 買い手を特定できる「透かし」を仕込む</h3>
+      <p>技術的に完全な防止が難しい以上、「漏れた場合にどこから漏れたか追跡できる」ことも抑止力になります。config内の識別子や、DBに保存するライセンスキーを購入者ごとに変えておくと、リークされたコピーからどの購入者経由か推測しやすくなります。</p>
+      <div class="code-block">
+        <pre><code class="language-lua">-- config.lua(購入者ごとに配布時に書き換えて渡す)
+Config.LicensedTo = 'purchase_a1b2c3d4' -- 購入者ごとに異なる識別子(サポート対応・リーク時の追跡に使う)</code></pre>
+      </div>
+    </section>
+
+    <section class="pitfalls">
+      <h2>注意点・よくあるミス</h2>
+      <ul>
+        <li><strong>NUIファイルはEscrow対象外です。</strong> 価格計算やチート判定のような重要なロジックをNUI側のJavaScriptに書いてしまうと、Escrowを使っていてもそこだけ平文で読めてしまいます。重要な判定は必ずLua(server側)に置いてください。</li>
+        <li>自前のライセンス認証は、<strong>ライセンスサーバー自体が落ちている間、正規購入者まで機能が止まってしまう</strong>リスクがあります。タイムアウト処理や、一定期間はキャッシュされた認証結果で動かす猶予期間を設けるなどの配慮を検討してください。</li>
+        <li>過度に複雑な難読化やアンチデバッグ処理は、正規購入者の環境でも誤動作(false positive)を起こしやすく、サポート対応の負担やレビュー評価の低下につながりがちです。保護の強さと運用のしやすさのバランスを考えましょう。</li>
+        <li>技術的な保護だけで100%は防げません。利用規約(再配布禁止・購入者本人のみ利用可等)を明記し、技術的対策と合わせて運用することが実務上は一般的です。</li>
+      </ul>
+    </section>
+
+    <section class="supplement">
+      <h2>補足</h2>
+      <p>Tebex経由での配布であれば、Escrowと購入・配布の導線が公式に統合されているため、まずはこの仕組みを検討するのが最も確実です(Tier4-39のTebex連携も参照)。独自のライセンス認証は、Tebex以外のチャネルで配布する場合や、Escrowでは保護できないNUI部分を補完したい場合の選択肢として位置づけてください。いずれの方法も、Tier5-04で学んだ「サーバー権威設計の徹底」が土台になっている点は変わりません。</p>
+      <p class="version-note">Asset Escrowの対応ファイル種別・制限事項は将来変わる可能性があります。本レッスンの内容はdocs.fivem.netの公式ドキュメントで確認済みですが、実際に販売する際は最新の公式ドキュメントも必ず確認してください。</p>
+    </section>
+
+    <label class="complete-toggle">
+      <input type="checkbox" id="mark-complete-checkbox">
+      このレッスンを完了にする
+    </label>
+  </main>
+
+  <nav id="prev-next-nav"></nav>
+  <footer id="site-footer"></footer>
+
+  <script src="../../assets/js/lessons-data.js"></script>
+  <script src="../../assets/js/progress.js"></script>
+  <script src="../../assets/js/nav.js"></script>
+  <script src="../../assets/vendor/prism/prism.js"></script>
+  <script src="../../assets/js/code-copy.js"></script>
+</body>
+</html>
