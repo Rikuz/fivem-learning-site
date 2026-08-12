@@ -29,6 +29,18 @@ FiveM(GTA Vのマルチプレイヤー拡張フレームワーク)のスクリ�
 
 ---
 
+## ログインゲート(login.html / assets/js/auth-guard.js)について
+
+サイト全体に、`login.html`以外の全ページへのアクセス前にログインを要求する簡易ゲートを設けている。**これは静的サイト上のクライアント側チェックに過ぎず、実際のアクセス制御(認可)ではない。** GitHub Pages上の全ファイルはURLを直接叩けば誰でも取得できる(検索エンジンのクロール・curl等も素通り)。あくまで「通常のブラウザ操作でリンクをたどる訪問者」をログイン画面で止めるだけの仕組みであり、機密情報の保護目的では絶対に使わないこと。
+
+- `assets/js/auth-guard.js`は各HTMLの`<head>`の**最初の行**(`pico.min.css`より前)に配置する。`localStorage`の`fivemSiteAuthed`キーが`"true"`でなければ、`login.html?redirect=<元のパス>`へ即座にリダイレクトする。
+- `login.html`にはこのスクリプトを含めない(含めると無限リダイレクトになる)。ユーザー名・パスワードは`login.html`内のJSにハードコードされている(現状: `rikuz` / `1234`)。**平文でリポジトリに公開されるため、変更時もその前提を維持すること。**
+- ログイン成功時は`localStorage`に`fivemSiteAuthed=true`を保存し、`redirect`パラメータがあればそこへ、なければ`index.html`へ遷移する。
+- `nav.js`の`renderSiteFooter()`がログアウトリンクを描画し、クリックで`localStorage`をクリアして`login.html`に戻す。
+- 新しいHTMLページを追加する際は、他ページと同様に`<head>`の先頭に`<script src="{root}assets/js/auth-guard.js"></script>`を必ず入れること(`root`は他の相対パスと同じ計算方法)。
+
+---
+
 ## ディレクトリ構成
 
 ```

@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ログイン | FiveMスクリプト学習</title>
+  <link rel="stylesheet" href="assets/vendor/pico/pico.min.css">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/components.css">
+  <style>
+    .login-wrap {
+      max-width: 360px;
+      margin: 15vh auto 0;
+    }
+    .login-wrap h1 {
+      text-align: center;
+    }
+    #login-error {
+      color: var(--tier4-main);
+      font-size: var(--font-size-small);
+      display: none;
+      margin-top: var(--space-1);
+    }
+  </style>
+</head>
+<body>
+  <main class="login-wrap">
+    <h1>FiveMスクリプト学習</h1>
+    <form id="login-form">
+      <label for="username">ユーザー名</label>
+      <input type="text" id="username" name="username" autocomplete="username" required>
+
+      <label for="password">パスワード</label>
+      <input type="password" id="password" name="password" autocomplete="current-password" required>
+
+      <button type="submit">ログイン</button>
+      <p id="login-error">ユーザー名またはパスワードが違います。</p>
+    </form>
+  </main>
+
+  <script>
+    document.getElementById("login-form").addEventListener("submit", function (event) {
+      event.preventDefault();
+
+      var username = document.getElementById("username").value;
+      var password = document.getElementById("password").value;
+      var errorEl = document.getElementById("login-error");
+
+      if (username === "rikuz" && password === "1234") {
+        localStorage.setItem("fivemSiteAuthed", "true");
+        var params = new URLSearchParams(window.location.search);
+        var redirect = params.get("redirect");
+        window.location.href = redirect ? decodeURIComponent(redirect) : "index.html";
+      } else {
+        errorEl.style.display = "block";
+      }
+    });
+  </script>
+</body>
+</html>

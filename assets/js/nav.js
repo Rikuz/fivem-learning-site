@@ -228,8 +228,21 @@ function renderSampleDownloadBanner() {
 function renderSiteFooter() {
   const el = document.getElementById("site-footer");
   if (!el) return;
+  const root = computeSiteRoot();
   el.className = "site-footer";
-  el.innerHTML = `<p>FiveMスクリプト学習サイト — 個人学習用の非公式コンテンツです</p>`;
+  el.innerHTML = `
+    <p>FiveMスクリプト学習サイト — 個人学習用の非公式コンテンツです</p>
+    <p><a href="#" id="logout-link">ログアウト</a></p>
+  `;
+
+  const logoutLink = document.getElementById("logout-link");
+  if (logoutLink) {
+    logoutLink.addEventListener("click", (event) => {
+      event.preventDefault();
+      localStorage.removeItem("fivemSiteAuthed");
+      window.location.href = `${root}login.html`;
+    });
+  }
 }
 
 function initNav() {
