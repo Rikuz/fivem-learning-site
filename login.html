@@ -38,7 +38,11 @@
     </form>
   </main>
 
+  <script src="assets/js/sha256.js"></script>
   <script>
+    // 資格情報はsha256("ユーザー名:パスワード")のハッシュ値のみを保持する(平文はソースに残さない)
+    var CREDENTIAL_HASH = "8bc83e85f19b4f1630b12d7d503e77cdea9de84e7cec77c373f5f9e2f6709bfc";
+
     document.getElementById("login-form").addEventListener("submit", function (event) {
       event.preventDefault();
 
@@ -46,7 +50,7 @@
       var password = document.getElementById("password").value;
       var errorEl = document.getElementById("login-error");
 
-      if (username === "rikuz" && password === "1234") {
+      if (sha256(username + ":" + password) === CREDENTIAL_HASH) {
         localStorage.setItem("fivemSiteAuthed", "true");
         var params = new URLSearchParams(window.location.search);
         var redirect = params.get("redirect");
